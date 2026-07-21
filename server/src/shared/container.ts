@@ -100,7 +100,16 @@ export function buildContainer(config: Config): Container {
     config.RECEIPTS_DIR ||
       path.resolve(fileURLToPath(import.meta.url), '../../../..', 'data/receipts'),
   );
-  const notifier = new TelegramNotifier(bot, config.ADMIN_TELEGRAM_IDS, logger);
+  const notifier = new TelegramNotifier(
+    bot,
+    // The table is authoritative; the environment is the fallback for the
+    // window before it has been seeded.
+    async () => {
+      const admins = await repositories.admins.list();
+      return admins.length > 0 ? admins.map((admin) => admin.telegramId) : config.ADMIN_TELEGRAM_IDS;
+    },
+    logger,
+  );
 
   const useCases = {
     registerUser: new RegisterUserUseCase({ users: repositories.users }),

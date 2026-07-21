@@ -5,7 +5,7 @@ import { registerAdminCommands } from './commands/admin.js';
 import { registerBasicCommands } from './commands/basic.js';
 import { registerDepositFlow } from './commands/deposit.js';
 import type { BotContext, SessionData } from './context.js';
-import { toUserMessage } from './errorMessages.js';
+import { toUserMessage } from '../../shared/errorMessages.js';
 
 export function createBot(container: Container): Telegraf<BotContext> {
   const bot = container.bot as unknown as Telegraf<BotContext>;

@@ -5,6 +5,13 @@ import type { Product } from '../entities/Product.js';
 import type { User } from '../entities/User.js';
 import type { Money } from '../entities/Money.js';
 
+/** Read model for the admin user list: the user plus their order activity. */
+export interface UserListEntry {
+  user: User;
+  orderCount: number;
+  totalSpent: Money;
+}
+
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByTelegramId(telegramId: bigint): Promise<User | null>;
@@ -16,6 +23,12 @@ export interface UserRepository {
   }): Promise<User>;
   /** Atomic `balance = balance + delta`; rejects if the result would go negative. */
   adjustBalance(userId: string, delta: Money): Promise<User>;
+  /** Admin list: newest first, optionally filtered by name, username or id. */
+  search(input: { query?: string; limit: number; offset: number }): Promise<{
+    entries: UserListEntry[];
+    total: number;
+  }>;
+  setBanned(userId: string, banned: boolean): Promise<User>;
 }
 
 export interface ProductRepository {
@@ -54,6 +67,7 @@ export interface DepositRepository {
   create(data: { userId: string; amount: Money; screenshotUrl: string }): Promise<Deposit>;
   findById(id: string): Promise<Deposit | null>;
   listByStatus(status: DepositStatus, limit: number): Promise<Deposit[]>;
+  listByUser(userId: string, limit: number): Promise<Deposit[]>;
   /**
    * Approves the deposit and credits the wallet in a single transaction, and
    * only if the deposit is still PENDING — this is what stops a double-tap on

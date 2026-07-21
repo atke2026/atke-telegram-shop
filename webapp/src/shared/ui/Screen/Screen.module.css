@@ -4,9 +4,20 @@
   background: var(--bg-secondary);
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
 .title {
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin-bottom: var(--space-4);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

@@ -10,9 +10,14 @@ import { depositReviewKeyboard } from './keyboards/menus.js';
 
 /** Fans admin alerts out to every configured operator. */
 export class TelegramNotifier implements AdminNotifier, DepositNotifier {
+  /**
+   * `resolveAdminIds` is called per notification rather than captured once:
+   * admins granted through the panel must start receiving alerts immediately,
+   * without a restart.
+   */
   constructor(
     private readonly bot: Telegraf,
-    private readonly adminIds: bigint[],
+    private readonly resolveAdminIds: () => Promise<bigint[]>,
     private readonly logger: Logger,
   ) {}
 
@@ -70,8 +75,21 @@ export class TelegramNotifier implements AdminNotifier, DepositNotifier {
 
   /** One unreachable admin must never break the flow that raised the notification. */
   private async fanOut(send: (adminId: number) => Promise<unknown>): Promise<void> {
+    let adminIds: bigint[];
+    try {
+      adminIds = await this.resolveAdminIds();
+    } catch (error) {
+      this.logger.error({ err: error }, 'Could not resolve administrators to notify');
+      return;
+    }
+
+    if (adminIds.length === 0) {
+      this.logger.error('No administrators configured; alert dropped');
+      return;
+    }
+
     await Promise.all(
-      this.adminIds.map(async (id) => {
+      adminIds.map(async (id) => {
         try {
           await send(Number(id));
         } catch (error) {

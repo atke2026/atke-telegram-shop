@@ -45,3 +45,35 @@
   --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.4);
   --shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.6);
 }
+
+/*
+ * Explicit palettes for when the user overrides Telegram's theme.
+ *
+ * `data-theme-mode` is absent by default, so the variables above keep resolving
+ * to --tg-theme-* and the app follows the client. Picking Day or Night stamps
+ * an attribute here and replaces them wholesale — the tg variables cannot be
+ * used, since they describe the client's theme, not the chosen one.
+ */
+:root[data-theme-mode='light'] {
+  --bg: #ffffff;
+  --bg-secondary: #f2f2f7;
+  --surface: #ffffff;
+  --text: #000000;
+  --text-muted: #8e8e93;
+  --link: #2481cc;
+  --accent: #2481cc;
+  --accent-text: #ffffff;
+  --destructive: #e53935;
+}
+
+:root[data-theme-mode='dark'] {
+  --bg: #17212b;
+  --bg-secondary: #0e1621;
+  --surface: #17212b;
+  --text: #ffffff;
+  --text-muted: #708499;
+  --link: #6ab3f3;
+  --accent: #5288c1;
+  --accent-text: #ffffff;
+  --destructive: #ec3942;
+}

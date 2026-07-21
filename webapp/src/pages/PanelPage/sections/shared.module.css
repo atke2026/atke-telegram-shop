@@ -125,3 +125,25 @@
   background: var(--bg-secondary);
   color: var(--text-muted);
 }
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchWrap .input {
+  padding-left: 36px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.chevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}

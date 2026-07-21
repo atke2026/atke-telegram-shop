@@ -25,7 +25,8 @@ export function BottomNavBar() {
   return (
     <nav className={styles.nav} data-tabs={tabs.length}>
       {tabs.map((tab) => {
-        const active = pathname === tab.to;
+        // A detail route under /panel should keep the Panel tab lit.
+        const active = tab.to === '/' ? pathname === '/' : pathname.startsWith(tab.to);
         const Icon = tab.icon;
 
         return (

@@ -9,6 +9,7 @@ import type { User } from '../../core/entities/User.js';
 import { DomainError } from '../../core/errors/DomainError.js';
 import { PAYMENT_METHODS } from '../../core/paymentMethods.js';
 import { UnsupportedImageError } from '../../infrastructure/storage/ReceiptStorage.js';
+import { toUserMessage } from '../../shared/errorMessages.js';
 import { registerAdminRoutes } from './adminRoutes.js';
 import { InitDataError, verifyInitData } from '../../infrastructure/telegram/verifyInitData.js';
 import type { Container } from '../../shared/container.js';
@@ -110,8 +111,15 @@ export function createWebApi(container: Container): FastifyInstance {
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof DomainError) {
-      // Expected business outcomes: the client renders these to the user.
-      return reply.code(statusForDomainError(error)).send({ error: error.code, message: error.message });
+      // The client shows `message` directly, so it must be customer-facing
+      // copy. Domain messages are written for operators — SystemOfflineError
+      // names the reseller balance, InvalidApiKeyError names the API key — and
+      // must never be forwarded verbatim. The real reason goes to the log.
+      logger.info({ code: error.code, reason: error.message, url: request.url }, 'Domain error');
+
+      return reply
+        .code(statusForDomainError(error))
+        .send({ error: error.code, message: toUserMessage(error) });
     }
 
     logger.error({ err: error, url: request.url }, 'Web API error');

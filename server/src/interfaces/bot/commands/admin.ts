@@ -4,7 +4,7 @@ import { CONFIG_KEYS } from '../../../core/constants.js';
 import { Money } from '../../../core/entities/Money.js';
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
-import { toUserMessage } from '../errorMessages.js';
+import { toUserMessage } from '../../../shared/errorMessages.js';
 
 export function registerAdminCommands(bot: Telegraf<BotContext>, container: Container): void {
   const { useCases, repositories, config, logger } = container;

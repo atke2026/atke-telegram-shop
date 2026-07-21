@@ -68,6 +68,8 @@ describe('PlaceOrderUseCase', () => {
       findByTelegramId: vi.fn(),
       create: vi.fn(),
       adjustBalance: vi.fn().mockResolvedValue(makeUser({ balance: Money.fromDecimal('660') })),
+      search: vi.fn(),
+      setBanned: vi.fn(),
     };
 
     products = {

@@ -5,7 +5,7 @@ import type { User } from '../../core/entities/User.js';
 import { isStoredReceipt } from '../../infrastructure/storage/ReceiptStorage.js';
 import { NotAnAdminError } from '../../use-cases/admin/ManageAdminsUseCase.js';
 import type { Container } from '../../shared/container.js';
-import { toDepositDto, toProductDto } from './serializers.js';
+import { toDepositDto, toOrderDto, toProductDto } from './serializers.js';
 
 /**
  * Everything under /api/admin.
@@ -228,20 +228,65 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
 
   // --- users ------------------------------------------------------------
 
+  app.get('/api/admin/users', async (request) => {
+    await requireAdmin(request);
+
+    const { query, limit, offset } = request.query as {
+      query?: string;
+      limit?: string;
+      offset?: string;
+    };
+
+    const result = await repositories.users.search({
+      ...(query ? { query } : {}),
+      // Capped so a crafted limit cannot ask for the whole table.
+      limit: Math.min(Number(limit) || 30, 100),
+      offset: Math.max(Number(offset) || 0, 0),
+    });
+
+    return {
+      total: result.total,
+      users: result.entries.map((entry) => ({
+        id: entry.user.id,
+        telegramId: entry.user.telegramId.toString(),
+        firstName: entry.user.firstName,
+        username: entry.user.username,
+        isBanned: entry.user.isBanned,
+        createdAt: entry.user.createdAt.toISOString(),
+        balance: {
+          amount: entry.user.balance.toDecimalString(),
+          label: entry.user.balance.format(),
+        },
+        orderCount: entry.orderCount,
+        totalSpent: { amount: entry.totalSpent.toDecimalString(), label: entry.totalSpent.format() },
+      })),
+    };
+  });
+
   app.get('/api/admin/users/:telegramId', async (request, reply) => {
     await requireAdmin(request);
 
     const { telegramId } = request.params as { telegramId: string };
-    let user;
-    try {
-      user = await repositories.users.findByTelegramId(BigInt(telegramId));
-    } catch {
+    if (!/^\d{1,20}$/.test(telegramId)) {
       return reply.code(400).send({ error: 'telegramId must be numeric' });
     }
 
+    const user = await repositories.users.findByTelegramId(BigInt(telegramId));
     if (!user) return reply.code(404).send({ error: 'USER_NOT_FOUND' });
 
-    const orders = await repositories.orders.listByUser(user.id, 20);
+    const [orders, deposits] = await Promise.all([
+      repositories.orders.listByUser(user.id, 50),
+      repositories.deposits.listByUser(user.id, 50),
+    ]);
+
+    const spent = orders
+      .filter((order) => order.status === 'COMPLETED')
+      .reduce((total, order) => total.add(order.pricePaid), Money.ZERO);
+
+    const deposited = deposits
+      .filter((deposit) => deposit.status === 'APPROVED')
+      .reduce((total, deposit) => total.add(deposit.amount), Money.ZERO);
+
     return {
       user: {
         id: user.id,
@@ -249,10 +294,53 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
         firstName: user.firstName,
         username: user.username,
         isBanned: user.isBanned,
+        createdAt: user.createdAt.toISOString(),
         balance: { amount: user.balance.toDecimalString(), label: user.balance.format() },
       },
-      orderCount: orders.length,
+      totals: {
+        spent: { amount: spent.toDecimalString(), label: spent.format() },
+        deposited: { amount: deposited.toDecimalString(), label: deposited.format() },
+        orderCount: orders.length,
+        depositCount: deposits.length,
+      },
+      // Delivered items are withheld: an admin has no reason to read a
+      // customer's license keys, and this endpoint would be the easy way.
+      orders: orders.map((order) => ({ ...toOrderDto(order), deliveredItems: null })),
+      deposits: deposits.map((deposit) => ({
+        ...toDepositDto(deposit),
+        hasReceiptImage: deposit.screenshotUrl !== 'webapp-upload',
+      })),
     };
+  });
+
+  app.post('/api/admin/users/:telegramId/ban', async (request, reply) => {
+    const admin = await requireAdmin(request);
+
+    const { telegramId } = request.params as { telegramId: string };
+    const body = request.body as { banned?: unknown } | undefined;
+    if (typeof body?.banned !== 'boolean') {
+      return reply.code(400).send({ error: 'banned must be true or false' });
+    }
+
+    if (!/^\d{1,20}$/.test(telegramId)) {
+      return reply.code(400).send({ error: 'telegramId must be numeric' });
+    }
+
+    const user = await repositories.users.findByTelegramId(BigInt(telegramId));
+    if (!user) return reply.code(404).send({ error: 'USER_NOT_FOUND' });
+
+    // An admin locking themselves out of their own account helps nobody.
+    if (user.telegramId === admin.telegramId) {
+      return reply.code(409).send({ error: 'You cannot ban your own account' });
+    }
+
+    const updated = await repositories.users.setBanned(user.id, body.banned);
+    logger.warn(
+      { by: admin.telegramId.toString(), target: telegramId, banned: body.banned },
+      'User ban status changed',
+    );
+
+    return { isBanned: updated.isBanned };
   });
 
   app.post('/api/admin/users/:telegramId/balance', async (request, reply) => {

@@ -44,12 +44,15 @@ describe('RequestDepositUseCase', () => {
       findByTelegramId: vi.fn(),
       create: vi.fn(),
       adjustBalance: vi.fn(),
+      search: vi.fn(),
+      setBanned: vi.fn(),
     };
 
     deposits = {
       create: vi.fn().mockImplementation(async (data) => ({ id: 'd1', ...data })),
       findById: vi.fn(),
       listByStatus: vi.fn(),
+      listByUser: vi.fn(),
       approveAndCredit: vi.fn(),
       reject: vi.fn(),
     };

@@ -5,7 +5,7 @@ import { paymentMethodsAsMarkdown } from '../../../core/paymentMethods.js';
 import { MAX_DEPOSIT } from '../../../use-cases/deposit/RequestDepositUseCase.js';
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
-import { toUserMessage } from '../errorMessages.js';
+import { toUserMessage } from '../../../shared/errorMessages.js';
 
 // Shared with the web app's wallet screen so the two cannot disagree.
 const DEFAULT_INSTRUCTIONS = paymentMethodsAsMarkdown();

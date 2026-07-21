@@ -135,5 +135,26 @@ const forged = signInitData(
 );
 await check('forged initData claiming to be the admin', '/api/admin/summary', 401, forged);
 
+console.log('\n--- user administration ---');
+await check('outsider → GET /api/admin/users', '/api/admin/users', 403, asOutsider);
+const users = (await check('admin → GET /api/admin/users', '/api/admin/users', 200, asAdmin)) as {
+  users?: { telegramId: string; orderCount: number }[];
+  total?: number;
+};
+console.log(`     ${users?.total ?? 0} user(s)`);
+
+const first = users?.users?.[0]?.telegramId;
+if (first) {
+  await check(`admin → GET /api/admin/users/${first}`, `/api/admin/users/${first}`, 200, asAdmin);
+  await check('outsider → GET the same user', `/api/admin/users/${first}`, 403, asOutsider);
+}
+
+await check('admin → GET a non-numeric user id', '/api/admin/users/not-a-number', 400, asAdmin);
+await check('admin → GET an unknown user', '/api/admin/users/40404040', 404, asAdmin);
+await check('admin → ban own account', `/api/admin/users/${ADMIN_ID}/ban`, 409, asAdmin, {
+  method: 'POST',
+  body: JSON.stringify({ banned: true }),
+});
+
 console.log(failures === 0 ? '\nauthorisation boundary holds' : `\n${failures} CHECK(S) FAILED`);
 process.exit(failures === 0 ? 0 : 1);

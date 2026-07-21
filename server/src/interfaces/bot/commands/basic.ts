@@ -4,7 +4,7 @@ import { productDetails } from '../../../core/entities/Product.js';
 import { escapeHtml } from '../html.js';
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
-import { toUserMessage } from '../errorMessages.js';
+import { toUserMessage } from '../../../shared/errorMessages.js';
 import { mainMenu, productListKeyboard, confirmPurchaseKeyboard } from '../keyboards/menus.js';
 
 export function registerBasicCommands(bot: Telegraf<BotContext>, container: Container): void {

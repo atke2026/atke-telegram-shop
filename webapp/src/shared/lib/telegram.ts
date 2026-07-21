@@ -41,6 +41,10 @@ declare global {
   }
 }
 
+// Imported after the type declarations so theme.ts can read colorScheme.
+// eslint-disable-next-line import/first
+import { refreshThemeMode } from './theme';
+
 export function getWebApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp;
 }
@@ -66,20 +70,20 @@ export function getInitData(): string {
   return '';
 }
 
-/** Mirrors Telegram's colour scheme onto the root element for theme.css. */
-function applyColorScheme(webApp: TelegramWebApp): void {
-  document.documentElement.dataset.theme = webApp.colorScheme;
-}
-
 export function initTelegram(): void {
   const webApp = getWebApp();
+
+  // The stored preference is applied either way: the app may be open in a
+  // browser tab, where there is no Telegram to follow.
+  refreshThemeMode();
   if (!webApp) return;
 
   webApp.ready();
   webApp.expand();
-  applyColorScheme(webApp);
 
-  const onThemeChanged = () => applyColorScheme(webApp);
+  // Only meaningful while the user is on the default; refreshThemeMode keeps
+  // an explicit Day/Night choice pinned.
+  const onThemeChanged = () => refreshThemeMode();
   webApp.onEvent('themeChanged', onThemeChanged);
 
   // Match the header and background to the app's own surface colour.

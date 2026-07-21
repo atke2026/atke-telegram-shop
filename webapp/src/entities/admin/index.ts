@@ -1,4 +1,7 @@
 export {
+  useGetAdminUsersQuery,
+  useGetAdminUserQuery,
+  useSetUserBannedMutation,
   useGetAdminSummaryQuery,
   useGetAdminDepositsQuery,
   useApproveDepositMutation,
@@ -14,4 +17,6 @@ export {
   type AdminDepositRow,
   type AdminProductRow,
   type AdminRow,
+  type AdminUserRow,
+  type AdminUserDetail,
 } from './api/adminApi';

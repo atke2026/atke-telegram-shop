@@ -1,0 +1,59 @@
+.wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.trigger {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: var(--hairline);
+  box-shadow: var(--shadow-card);
+  color: var(--text);
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 31;
+  min-width: 210px;
+  padding: var(--space-1);
+  background: var(--surface);
+  border: var(--hairline);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-raised);
+  transform-origin: top right;
+  overflow: hidden;
+}
+
+.item,
+.itemSelected {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 10px var(--space-3);
+  border-radius: 10px;
+  font-size: 14px;
+  text-align: left;
+  color: var(--text);
+}
+
+.itemSelected {
+  color: var(--accent);
+  background: var(--bg-secondary);
+}
+
+.label {
+  flex: 1;
+}

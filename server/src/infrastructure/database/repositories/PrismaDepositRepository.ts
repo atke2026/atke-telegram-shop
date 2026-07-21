@@ -63,6 +63,16 @@ export class PrismaDepositRepository implements DepositRepository {
     return rows.map(toDeposit);
   }
 
+  async listByUser(userId: string, limit: number): Promise<Deposit[]> {
+    const rows = await this.prisma.deposit.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    return rows.map(toDeposit);
+  }
+
   async approveAndCredit(depositId: string, reviewerTelegramId: bigint): Promise<{ deposit: Deposit; user: User }> {
     return this.prisma.$transaction(async (tx) => {
       // Conditional on status: a second Approve tap updates 0 rows and bails out

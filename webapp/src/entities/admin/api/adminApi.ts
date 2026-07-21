@@ -31,6 +31,50 @@ export interface AdminProductRow {
   fixedPrice: boolean;
 }
 
+export interface AdminUserRow {
+  id: string;
+  telegramId: string;
+  firstName: string | null;
+  username: string | null;
+  isBanned: boolean;
+  createdAt: string;
+  balance: MoneyDto;
+  orderCount: number;
+  totalSpent: MoneyDto;
+}
+
+export interface AdminUserDetail {
+  user: {
+    id: string;
+    telegramId: string;
+    firstName: string | null;
+    username: string | null;
+    isBanned: boolean;
+    createdAt: string;
+    balance: MoneyDto;
+  };
+  totals: {
+    spent: MoneyDto;
+    deposited: MoneyDto;
+    orderCount: number;
+    depositCount: number;
+  };
+  orders: {
+    id: string;
+    productName: string;
+    pricePaid: MoneyDto;
+    status: string;
+    createdAt: string;
+  }[];
+  deposits: {
+    id: string;
+    amount: MoneyDto;
+    status: string;
+    createdAt: string;
+    hasReceiptImage: boolean;
+  }[];
+}
+
 export interface AdminRow {
   telegramId: string;
   firstName: string | null;
@@ -96,6 +140,32 @@ export const adminApi = baseApi.injectEndpoints({
       invalidatesTags: ['User'],
     }),
 
+    getAdminUsers: builder.query<
+      { users: AdminUserRow[]; total: number },
+      { query?: string; offset?: number }
+    >({
+      query: ({ query, offset = 0 }) => {
+        const params = new URLSearchParams({ offset: String(offset), limit: '30' });
+        if (query) params.set('query', query);
+        return `/admin/users?${params.toString()}`;
+      },
+      providesTags: ['AdminUser'],
+    }),
+
+    getAdminUser: builder.query<AdminUserDetail, string>({
+      query: (telegramId) => `/admin/users/${telegramId}`,
+      providesTags: ['AdminUser'],
+    }),
+
+    setUserBanned: builder.mutation<unknown, { telegramId: string; banned: boolean }>({
+      query: ({ telegramId, banned }) => ({
+        url: `/admin/users/${telegramId}/ban`,
+        method: 'POST',
+        body: { banned },
+      }),
+      invalidatesTags: ['AdminUser'],
+    }),
+
     getAdmins: builder.query<AdminRow[], void>({
       query: () => '/admin/admins',
       transformResponse: (response: { admins: AdminRow[] }) => response.admins,
@@ -115,6 +185,9 @@ export const adminApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetAdminUsersQuery,
+  useGetAdminUserQuery,
+  useSetUserBannedMutation,
   useGetAdminSummaryQuery,
   useGetAdminDepositsQuery,
   useApproveDepositMutation,
