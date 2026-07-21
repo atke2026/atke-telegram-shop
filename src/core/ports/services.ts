@@ -13,10 +13,13 @@ export interface HubxProduct {
 export interface HubxOrderResult {
   hubxOrderId: string | null;
   deliveredItems: DeliveredItem[];
+  /** HubX returned a previous delivery for this external_order_id — no new charge. */
+  idempotentReplay: boolean;
 }
 
 export interface HubxGateway {
   getProducts(): Promise<HubxProduct[]>;
+  getProduct(idOrSlug: string): Promise<HubxProduct | null>;
   getResellerBalanceUSDT(): Promise<string>;
   /** `externalOrderId` makes retries idempotent on HubX's side. */
   placeOrder(input: {
@@ -24,6 +27,8 @@ export interface HubxGateway {
     quantity: number;
     externalOrderId: string;
   }): Promise<HubxOrderResult>;
+  /** Re-fetches a delivery, for recovering items lost to a failed send. */
+  getOrder(hubxOrderId: string): Promise<HubxOrderResult | null>;
 }
 
 export interface CachePort {

@@ -84,10 +84,13 @@ describe('PlaceOrderUseCase', () => {
 
     hubx = {
       getProducts: vi.fn(),
+      getProduct: vi.fn(),
+      getOrder: vi.fn(),
       getResellerBalanceUSDT: vi.fn().mockResolvedValue('150.00'),
       placeOrder: vi.fn().mockResolvedValue({
         hubxOrderId: 'hubx-99',
         deliveredItems: [{ code: 'SECRET-123' }],
+        idempotentReplay: false,
       }),
     };
 

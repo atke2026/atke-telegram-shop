@@ -108,7 +108,17 @@ export class PlaceOrderUseCase {
       });
 
       await orders.markCompleted(orderId, result.hubxOrderId, result.deliveredItems);
-      logger.info({ orderId, userId: user.id, productId: product.id }, 'Order fulfilled');
+      logger.info(
+        {
+          orderId,
+          userId: user.id,
+          productId: product.id,
+          hubxOrderId: result.hubxOrderId,
+          // Should never be true on a fresh UUID; if it is, HubX saw this id before.
+          idempotentReplay: result.idempotentReplay,
+        },
+        'Order fulfilled',
+      );
 
       return {
         orderId,

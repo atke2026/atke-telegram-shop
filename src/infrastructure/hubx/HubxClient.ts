@@ -1,19 +1,33 @@
-import { InvalidApiKeyError, OutOfStockError, SystemOfflineError } from '../../core/errors/DomainError.js';
+import {
+  InvalidApiKeyError,
+  OutOfStockError,
+  ProductNotFoundError,
+  SystemOfflineError,
+} from '../../core/errors/DomainError.js';
 import type { HubxGateway, HubxOrderResult, HubxProduct } from '../../core/ports/services.js';
 import type { Logger } from '../../shared/logger.js';
 
 interface HubxClientOptions {
+  /** Full base including the version prefix, e.g. https://host/api/public/reseller/v1 */
   baseUrl: string;
   apiKey: string;
   logger: Logger;
   timeoutMs?: number;
 }
 
-/** Raised for transport/5xx faults so callers can distinguish them from business errors. */
+/** Transport or unmapped-status fault — distinct from an expected business error. */
 export class HubxRequestError extends Error {
   constructor(message: string, readonly status?: number) {
     super(message);
     this.name = 'HubxRequestError';
+  }
+}
+
+/** Signals a 404 from HubX so callers can decide what was missing. */
+class HubxNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'HubxNotFoundError';
   }
 }
 
@@ -31,18 +45,28 @@ export class HubxClient implements HubxGateway {
   }
 
   async getProducts(): Promise<HubxProduct[]> {
-    const body = await this.request<{ data?: unknown[] } | unknown[]>('GET', '/products');
-    const rows = Array.isArray(body) ? body : (body.data ?? []);
+    const body = await this.request<unknown>('GET', '/products');
+    const rows = unwrapList(body);
 
-    return rows.map((row) => this.toProduct(row as Record<string, unknown>));
+    return rows.map((row) => this.toProduct(row));
+  }
+
+  async getProduct(idOrSlug: string): Promise<HubxProduct | null> {
+    try {
+      const body = await this.request<unknown>('GET', `/products/${encodeURIComponent(idOrSlug)}`);
+      return this.toProduct(unwrapObject(body));
+    } catch (error) {
+      if (error instanceof HubxNotFoundError) return null;
+      throw error;
+    }
   }
 
   async getResellerBalanceUSDT(): Promise<string> {
-    const body = await this.request<Record<string, unknown>>('GET', '/balance');
-    const raw = body.balance ?? body.available_balance ?? (body.data as Record<string, unknown> | undefined)?.balance;
+    const payload = unwrapObject(await this.request<unknown>('GET', '/balance'));
+    const raw = payload.balance ?? payload.available_balance ?? payload.amount;
 
     if (raw === undefined || raw === null) {
-      throw new HubxRequestError('Balance response did not contain a balance field');
+      throw new HubxRequestError('Balance response contained no balance field');
     }
 
     return String(raw);
@@ -53,18 +77,38 @@ export class HubxClient implements HubxGateway {
     quantity: number;
     externalOrderId: string;
   }): Promise<HubxOrderResult> {
-    const body = await this.request<Record<string, unknown>>('POST', '/orders', {
-      product_id: input.productId,
-      quantity: input.quantity,
-      external_order_id: input.externalOrderId,
-    });
+    const body = await this.request<unknown>(
+      'POST',
+      '/orders',
+      {
+        product_id: input.productId,
+        quantity: input.quantity,
+        external_order_id: input.externalOrderId,
+      },
+      // A 404 here means the product vanished between our sync and the order.
+      (message) => new ProductNotFoundError(message),
+    );
 
-    const payload = (body.data as Record<string, unknown> | undefined) ?? body;
+    return this.toOrderResult(unwrapObject(body));
+  }
+
+  async getOrder(hubxOrderId: string): Promise<HubxOrderResult | null> {
+    try {
+      const body = await this.request<unknown>('GET', `/orders/${encodeURIComponent(hubxOrderId)}`);
+      return this.toOrderResult(unwrapObject(body));
+    } catch (error) {
+      if (error instanceof HubxNotFoundError) return null;
+      throw error;
+    }
+  }
+
+  private toOrderResult(payload: Record<string, unknown>): HubxOrderResult {
     const items = payload.delivered_items;
 
     return {
       hubxOrderId: payload.id != null ? String(payload.id) : null,
       deliveredItems: Array.isArray(items) ? (items as HubxOrderResult['deliveredItems']) : [],
+      idempotentReplay: payload.idempotent_replay === true,
     };
   }
 
@@ -77,18 +121,23 @@ export class HubxClient implements HubxGateway {
       name: String(row.name ?? 'Unnamed product'),
       description: row.description != null ? String(row.description) : null,
       stock: Number.isFinite(stock) ? stock : 0,
+      // /products only lists active items, so absence of the flag means active.
       isActive: row.is_active !== false && row.status !== 'inactive',
       priceUSDT: String(row.price ?? row.price_usdt ?? '0'),
     };
   }
 
-  private async request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
+  private async request<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+    onNotFound?: (message: string) => Error,
+  ): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const response = await fetch(url, {
+      const response = await fetch(`${this.baseUrl}${path}`, {
         method,
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
@@ -103,8 +152,11 @@ export class HubxClient implements HubxGateway {
       const parsed = text ? safeJsonParse(text) : null;
 
       if (!response.ok) {
-        this.logger.warn({ method, path, status: response.status, body: text.slice(0, 500) }, 'HubX request failed');
-        throw this.toError(response.status, parsed, text);
+        this.logger.warn(
+          { method, path, status: response.status, body: text.slice(0, 500) },
+          'HubX request failed',
+        );
+        throw this.toError(response.status, parsed, text, onNotFound);
       }
 
       return parsed as T;
@@ -118,22 +170,65 @@ export class HubxClient implements HubxGateway {
     }
   }
 
-  private toError(status: number, parsed: unknown, rawText: string): Error {
-    const message =
-      (parsed && typeof parsed === 'object' && 'message' in parsed ? String((parsed as { message: unknown }).message) : '') ||
-      rawText.slice(0, 200) ||
-      `HTTP ${status}`;
+  private toError(
+    status: number,
+    parsed: unknown,
+    rawText: string,
+    onNotFound?: (message: string) => Error,
+  ): Error {
+    const message = extractMessage(parsed) || rawText.slice(0, 200) || `HTTP ${status}`;
 
-    if (status === 401 || status === 403) return new InvalidApiKeyError();
-    // HubX signals both "product sold out" and "reseller wallet empty" in the 4xx range;
-    // the message is what separates them.
-    if (status === 409) {
-      return /balance|fund/i.test(message) ? new SystemOfflineError(message) : new OutOfStockError(message);
+    switch (status) {
+      case 401:
+        return new InvalidApiKeyError();
+      case 402:
+        // Our reseller wallet is empty — the customer did nothing wrong.
+        return new SystemOfflineError(`insufficient reseller balance: ${message}`);
+      case 404:
+        return onNotFound ? onNotFound(message) : new HubxNotFoundError(message);
+      case 409:
+        // HubX auto-refunds our wallet on a failed allocation, so there is
+        // nothing to reconcile upstream — only the customer needs refunding.
+        return new OutOfStockError(message);
+      default:
+        return new HubxRequestError(message, status);
     }
-    if (status === 402) return new SystemOfflineError(message);
-
-    return new HubxRequestError(message, status);
   }
+}
+
+function extractMessage(parsed: unknown): string {
+  if (!parsed || typeof parsed !== 'object') return '';
+
+  const record = parsed as Record<string, unknown>;
+  const candidate = record.message ?? record.error ?? record.detail;
+
+  return typeof candidate === 'string' ? candidate : '';
+}
+
+/**
+ * HubX wraps responses in an `{ok, …}` envelope; the payload key is not
+ * documented, so accept a bare array or any of the plausible wrappers.
+ */
+function unwrapList(body: unknown): Record<string, unknown>[] {
+  if (Array.isArray(body)) return body as Record<string, unknown>[];
+  if (!body || typeof body !== 'object') return [];
+
+  const record = body as Record<string, unknown>;
+  for (const key of ['data', 'products', 'items', 'results']) {
+    const candidate = record[key];
+    if (Array.isArray(candidate)) return candidate as Record<string, unknown>[];
+  }
+
+  return [];
+}
+
+function unwrapObject(body: unknown): Record<string, unknown> {
+  if (!body || typeof body !== 'object') return {};
+
+  const record = body as Record<string, unknown>;
+  const data = record.data;
+
+  return data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>) : record;
 }
 
 function safeJsonParse(text: string): unknown {

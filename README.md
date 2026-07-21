@@ -73,8 +73,22 @@ Balances are integer minor units (`Money`, backed by `bigint`) in the domain and
 npm test
 ```
 
-## Before going live
+## HubX integration
 
-The HubX request/response shapes in `src/infrastructure/hubx/HubxClient.ts` were written
-against the plan, not the live API. Verify the endpoint paths, the auth header, and the
-JSON field names against the real HubX documentation before taking real payments.
+Base URL includes the version prefix: `…/api/public/reseller/v1`. Auth is
+`Authorization: Bearer rsk_live_…`.
+
+Status mapping (`src/infrastructure/hubx/HubxClient.ts`):
+
+| Status | Meaning | Mapped to | Customer sees |
+| --- | --- | --- | --- |
+| 401 | invalid/revoked key | `InvalidApiKeyError` | "store offline" + admin alert |
+| 402 | our reseller wallet is empty | `SystemOfflineError` | "store offline" + admin alert |
+| 404 | product/order missing | `ProductNotFoundError` / `null` | "no longer available" |
+| 409 | out of stock (HubX auto-refunds us) | `OutOfStockError` | "out of stock", wallet refunded |
+
+**Still unverified:** the success-response envelope. A 401 probe returns
+`{"ok":false,"error":"…"}`, so responses are wrapped, but the payload key on success is
+undocumented. `unwrapList` accepts `data`/`products`/`items`/`results` and a bare array.
+Run `/sync` with a real key as the first live check — if it reports 0 products while the
+dashboard shows some, that unwrapper is the thing to fix.
