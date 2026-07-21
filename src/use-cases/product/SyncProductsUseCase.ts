@@ -1,5 +1,5 @@
 import { Money } from '../../core/entities/Money.js';
-import { calculateSellingPrice, type Product } from '../../core/entities/Product.js';
+import { resolveSellingPrice, type Product } from '../../core/entities/Product.js';
 import type { ConfigRepository, ProductRepository } from '../../core/ports/repositories.js';
 import type { CachePort, HubxGateway } from '../../core/ports/services.js';
 import { CACHE_KEYS, CONFIG_KEYS } from '../../core/constants.js';
@@ -33,12 +33,14 @@ export class SyncProductsUseCase {
     const rate = (await config.get(CONFIG_KEYS.usdtEtbRate)) ?? defaultRate;
     const upstream = await hubx.getProducts();
 
-    // Existing rows carry the admin's markup, which the price must include.
+    // Existing rows carry operator-owned pricing that a sync must preserve.
     const existing = await products.listActive();
-    const markupById = new Map(existing.map((product) => [product.id, product.markup]));
+    const existingById = new Map(existing.map((product) => [product.id, product]));
 
     const repriced: Product[] = upstream.map((item) => {
-      const markup = markupById.get(item.id) ?? Money.ZERO;
+      const current = existingById.get(item.id);
+      const markup = current?.markup ?? Money.ZERO;
+      const priceOverride = current?.priceOverride ?? null;
 
       return {
         id: item.id,
@@ -49,7 +51,8 @@ export class SyncProductsUseCase {
         isActive: item.isActive,
         costPriceUSDT: item.priceUSDT,
         markup,
-        sellingPrice: calculateSellingPrice(item.priceUSDT, rate, markup),
+        priceOverride,
+        sellingPrice: resolveSellingPrice(item.priceUSDT, rate, markup, priceOverride),
         updatedAt: new Date(),
       };
     });

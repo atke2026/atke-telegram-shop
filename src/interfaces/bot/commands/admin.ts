@@ -115,6 +115,79 @@ export function registerAdminCommands(bot: Telegraf<BotContext>, container: Cont
     });
   });
 
+  bot.command('prices', async (ctx) => {
+    if (!(await requireAdmin(ctx))) return;
+
+    const products = await repositories.products.listActive();
+    if (products.length === 0) return ctx.reply('📭 No products. Run /sync first.');
+
+    const lines = products.map(
+      (product) =>
+        `${product.priceOverride ? '📌' : '🔄'} \`${product.slug}\`\n` +
+        `   ${product.name}\n` +
+        `   ${product.costPriceUSDT} USDT → *${product.sellingPrice.format()}*  stock ${product.stock}`,
+    );
+
+    await ctx.reply(
+      `💵 *Prices* (📌 fixed · 🔄 auto)\n\n${lines.join('\n')}\n\n` +
+        `Set one: \`/setprice <slug> <birr>\`\nBack to auto: \`/autoprice <slug>\``,
+      { parse_mode: 'Markdown' },
+    );
+  });
+
+  bot.command('setprice', async (ctx) => {
+    if (!(await requireAdmin(ctx))) return;
+
+    const [, slug, amount] = ctx.message.text.trim().split(/\s+/);
+    if (!slug || !amount || !/^\d+(\.\d{1,2})?$/.test(amount.replace(/,/g, ''))) {
+      return ctx.reply(
+        'Usage: `/setprice <slug> <birr>`\nExample: `/setprice google-ai-pro 2500`\n\nSee /prices for slugs.',
+        { parse_mode: 'Markdown' },
+      );
+    }
+
+    try {
+      const result = await useCases.setProductPrice.execute({
+        slugOrId: slug,
+        priceETB: amount.replace(/,/g, ''),
+      });
+
+      await ctx.reply(
+        `✅ *${result.product.name}*\n\n` +
+          `Price: ${result.previousPrice.format()} → *${result.product.sellingPrice.format()}*\n` +
+          `Cost: ${result.product.costPriceUSDT} USDT (auto price would be ${result.computedPrice.format()})\n\n` +
+          `📌 Fixed — it will not move when the USDT rate changes.\n` +
+          `Revert with \`/autoprice ${result.product.slug}\`.`,
+        { parse_mode: 'Markdown' },
+      );
+    } catch (error) {
+      logger.warn({ err: error, slug }, 'Set price failed');
+      await ctx.reply(toUserMessage(error));
+    }
+  });
+
+  bot.command('autoprice', async (ctx) => {
+    if (!(await requireAdmin(ctx))) return;
+
+    const [, slug] = ctx.message.text.trim().split(/\s+/);
+    if (!slug) {
+      return ctx.reply('Usage: `/autoprice <slug>`', { parse_mode: 'Markdown' });
+    }
+
+    try {
+      const result = await useCases.setProductPrice.execute({ slugOrId: slug, priceETB: null });
+
+      await ctx.reply(
+        `🔄 *${result.product.name}* is back to automatic pricing.\n\n` +
+          `Price: ${result.previousPrice.format()} → *${result.product.sellingPrice.format()}*`,
+        { parse_mode: 'Markdown' },
+      );
+    } catch (error) {
+      logger.warn({ err: error, slug }, 'Auto price failed');
+      await ctx.reply(toUserMessage(error));
+    }
+  });
+
   bot.command('setinstructions', async (ctx) => {
     if (!(await requireAdmin(ctx))) return;
 

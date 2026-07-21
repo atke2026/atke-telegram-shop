@@ -92,6 +92,9 @@ model Product {
   costPriceUSDT   Decimal  @db.Decimal(18, 6)
   // Markup applied on top of the converted ETB cost.
   markupETB       Decimal  @default(0) @db.Decimal(18, 2)
+  // Operator-set retail price. When present it wins over cost*rate+markup and
+  // stays put as the exchange rate moves.
+  priceOverrideETB Decimal? @db.Decimal(18, 2)
   sellingPriceETB Decimal  @db.Decimal(18, 2)
   updatedAt       DateTime @updatedAt
 

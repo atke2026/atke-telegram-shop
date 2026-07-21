@@ -1,3 +1,5 @@
+import { Agent } from 'node:https';
+
 import { Telegraf } from 'telegraf';
 
 import type {
@@ -21,6 +23,7 @@ import { ApproveDepositUseCase, RejectDepositUseCase } from '../use-cases/deposi
 import { RequestDepositUseCase } from '../use-cases/deposit/RequestDepositUseCase.js';
 import { PlaceOrderUseCase } from '../use-cases/order/PlaceOrderUseCase.js';
 import { ListProductsUseCase } from '../use-cases/product/ListProductsUseCase.js';
+import { SetProductPriceUseCase } from '../use-cases/product/SetProductPriceUseCase.js';
 import { SyncProductsUseCase } from '../use-cases/product/SyncProductsUseCase.js';
 import { RegisterUserUseCase } from '../use-cases/user/RegisterUserUseCase.js';
 import type { Config } from './config.js';
@@ -47,6 +50,7 @@ export interface Container {
   useCases: {
     registerUser: RegisterUserUseCase;
     listProducts: ListProductsUseCase;
+    setProductPrice: SetProductPriceUseCase;
     syncProducts: SyncProductsUseCase;
     placeOrder: PlaceOrderUseCase;
     requestDeposit: RequestDepositUseCase;
@@ -61,7 +65,12 @@ export function buildContainer(config: Config): Container {
 
   const prisma = createPrismaClient(config.DATABASE_URL);
   const cache = RedisCache.connect(config.REDIS_URL, logger);
-  const bot = new Telegraf(config.BOT_TOKEN);
+  // api.telegram.org publishes an AAAA record, but hosts without an IPv6 route
+  // stall on it instead of falling back cleanly. Pinning the agent to IPv4
+  // avoids that; keepAlive also spares a TLS handshake per API call.
+  const bot = new Telegraf(config.BOT_TOKEN, {
+    telegram: { agent: new Agent({ family: 4, keepAlive: true }) },
+  });
 
   const repositories = {
     users: new PrismaUserRepository(prisma),
@@ -77,6 +86,12 @@ export function buildContainer(config: Config): Container {
   const useCases = {
     registerUser: new RegisterUserUseCase({ users: repositories.users }),
     listProducts: new ListProductsUseCase({ products: repositories.products }),
+    setProductPrice: new SetProductPriceUseCase({
+      products: repositories.products,
+      config: repositories.config,
+      cache,
+      defaultRate: String(config.DEFAULT_USDT_ETB_RATE),
+    }),
     syncProducts: new SyncProductsUseCase({
       hubx,
       products: repositories.products,

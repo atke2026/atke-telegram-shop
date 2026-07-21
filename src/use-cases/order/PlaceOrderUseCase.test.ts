@@ -45,6 +45,7 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
     isActive: true,
     costPriceUSDT: '2.00',
     markup: Money.fromDecimal('20'),
+    priceOverride: null,
     sellingPrice: Money.fromDecimal('340'),
     updatedAt: new Date(),
     ...overrides,
@@ -69,7 +70,9 @@ describe('PlaceOrderUseCase', () => {
 
     products = {
       findById: vi.fn().mockResolvedValue(makeProduct()),
+      findBySlugOrId: vi.fn(),
       listActive: vi.fn(),
+      setPriceOverride: vi.fn(),
       upsertMany: vi.fn(),
       deactivateMissing: vi.fn(),
     };

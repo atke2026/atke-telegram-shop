@@ -14,7 +14,11 @@ export interface UserRepository {
 
 export interface ProductRepository {
   findById(id: string): Promise<Product | null>;
+  /** Accepts either the HubX uuid or the human-friendly slug. */
+  findBySlugOrId(value: string): Promise<Product | null>;
   listActive(): Promise<Product[]>;
+  /** Sets or clears the fixed retail price, storing the resulting price. */
+  setPriceOverride(productId: string, override: Money | null, sellingPrice: Money): Promise<Product>;
   /** Insert-or-update the synced catalogue; returns how many rows changed. */
   upsertMany(products: Product[]): Promise<number>;
   deactivateMissing(seenIds: string[]): Promise<number>;
