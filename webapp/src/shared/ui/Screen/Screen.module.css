@@ -1,0 +1,12 @@
+.screen {
+  padding: var(--space-4) var(--space-4) calc(var(--nav-height) + var(--space-6));
+  min-height: var(--app-height);
+  background: var(--bg-secondary);
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-4);
+}

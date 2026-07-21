@@ -1,0 +1,87 @@
+.card {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border: var(--hairline);
+  border-radius: var(--radius-button);
+  background: var(--bg-secondary);
+  font-size: 17px;
+  font-weight: 600;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 116px;
+  padding: var(--space-3);
+  border: 1px dashed var(--text-muted);
+  border-radius: var(--radius-card);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.preview {
+  max-height: 90px;
+  max-width: 100%;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.fileName {
+  font-size: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--destructive);
+}
+
+.success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+}
+
+.successIcon {
+  color: #34c759;
+}
+
+.successTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.successBody {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}

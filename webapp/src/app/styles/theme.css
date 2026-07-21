@@ -1,0 +1,47 @@
+/*
+ * Every colour resolves to a Telegram theme variable, with a fallback for when
+ * the app is opened outside Telegram (a browser tab during development).
+ * Nothing below hardcodes a brand colour for surfaces or text — that is what
+ * lets the app follow the user's Dark/Light/custom theme automatically.
+ */
+:root {
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --bg-secondary: var(--tg-theme-secondary-bg-color, #f2f2f7);
+  --surface: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #ffffff));
+  --text: var(--tg-theme-text-color, #000000);
+  --text-muted: var(--tg-theme-hint-color, #8e8e93);
+  --link: var(--tg-theme-link-color, #2481cc);
+  --accent: var(--tg-theme-button-color, #2481cc);
+  --accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --destructive: var(--tg-theme-destructive-text-color, #e53935);
+
+  /* Section 3 of the plan: microscopic borders, tight non-diffused shadows. */
+  --hairline: 0.5px solid rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+  --radius-card: 14px;
+  --radius-button: 12px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --nav-height: 60px;
+  /* Telegram reports the real viewport; falls back to the CSS unit elsewhere. */
+  --app-height: var(--tg-viewport-stable-height, 100dvh);
+}
+
+/*
+ * Telegram sets colorScheme on the root element. A hairline of rgba(0,0,0,.1)
+ * vanishes on a dark surface, so both the border and shadow invert.
+ */
+:root[data-theme='dark'] {
+  --hairline: 0.5px solid rgba(255, 255, 255, 0.12);
+  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.6);
+}

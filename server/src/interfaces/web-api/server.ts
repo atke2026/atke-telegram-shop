@@ -1,4 +1,8 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 
 import type { User } from '../../core/entities/User.js';
@@ -52,6 +56,16 @@ export function createWebApi(container: Container): FastifyInstance {
     credentials: true,
   });
 
+  // Serve the product logos from the repo root, so the web app and the bot
+  // read the same files instead of keeping divergent copies.
+  void app.register(fastifyStatic, {
+    root: path.resolve(fileURLToPath(import.meta.url), '../../../../..', 'assets/logos'),
+    prefix: '/logos/',
+    decorateReply: false,
+    cacheControl: true,
+    maxAge: '7d',
+  });
+
   /**
    * Authentication. The client sends the raw Telegram initData string; we
    * verify its HMAC against the bot token on every request. There is no
@@ -59,7 +73,8 @@ export function createWebApi(container: Container): FastifyInstance {
    * so a leaked string expires on its own.
    */
   app.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
-    if (request.url.startsWith('/api/health')) return;
+    // Health and logos are public; everything else needs valid initData.
+    if (request.url.startsWith('/api/health') || request.url.startsWith('/logos/')) return;
 
     const header = request.headers.authorization ?? '';
     const initData = header.startsWith('tma ')

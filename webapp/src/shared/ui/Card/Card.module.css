@@ -1,0 +1,11 @@
+.card {
+  background: var(--surface);
+  border: var(--hairline);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.interactive {
+  cursor: pointer;
+}
