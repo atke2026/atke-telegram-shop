@@ -11,7 +11,8 @@ export const mainMenu = Markup.keyboard([
 export function productListKeyboard(products: ProductListItem[]) {
   const rows = products.map((product) => [
     Markup.button.callback(
-      `${product.inStock ? '🟢' : '🔴'} ${product.name} — ${product.priceLabel}`,
+      `${product.name} — ${product.priceLabel}`,
+      // Out-of-stock rows stay tappable but answer with a notice instead.
       product.inStock ? `product:${product.id}` : 'noop',
     ),
   ]);

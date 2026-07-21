@@ -40,7 +40,7 @@ export function registerBasicCommands(bot: Telegraf<BotContext>, container: Cont
       return ctx.reply('📭 No products are available right now. Please check back soon.');
     }
 
-    await ctx.reply('🛒 *Available products*\n\nTap one to see details:', {
+    await ctx.reply('🏪 *Shop Deals*\n\n👇 Tap a product to view details.', {
       parse_mode: 'Markdown',
       ...productListKeyboard(products),
     });
