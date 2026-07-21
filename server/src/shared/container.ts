@@ -1,4 +1,6 @@
 import { Agent } from 'node:https';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { Telegraf } from 'telegraf';
 
@@ -20,6 +22,7 @@ import { PrismaOrderRepository } from '../infrastructure/database/repositories/P
 import { PrismaProductRepository } from '../infrastructure/database/repositories/PrismaProductRepository.js';
 import { PrismaUserRepository } from '../infrastructure/database/repositories/PrismaUserRepository.js';
 import { HubxClient } from '../infrastructure/hubx/HubxClient.js';
+import { ReceiptStorage } from '../infrastructure/storage/ReceiptStorage.js';
 import { TelegramNotifier } from '../interfaces/bot/TelegramNotifier.js';
 import { ApproveDepositUseCase, RejectDepositUseCase } from '../use-cases/deposit/ReviewDepositUseCase.js';
 import { RequestDepositUseCase } from '../use-cases/deposit/RequestDepositUseCase.js';
@@ -48,6 +51,7 @@ export interface Container {
   };
   services: {
     hubx: HubxGateway;
+    receipts: ReceiptStorage;
     notifier: AdminNotifier;
     depositNotifier: DepositNotifier;
     cache: CachePort;
@@ -88,6 +92,14 @@ export function buildContainer(config: Config): Container {
   };
 
   const hubx = new HubxClient({ baseUrl: config.HUBX_API_URL, apiKey: config.HUBX_API_KEY, logger });
+
+  // Deliberately one level above server/: deploys rsync --delete that
+  // directory, which would take every stored receipt with it. Four segments up
+  // lands on the repo root from both src/shared/ and dist/shared/.
+  const receipts = new ReceiptStorage(
+    config.RECEIPTS_DIR ||
+      path.resolve(fileURLToPath(import.meta.url), '../../../..', 'data/receipts'),
+  );
   const notifier = new TelegramNotifier(bot, config.ADMIN_TELEGRAM_IDS, logger);
 
   const useCases = {
@@ -136,7 +148,7 @@ export function buildContainer(config: Config): Container {
     prisma,
     cache,
     repositories,
-    services: { hubx, notifier, depositNotifier: notifier, cache },
+    services: { hubx, receipts, notifier, depositNotifier: notifier, cache },
     useCases,
     async shutdown() {
       await Promise.allSettled([prisma.$disconnect(), cache.disconnect()]);

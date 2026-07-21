@@ -38,6 +38,8 @@ const schema = z.object({
         .map((origin) => origin.trim())
         .filter(Boolean),
     ),
+  /** Where web-app receipt uploads are kept so admins can review them. */
+  RECEIPTS_DIR: z.string().default(''),
   /** How long a Telegram initData string stays acceptable. */
   INIT_DATA_MAX_AGE_SECONDS: z.coerce.number().int().positive().default(86_400),
 });

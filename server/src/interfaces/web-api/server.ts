@@ -8,6 +8,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import type { User } from '../../core/entities/User.js';
 import { DomainError } from '../../core/errors/DomainError.js';
 import { PAYMENT_METHODS } from '../../core/paymentMethods.js';
+import { UnsupportedImageError } from '../../infrastructure/storage/ReceiptStorage.js';
 import { registerAdminRoutes } from './adminRoutes.js';
 import { InitDataError, verifyInitData } from '../../infrastructure/telegram/verifyInitData.js';
 import type { Container } from '../../shared/container.js';
@@ -205,12 +206,23 @@ export function createWebApi(container: Container): FastifyInstance {
     if (buffer.length === 0) return reply.code(400).send({ error: 'receipt image is empty' });
 
     const user = requireUser(request);
+
+    // Stored before the deposit row exists: an admin has to be able to see the
+    // receipt to verify it, and a deposit recorded without one is unreviewable.
+    let receiptReference: string;
+    try {
+      receiptReference = await container.services.receipts.save(buffer);
+    } catch (error) {
+      if (error instanceof UnsupportedImageError) {
+        return reply.code(400).send({ error: 'receipt must be a JPEG, PNG, WebP or GIF image' });
+      }
+      throw error;
+    }
+
     const deposit = await useCases.requestDeposit.execute({
       userId: user.id,
       amountETB,
-      // The bot flow stores a Telegram file_id here; a web upload has no id
-      // until Telegram accepts it, so record the origin instead.
-      screenshotUrl: 'webapp-upload',
+      screenshotUrl: receiptReference,
     });
 
     await container.services.depositNotifier.notifyNewDeposit({

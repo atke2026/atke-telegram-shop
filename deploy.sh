@@ -163,9 +163,12 @@ else
 fi
 
 # --- directories ---
-mkdir -p "\$APP_DIR" "\$APP_DIR/assets" /var/www/yeneshop
+# data/ holds uploaded receipts and is deliberately outside server/, which
+# every deploy replaces with rsync --delete.
+mkdir -p "\$APP_DIR" "\$APP_DIR/assets" "\$APP_DIR/data/receipts" /var/www/yeneshop
 # The deploying account owns the tree so rsync needs no sudo.
 chown -R "$SSH_USER":"$SSH_USER" "\$APP_DIR" /var/www/yeneshop
+chmod 700 "\$APP_DIR/data/receipts"
 
 # --- firewall (only if already enabled; do not lock anyone out) ---
 if ufw status 2>/dev/null | grep -q "Status: active"; then

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import { Money } from '../../core/entities/Money.js';
 import type { User } from '../../core/entities/User.js';
+import { isStoredReceipt } from '../../infrastructure/storage/ReceiptStorage.js';
 import { NotAnAdminError } from '../../use-cases/admin/ManageAdminsUseCase.js';
 import type { Container } from '../../shared/container.js';
 import { toDepositDto, toProductDto } from './serializers.js';
@@ -82,6 +83,8 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
         const user = await repositories.users.findById(deposit.userId);
         return {
           ...toDepositDto(deposit),
+          // Only the earliest web uploads, made before receipts were stored,
+          // have nothing to show.
           hasReceiptImage: deposit.screenshotUrl !== 'webapp-upload',
           user: user
             ? {
@@ -106,9 +109,20 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
     const deposit = await repositories.deposits.findById(id);
     if (!deposit) return reply.code(404).send({ error: 'DEPOSIT_NOT_FOUND' });
 
-    // Web uploads are handed straight to Telegram and never stored here.
+    // Deposits made before receipts were stored have nothing on disk.
     if (deposit.screenshotUrl === 'webapp-upload') {
       return reply.code(404).send({ error: 'RECEIPT_NOT_STORED' });
+    }
+
+    if (isStoredReceipt(deposit.screenshotUrl)) {
+      const stored = await services.receipts.read(deposit.screenshotUrl);
+      if (!stored) return reply.code(404).send({ error: 'RECEIPT_NOT_FOUND' });
+
+      return reply
+        .header('Content-Type', stored.contentType)
+        // Receipts are personal data: never let a shared cache keep a copy.
+        .header('Cache-Control', 'private, max-age=300')
+        .send(stored.buffer);
     }
 
     try {

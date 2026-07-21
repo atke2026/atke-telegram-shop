@@ -1,6 +1,8 @@
 import { UploadSimple, CheckCircle } from '@phosphor-icons/react';
 import { useRef, useState } from 'react';
 
+import { compressImage, formatBytes } from '@shared/lib/compressImage';
+
 import { useRequestDepositMutation } from '@entities/deposit';
 import { apiErrorMessage } from '@shared/api/baseApi';
 import { haptics } from '@shared/lib/telegram';
@@ -8,31 +10,48 @@ import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 import styles from './DepositForm.module.css';
 
-/** Matches the server's own limit, so an oversized file fails here not there. */
-const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
+/** Applies to the *original* pick; compression usually brings it far below. */
+const MAX_RECEIPT_BYTES = 20 * 1024 * 1024;
 
 export function DepositForm({ minimumLabel }: { minimumLabel: string }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [amount, setAmount] = useState('');
-  const [receipt, setReceipt] = useState<{ name: string; dataUrl: string } | null>(null);
+  const [receipt, setReceipt] = useState<{
+    name: string;
+    dataUrl: string;
+    sizeLabel: string;
+  } | null>(null);
+  const [compressing, setCompressing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [requestDeposit, { isLoading }] = useRequestDepositMutation();
 
-  const pickFile = (file: File) => {
+  const pickFile = async (file: File) => {
     if (file.size > MAX_RECEIPT_BYTES) {
-      setError('That image is larger than 5MB. Please choose a smaller one.');
+      setError('That image is too large. Please choose a smaller one.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setReceipt({ name: file.name, dataUrl: String(reader.result) });
-      setError(null);
+    setCompressing(true);
+    setError(null);
+
+    try {
+      const result = await compressImage(file);
+      const shrunk = result.compressedBytes < result.originalBytes;
+
+      setReceipt({
+        name: file.name,
+        dataUrl: result.dataUrl,
+        sizeLabel: shrunk
+          ? `${formatBytes(result.originalBytes)} → ${formatBytes(result.compressedBytes)}`
+          : formatBytes(result.compressedBytes),
+      });
       haptics.select();
-    };
-    reader.onerror = () => setError('Could not read that image.');
-    reader.readAsDataURL(file);
+    } catch {
+      setError('Could not read that image.');
+    } finally {
+      setCompressing(false);
+    }
   };
 
   const submit = async () => {
@@ -88,15 +107,17 @@ export function DepositForm({ minimumLabel }: { minimumLabel: string }) {
         hidden
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) pickFile(file);
+          if (file) void pickFile(file);
         }}
       />
 
       <button type="button" className={styles.dropzone} onClick={() => fileInput.current?.click()}>
-        {receipt ? (
+        {compressing ? (
+          <span>Preparing image…</span>
+        ) : receipt ? (
           <>
             <img className={styles.preview} src={receipt.dataUrl} alt="" />
-            <span className={styles.fileName}>{receipt.name}</span>
+            <span className={styles.fileName}>{receipt.sizeLabel}</span>
           </>
         ) : (
           <>
@@ -111,7 +132,7 @@ export function DepositForm({ minimumLabel }: { minimumLabel: string }) {
       <Button
         fullWidth
         loading={isLoading}
-        disabled={!amount || !receipt}
+        disabled={!amount || !receipt || compressing}
         onClick={() => void submit()}
       >
         Submit for review
