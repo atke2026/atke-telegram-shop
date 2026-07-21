@@ -3,6 +3,7 @@ import { Agent } from 'node:https';
 import { Telegraf } from 'telegraf';
 
 import type {
+  AdminRepository,
   ConfigRepository,
   DepositRepository,
   OrderRepository,
@@ -12,6 +13,7 @@ import type {
 import type { AdminNotifier, CachePort, DepositNotifier, HubxGateway } from '../core/ports/services.js';
 import { RedisCache } from '../infrastructure/cache/RedisCache.js';
 import { createPrismaClient, type PrismaClient } from '../infrastructure/database/prisma.js';
+import { PrismaAdminRepository } from '../infrastructure/database/repositories/PrismaAdminRepository.js';
 import { PrismaConfigRepository } from '../infrastructure/database/repositories/PrismaConfigRepository.js';
 import { PrismaDepositRepository } from '../infrastructure/database/repositories/PrismaDepositRepository.js';
 import { PrismaOrderRepository } from '../infrastructure/database/repositories/PrismaOrderRepository.js';
@@ -25,6 +27,7 @@ import { PlaceOrderUseCase } from '../use-cases/order/PlaceOrderUseCase.js';
 import { ListProductsUseCase } from '../use-cases/product/ListProductsUseCase.js';
 import { SetProductPriceUseCase } from '../use-cases/product/SetProductPriceUseCase.js';
 import { SyncProductsUseCase } from '../use-cases/product/SyncProductsUseCase.js';
+import { ManageAdminsUseCase } from '../use-cases/admin/ManageAdminsUseCase.js';
 import { RegisterUserUseCase } from '../use-cases/user/RegisterUserUseCase.js';
 import type { Config } from './config.js';
 import { createLogger, type Logger } from './logger.js';
@@ -41,6 +44,7 @@ export interface Container {
     orders: OrderRepository;
     deposits: DepositRepository;
     config: ConfigRepository;
+    admins: AdminRepository;
   };
   services: {
     hubx: HubxGateway;
@@ -50,6 +54,7 @@ export interface Container {
   };
   useCases: {
     registerUser: RegisterUserUseCase;
+    manageAdmins: ManageAdminsUseCase;
     listProducts: ListProductsUseCase;
     setProductPrice: SetProductPriceUseCase;
     syncProducts: SyncProductsUseCase;
@@ -79,6 +84,7 @@ export function buildContainer(config: Config): Container {
     orders: new PrismaOrderRepository(prisma),
     deposits: new PrismaDepositRepository(prisma),
     config: new PrismaConfigRepository(prisma),
+    admins: new PrismaAdminRepository(prisma),
   };
 
   const hubx = new HubxClient({ baseUrl: config.HUBX_API_URL, apiKey: config.HUBX_API_KEY, logger });
@@ -86,6 +92,11 @@ export function buildContainer(config: Config): Container {
 
   const useCases = {
     registerUser: new RegisterUserUseCase({ users: repositories.users }),
+    manageAdmins: new ManageAdminsUseCase({
+      admins: repositories.admins,
+      users: repositories.users,
+      logger,
+    }),
     listProducts: new ListProductsUseCase({ products: repositories.products }),
     setProductPrice: new SetProductPriceUseCase({
       products: repositories.products,

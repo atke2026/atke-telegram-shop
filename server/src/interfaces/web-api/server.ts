@@ -8,6 +8,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import type { User } from '../../core/entities/User.js';
 import { DomainError } from '../../core/errors/DomainError.js';
 import { PAYMENT_METHODS } from '../../core/paymentMethods.js';
+import { registerAdminRoutes } from './adminRoutes.js';
 import { InitDataError, verifyInitData } from '../../infrastructure/telegram/verifyInitData.js';
 import type { Container } from '../../shared/container.js';
 import {
@@ -33,12 +34,15 @@ function statusForDomainError(error: DomainError): number {
     case 'INSUFFICIENT_BALANCE':
     case 'INVALID_AMOUNT':
     case 'OUT_OF_STOCK':
+    // Refusing to remove the last admin is a state conflict, not bad input.
+    case 'LAST_ADMIN':
       return 409;
     case 'PRODUCT_NOT_FOUND':
     case 'USER_NOT_FOUND':
     case 'DEPOSIT_NOT_FOUND':
       return 404;
     case 'USER_BANNED':
+    case 'NOT_AN_ADMIN':
       return 403;
     case 'SYSTEM_OFFLINE':
     case 'INVALID_API_KEY':
@@ -120,7 +124,13 @@ export function createWebApi(container: Container): FastifyInstance {
 
   app.get('/api/health', async () => ({ ok: true }));
 
-  app.get('/api/me', async (request) => ({ user: toUserDto(requireUser(request)) }));
+  app.get('/api/me', async (request) => {
+    const user = requireUser(request);
+    // Drives the Panel tab's visibility only; every admin route re-checks.
+    const isAdmin = await useCases.manageAdmins.isAdmin(user.telegramId);
+
+    return { user: { ...toUserDto(user), isAdmin } };
+  });
 
   app.get('/api/products', async () => {
     const products = await repositories.products.listActive();
@@ -212,6 +222,8 @@ export function createWebApi(container: Container): FastifyInstance {
 
     return reply.code(201).send({ deposit: toDepositDto(deposit) });
   });
+
+  registerAdminRoutes(app, container);
 
   return app;
 }

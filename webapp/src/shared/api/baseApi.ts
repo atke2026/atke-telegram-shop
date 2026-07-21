@@ -13,7 +13,16 @@ export interface MoneyDto {
  */
 export const baseApi = createApi({
   reducerPath: 'api',
-  tagTypes: ['User', 'Product', 'Order', 'Deposit'],
+  tagTypes: [
+    'User',
+    'Product',
+    'Order',
+    'Deposit',
+    'Admin',
+    'AdminSummary',
+    'AdminDeposit',
+    'AdminProduct',
+  ],
   baseQuery: fetchBaseQuery({
     baseUrl: '/api',
     prepareHeaders: (headers) => {

@@ -9,6 +9,10 @@ async function main(): Promise<void> {
   const container = buildContainer(config);
   const { logger } = container;
 
+  // Must run before the bot or API accept anything, or a fresh deployment
+  // would have no administrators at all.
+  await container.useCases.manageAdmins.seedIfEmpty(config.ADMIN_TELEGRAM_IDS);
+
   const bot = createBot(container);
   const scheduler = startScheduler(container);
 

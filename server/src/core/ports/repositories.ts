@@ -1,3 +1,4 @@
+import type { Admin } from '../entities/Admin.js';
 import type { Deposit, DepositStatus } from '../entities/Deposit.js';
 import type { DeliveredItem, Order, OrderStatus } from '../entities/Order.js';
 import type { Product } from '../entities/Product.js';
@@ -65,4 +66,13 @@ export interface DepositRepository {
 export interface ConfigRepository {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
+}
+
+export interface AdminRepository {
+  /** The only authorisation question the system asks. */
+  isAdmin(telegramId: bigint): Promise<boolean>;
+  list(): Promise<Admin[]>;
+  count(): Promise<number>;
+  add(telegramId: bigint, addedByTelegramId: bigint | null, note: string | null): Promise<Admin>;
+  remove(telegramId: bigint): Promise<boolean>;
 }

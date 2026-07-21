@@ -108,6 +108,20 @@ model Product {
   @@map("products")
 }
 
+/// Membership *is* the permission: a telegramId present here is an admin.
+/// Seeded from ADMIN_TELEGRAM_IDS only while the table is empty, so grants and
+/// revocations made later are not undone on the next restart.
+model Admin {
+  id                String   @id @default(uuid())
+  telegramId        BigInt   @unique
+  /// Who granted it — null for the operators seeded from the environment.
+  addedByTelegramId BigInt?
+  note              String?
+  createdAt         DateTime @default(now())
+
+  @@map("admins")
+}
+
 model Config {
   key       String   @id
   value     String

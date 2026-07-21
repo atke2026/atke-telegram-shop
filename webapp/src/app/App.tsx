@@ -2,6 +2,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Route, Routes, useLocation } from 'react-router-dom';
 
 import { OrdersPage } from '@pages/OrdersPage';
+import { PanelPage } from '@pages/PanelPage';
 import { StorePage } from '@pages/StorePage';
 import { WalletPage } from '@pages/WalletPage';
 import { BottomNavBar } from '@widgets/BottomNavBar';
@@ -17,6 +18,7 @@ export function App() {
           <Route path="/" element={<StorePage />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/panel" element={<PanelPage />} />
           <Route path="*" element={<StorePage />} />
         </Routes>
       </AnimatePresence>

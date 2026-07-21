@@ -6,6 +6,8 @@ export interface UserDto {
   firstName: string | null;
   username: string | null;
   balance: MoneyDto;
+  /** Cosmetic only — the server re-checks on every admin route. */
+  isAdmin: boolean;
 }
 
 export const userApi = baseApi.injectEndpoints({

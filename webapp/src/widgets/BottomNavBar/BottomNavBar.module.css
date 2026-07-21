@@ -5,6 +5,7 @@
   bottom: 0;
   z-index: 10;
   display: grid;
+  /* Column count follows the tab count, so the Panel tab does not squash. */
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2) calc(var(--space-1) + env(safe-area-inset-bottom));
@@ -12,6 +13,10 @@
   border-top: var(--hairline);
   /* Sits above scrolling content without fully hiding it. */
   backdrop-filter: saturate(180%) blur(20px);
+}
+
+.nav[data-tabs='4'] {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .tab {

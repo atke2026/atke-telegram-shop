@@ -9,8 +9,7 @@ import { toUserMessage } from './errorMessages.js';
 
 export function createBot(container: Container): Telegraf<BotContext> {
   const bot = container.bot as unknown as Telegraf<BotContext>;
-  const { logger, config, repositories } = container;
-  const adminIds = new Set(config.ADMIN_TELEGRAM_IDS.map((id) => id.toString()));
+  const { logger, repositories, useCases } = container;
 
   bot.use(session({ defaultSession: (): SessionData => ({}) }));
 
@@ -18,9 +17,13 @@ export function createBot(container: Container): Telegraf<BotContext> {
   bot.use(async (ctx, next) => {
     if (!ctx.from) return next();
 
-    ctx.isAdmin = adminIds.has(String(ctx.from.id));
+    const telegramId = BigInt(ctx.from.id);
 
-    const user = await repositories.users.findByTelegramId(BigInt(ctx.from.id));
+    // The admins table is the single source of truth, shared with the web
+    // panel — the environment variable only seeds it on a fresh install.
+    ctx.isAdmin = await useCases.manageAdmins.isAdmin(telegramId);
+
+    const user = await repositories.users.findByTelegramId(telegramId);
     if (user) ctx.user = user;
 
     return next();
