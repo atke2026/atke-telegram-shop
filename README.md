@@ -88,6 +88,22 @@ Balances are integer minor units (`Money`, backed by `bigint`) in the domain and
 - **Refund on failure.** Any error after the debit refunds the wallet; if the refund
   itself fails, the admins get a 🚨 alert naming the user and amount.
 
+## Product logos
+
+`product_logos/` holds the raw brand marks as supplied. `npm run logos:build`
+normalises them into `assets/logos/` — one 512×512 white-backed WebP per product,
+**named by product slug**, so the web app can resolve an image without a lookup
+table:
+
+```ts
+const src = `/logos/${product.slug}.webp`;
+```
+
+Both Lovable products share one brand mark, so the file is emitted twice under
+each slug — keeping the naming rule uniform is worth 5KB.
+
+Re-run the script after adding a logo; it reports any source file it did not use.
+
 ## Testing
 
 ```bash
