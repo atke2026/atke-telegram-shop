@@ -63,7 +63,8 @@ export class HubxClient implements HubxGateway {
 
   async getResellerBalanceUSDT(): Promise<string> {
     const payload = unwrapObject(await this.request<unknown>('GET', '/balance'));
-    const raw = payload.balance ?? payload.available_balance ?? payload.amount;
+    // Live shape: {"ok":true,"balance_usdt":1}
+    const raw = payload.balance_usdt ?? payload.balance ?? payload.available_balance;
 
     if (raw === undefined || raw === null) {
       throw new HubxRequestError('Balance response contained no balance field');
@@ -112,8 +113,9 @@ export class HubxClient implements HubxGateway {
     };
   }
 
+  /** Live row: {id, slug, name, price_usdt: 2, stock: 9, active: true} */
   private toProduct(row: Record<string, unknown>): HubxProduct {
-    const stock = Number(row.stock ?? row.available_stock ?? 0);
+    const stock = Number(row.stock ?? 0);
 
     return {
       id: String(row.id),
@@ -121,9 +123,10 @@ export class HubxClient implements HubxGateway {
       name: String(row.name ?? 'Unnamed product'),
       description: row.description != null ? String(row.description) : null,
       stock: Number.isFinite(stock) ? stock : 0,
-      // /products only lists active items, so absence of the flag means active.
-      isActive: row.is_active !== false && row.status !== 'inactive',
-      priceUSDT: String(row.price ?? row.price_usdt ?? '0'),
+      // `active` is the documented flag; the others are defensive fallbacks.
+      isActive: row.active !== false && row.is_active !== false && row.status !== 'inactive',
+      // Numeric upstream — stringified here so it never touches a float.
+      priceUSDT: String(row.price_usdt ?? row.price ?? '0'),
     };
   }
 

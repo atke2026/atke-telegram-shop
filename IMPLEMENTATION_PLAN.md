@@ -118,14 +118,20 @@ sequenceDiagram
 - **Idempotency:** Generate a unique `external_order_id` (e.g., UUID or local database ID) for each customer order. This guarantees that if a network timeout occurs, retrying the order won't double-charge your HubX account.
 - **Fulfillment:** Once the order succeeds, parse the delivered items from the API response and deliver them securely to the user in a private Telegram message.
 
-### 5. Error Handling & Edge Cases
-- **409 Out of Stock:** If the API returns this, immediately refund the user's ETB balance.
-- **401 Invalid Key:** Alert the admin via Telegram if the API key is invalid or revoked.
+### 5. Authentication & Onboarding
+- **Seamless Auth:** The bot extracts `telegramId`, `username`, and `firstName` automatically via the Telegram payload without requiring passwords. The Web App uses the `initData` hash for secure validation.
+- **Mandatory Phone Number:** Because phone numbers are private by default, the bot's onboarding flow will block the user from shopping until they click a "📲 Share Contact" keyboard button to securely pass their phone number to the bot.
+
+## Web App UI & Design System (Future Phase)
+When the React/Vite Web App is built, it will strictly follow native Telegram aesthetics to ensure a premium, integrated experience:
+- **Colors:** Bind directly to Telegram CSS variables (e.g., `var(--tg-theme-bg-color)`, `var(--tg-theme-button-color)`).
+- **Cards:** Thin, sharp borders (`0.5px solid rgba(0,0,0,0.1)`) with a tight, non-diffused downward drop shadow (`0 2px 4px rgba(0,0,0,0.05)`).
+- **Buttons & Interactions:** Pill-shaped or heavily rounded buttons with CSS scale-down click effects (`transform: scale(0.97)`) and native Haptic Feedback vibrations using `Telegram.WebApp.HapticFeedback`.
 
 ## Database Schema (PostgreSQL) & Redis Cache
 
 ### PostgreSQL Models (via Prisma)
-* **User:** `id`, `telegramId`, `balanceETB`, `createdAt`, `updatedAt`
+* **User:** `id`, `telegramId`, `firstName`, `username`, `phone`, `avatarUrl`, `balanceETB`, `createdAt`, `updatedAt`
 * **Deposit:** `id`, `userId`, `amount`, `screenshotUrl`, `status` (PENDING, APPROVED, REJECTED), `createdAt`
 * **Order:** `id` (external_order_id), `userId`, `productId`, `status` (PENDING, PAID, COMPLETED, FAILED), `deliveredItems`, `hubxOrderId`, `createdAt`
 * **Product:** `id`, `slug`, `name`, `stock`, `costPriceUSDT`, `sellingPriceETB`, `updatedAt`
@@ -151,5 +157,6 @@ sequenceDiagram
 
 ### Phase 4: Interface Layer (Telegram Bot)
 - Connect Telegraf to the Use Cases.
+- Implement the Mandatory Contact Sharing onboarding flow.
 - Implement `/deposit` and the Admin Screenshot Approval flow.
 - Implement checkout flow via Telegram UI in ETB.

@@ -52,6 +52,16 @@ describe('HubxClient', () => {
     vi.unstubAllGlobals();
   });
 
+  // Captured verbatim from the live API — keep it that way.
+  const LIVE_PRODUCT = {
+    id: '31df9fef-7a6d-4224-8d8e-b73e20156738',
+    slug: 'lovable-unlimited-extension-lifetime',
+    name: 'Lovable Unlimited Extension (Lifetime)',
+    price_usdt: 2,
+    stock: 9,
+    active: true,
+  };
+
   it('sends the bearer key and hits the versioned base path', async () => {
     fetchMock.mockImplementation(mockResponse(200, { data: [] }));
 
@@ -62,18 +72,37 @@ describe('HubxClient', () => {
     expect(init.headers.Authorization).toBe('Bearer rsk_live_test');
   });
 
-  it('accepts both a bare array and a data-wrapped list', async () => {
-    const row = { id: 'p1', slug: 'google-ai-pro', name: 'Google AI Pro', stock: 3, price: '2.50' };
+  it('parses the live products envelope', async () => {
+    fetchMock.mockImplementation(mockResponse(200, { ok: true, products: [LIVE_PRODUCT] }));
 
-    fetchMock.mockImplementation(mockResponse(200, [row]));
+    const [product] = await client.getProducts();
+
+    expect(product).toEqual({
+      id: '31df9fef-7a6d-4224-8d8e-b73e20156738',
+      slug: 'lovable-unlimited-extension-lifetime',
+      name: 'Lovable Unlimited Extension (Lifetime)',
+      description: null,
+      stock: 9,
+      isActive: true,
+      // Numeric upstream, kept as a string so it never becomes a float.
+      priceUSDT: '2',
+    });
+  });
+
+  it('honours the `active` flag rather than assuming active', async () => {
+    fetchMock.mockImplementation(
+      mockResponse(200, { ok: true, products: [{ ...LIVE_PRODUCT, active: false }] }),
+    );
+
+    const [product] = await client.getProducts();
+    expect(product?.isActive).toBe(false);
+  });
+
+  it('also accepts a bare array or a data-wrapped list', async () => {
+    fetchMock.mockImplementation(mockResponse(200, [LIVE_PRODUCT]));
     expect(await client.getProducts()).toHaveLength(1);
 
-    fetchMock.mockImplementation(mockResponse(200, { ok: true, data: [row] }));
-    const [product] = await client.getProducts();
-    expect(product).toMatchObject({ id: 'p1', slug: 'google-ai-pro', stock: 3, priceUSDT: '2.50' });
-
-    // The live envelope key is undocumented, so `products` must work too.
-    fetchMock.mockImplementation(mockResponse(200, { ok: true, products: [row] }));
+    fetchMock.mockImplementation(mockResponse(200, { ok: true, data: [LIVE_PRODUCT] }));
     expect(await client.getProducts()).toHaveLength(1);
   });
 
@@ -83,10 +112,10 @@ describe('HubxClient', () => {
     await expect(client.getProducts()).rejects.toThrow(InvalidApiKeyError);
   });
 
-  it('reads the reseller balance', async () => {
-    fetchMock.mockImplementation(mockResponse(200, { balance: '150.25' }));
+  it('reads balance_usdt from the live balance envelope', async () => {
+    fetchMock.mockImplementation(mockResponse(200, { ok: true, balance_usdt: 1 }));
 
-    expect(await client.getResellerBalanceUSDT()).toBe('150.25');
+    expect(await client.getResellerBalanceUSDT()).toBe('1');
   });
 
   it('posts the idempotency key and surfaces a replay', async () => {
