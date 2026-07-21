@@ -118,3 +118,20 @@
   font-weight: 600;
   color: var(--destructive);
 }
+
+.buyRow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.infoButton {
+  /* Sized to its own content so Buy keeps the rest of the row. */
+  flex: 0 0 auto;
+  padding: 0 var(--space-4);
+  gap: 6px;
+}
+
+.infoLabel {
+  font-size: 14px;
+}

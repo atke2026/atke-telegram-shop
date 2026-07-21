@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from '@phosphor-icons/react';
+import { Info, X } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 
 import type { ProductDto } from '@entities/product';
@@ -20,11 +20,13 @@ export function ProductSheet({ product, onClose }: ProductSheetProps) {
   const { data: user } = useGetMeQuery();
   const [placeOrder, { isLoading }] = usePlaceOrderMutation();
   const [confirming, setConfirming] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // A newly opened sheet must never inherit the previous product's state.
   useEffect(() => {
     setConfirming(false);
+    setShowInstructions(false);
     setError(null);
   }, [product?.id]);
 
@@ -91,7 +93,18 @@ export function ProductSheet({ product, onClose }: ProductSheetProps) {
                 {product.inStock ? `${product.stock} in stock` : 'Out of stock'}
               </p>
 
-              {product.details ? <p className={styles.details}>{product.details}</p> : null}
+              <AnimatePresence initial={false}>
+                {showInstructions && product.details ? (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <p className={styles.details}>{product.details}</p>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
             </div>
 
             <footer className={styles.footer}>
@@ -115,9 +128,25 @@ export function ProductSheet({ product, onClose }: ProductSheetProps) {
                   </Button>
                 </div>
               ) : (
-                <Button fullWidth onClick={() => setConfirming(true)}>
-                  Buy for {product.price.label}
-                </Button>
+                <div className={styles.buyRow}>
+                  <Button fullWidth onClick={() => setConfirming(true)}>
+                    Buy for {product.price.label}
+                  </Button>
+
+                  {/* Narrow, to the right of Buy: the instructions matter, but
+                      not enough to push the purchase off the first screen. */}
+                  {product.details ? (
+                    <Button
+                      variant={showInstructions ? 'primary' : 'secondary'}
+                      className={styles.infoButton}
+                      aria-label={showInstructions ? 'Hide instructions' : 'Show instructions'}
+                      onClick={() => setShowInstructions((current) => !current)}
+                    >
+                      <Info size={18} weight={showInstructions ? 'fill' : 'regular'} />
+                      <span className={styles.infoLabel}>Info</span>
+                    </Button>
+                  ) : null}
+                </div>
               )}
             </footer>
           </motion.section>
