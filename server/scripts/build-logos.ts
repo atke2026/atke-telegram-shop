@@ -6,11 +6,15 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 
-const SOURCE_DIR = 'product_logos';
-const OUTPUT_DIR = 'assets/logos';
+// Logos live at the repo root, not inside server/, because the web app will
+// consume them too. Resolved from this file so the cwd does not matter.
+const REPO_ROOT = path.resolve(fileURLToPath(import.meta.url), '../../..');
+const SOURCE_DIR = path.join(REPO_ROOT, 'product_logos');
+const OUTPUT_DIR = path.join(REPO_ROOT, 'assets/logos');
 const SIZE = 512;
 /** Breathing room so logos don't touch the tile edge in a card layout. */
 const PADDING = 48;

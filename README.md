@@ -5,9 +5,24 @@ Ethiopian Birr with a manual (screenshot-verified) deposit flow.
 
 See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for the design rationale.
 
+## Layout
+
+```
+yeneshop/
+├── server/          Telegram bot + business logic (this is the app)
+├── assets/logos/    Product logos, shared with the future web app
+├── product_logos/   Raw logo sources
+└── *.md             Plans and design notes
+```
+
+The web app will live beside `server/` as its own package.
+
 ## Setup
 
+All commands run from `server/`:
+
 ```bash
+cd server
 npm install
 cp .env.example .env      # fill in BOT_TOKEN, HUBX_API_KEY, ADMIN_TELEGRAM_IDS
 npm run prisma:migrate    # creates the schema
@@ -90,8 +105,8 @@ Balances are integer minor units (`Money`, backed by `bigint`) in the domain and
 
 ## Product logos
 
-`product_logos/` holds the raw brand marks as supplied. `npm run logos:build`
-normalises them into `assets/logos/` — one 512×512 white-backed WebP per product,
+`product_logos/` (repo root) holds the raw brand marks as supplied.
+`npm run logos:build` normalises them into `assets/logos/` — one 512×512 white-backed WebP per product,
 **named by product slug**, so the web app can resolve an image without a lookup
 table:
 
