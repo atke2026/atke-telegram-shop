@@ -1,4 +1,5 @@
 import { createBot } from './interfaces/bot/bot.js';
+import { createWebApi } from './interfaces/web-api/server.js';
 import { startScheduler } from './interfaces/scheduler.js';
 import { loadConfig } from './shared/config.js';
 import { buildContainer } from './shared/container.js';
@@ -20,10 +21,15 @@ async function main(): Promise<void> {
     { command: 'help', description: 'How this bot works' },
   ]);
 
+  const api = createWebApi(container);
+  await api.listen({ port: config.WEB_API_PORT, host: config.WEB_API_HOST });
+  logger.info({ port: config.WEB_API_PORT }, '🌐 Web API listening');
+
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutting down');
     scheduler.stop();
     bot.stop(signal);
+    await api.close();
     await container.shutdown();
     process.exit(0);
   };

@@ -5,7 +5,6 @@ import { MAX_DEPOSIT } from '../../../use-cases/deposit/RequestDepositUseCase.js
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
 import { toUserMessage } from '../errorMessages.js';
-import { depositReviewKeyboard } from '../keyboards/menus.js';
 
 const DEFAULT_INSTRUCTIONS =
   'Send your payment to one of these accounts, then upload the receipt screenshot:\n\n' +
@@ -14,7 +13,7 @@ const DEFAULT_INSTRUCTIONS =
   '👤 *Account name:* Mikiyas Mulat Asmare';
 
 export function registerDepositFlow(bot: Telegraf<BotContext>, container: Container): void {
-  const { useCases, repositories, config, logger } = container;
+  const { useCases, repositories, logger } = container;
 
   bot.hears(['➕ Deposit', '/deposit'], async (ctx) => {
     if (!ctx.user) return ctx.reply('👋 Please send /start first.');
@@ -89,27 +88,18 @@ export function registerDepositFlow(bot: Telegraf<BotContext>, container: Contai
         { parse_mode: 'Markdown' },
       );
 
-      const caption =
-        `🧾 *New deposit request*\n\n` +
-        `User: ${ctx.user.firstName ?? 'Unknown'}` +
-        `${ctx.user.username ? ` (@${ctx.user.username})` : ''}\n` +
-        `Telegram ID: \`${ctx.user.telegramId}\`\n` +
-        `Amount: *${deposit.amount.format()}*\n` +
-        `Deposit ID: \`${deposit.id}\``;
-
-      await Promise.all(
-        config.ADMIN_TELEGRAM_IDS.map((adminId) =>
-          bot.telegram
-            .sendPhoto(Number(adminId), photo.file_id, {
-              caption,
-              parse_mode: 'Markdown',
-              ...depositReviewKeyboard(deposit.id),
-            })
-            .catch((error: unknown) =>
-              logger.error({ err: error, adminId: adminId.toString() }, 'Failed to forward deposit to admin'),
-            ),
-        ),
-      );
+      // Same notifier the web API uses, so both deposit paths present the
+      // identical review card to admins.
+      await container.services.depositNotifier.notifyNewDeposit({
+        depositId: deposit.id,
+        amountLabel: deposit.amount.format(),
+        user: {
+          telegramId: ctx.user.telegramId,
+          firstName: ctx.user.firstName,
+          username: ctx.user.username,
+        },
+        photo: { fileId: photo.file_id },
+      });
     } catch (error) {
       logger.warn({ err: error, userId: ctx.user.id }, 'Deposit request failed');
       ctx.session = {};

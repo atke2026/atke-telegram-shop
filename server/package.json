@@ -26,7 +26,9 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
     "@prisma/client": "^6.2.1",
+    "fastify": "^5.10.0",
     "ioredis": "^5.4.2",
     "node-cron": "^3.0.3",
     "pino": "^9.6.0",

@@ -24,6 +24,22 @@ const schema = z.object({
 
   DEFAULT_USDT_ETB_RATE: z.coerce.number().positive(),
   PRODUCT_SYNC_CRON: z.string().default('*/5 * * * *'),
+
+  // --- Web app ---
+  WEB_API_PORT: z.coerce.number().int().positive().default(8080),
+  WEB_API_HOST: z.string().default('0.0.0.0'),
+  /** Comma-separated CORS allowlist. Empty means reflect any origin (dev only). */
+  WEB_APP_ORIGINS: z
+    .string()
+    .default('')
+    .transform((raw) =>
+      raw
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+    ),
+  /** How long a Telegram initData string stays acceptable. */
+  INIT_DATA_MAX_AGE_SECONDS: z.coerce.number().int().positive().default(86_400),
 });
 
 export type Config = z.infer<typeof schema>;

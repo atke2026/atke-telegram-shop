@@ -41,3 +41,26 @@ export interface CachePort {
 export interface AdminNotifier {
   alert(message: string): Promise<void>;
 }
+
+export interface NewDepositNotification {
+  depositId: string;
+  amountLabel: string;
+  user: { telegramId: bigint; firstName: string | null; username: string | null };
+  /** A file_id when the receipt arrived via the bot, raw bytes when uploaded from the web app. */
+  photo: { fileId: string } | { buffer: Buffer };
+}
+
+/**
+ * Puts a deposit in front of the admins with approve/reject controls. Shared by
+ * the bot and the web API so the review flow cannot drift between them.
+ */
+export interface DepositNotifier {
+  notifyNewDeposit(notification: NewDepositNotification): Promise<void>;
+  /** Tells the customer their deposit was reviewed. */
+  notifyDepositReviewed(input: {
+    telegramId: bigint;
+    approved: boolean;
+    amountLabel: string;
+    newBalanceLabel?: string;
+  }): Promise<void>;
+}

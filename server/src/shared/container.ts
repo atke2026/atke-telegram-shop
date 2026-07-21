@@ -9,7 +9,7 @@ import type {
   ProductRepository,
   UserRepository,
 } from '../core/ports/repositories.js';
-import type { AdminNotifier, CachePort, HubxGateway } from '../core/ports/services.js';
+import type { AdminNotifier, CachePort, DepositNotifier, HubxGateway } from '../core/ports/services.js';
 import { RedisCache } from '../infrastructure/cache/RedisCache.js';
 import { createPrismaClient, type PrismaClient } from '../infrastructure/database/prisma.js';
 import { PrismaConfigRepository } from '../infrastructure/database/repositories/PrismaConfigRepository.js';
@@ -45,6 +45,7 @@ export interface Container {
   services: {
     hubx: HubxGateway;
     notifier: AdminNotifier;
+    depositNotifier: DepositNotifier;
     cache: CachePort;
   };
   useCases: {
@@ -124,7 +125,7 @@ export function buildContainer(config: Config): Container {
     prisma,
     cache,
     repositories,
-    services: { hubx, notifier, cache },
+    services: { hubx, notifier, depositNotifier: notifier, cache },
     useCases,
     async shutdown() {
       await Promise.allSettled([prisma.$disconnect(), cache.disconnect()]);
