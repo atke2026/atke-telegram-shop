@@ -5,6 +5,8 @@ export interface Product {
   slug: string;
   name: string;
   description: string | null;
+  /** Operator-written details; shown instead of the upstream description. */
+  descriptionOverride: string | null;
   stock: number;
   isActive: boolean;
   /** Upstream HubX cost, quoted in USDT. */
@@ -18,6 +20,10 @@ export interface Product {
 
 export function isPurchasable(product: Product): boolean {
   return product.isActive && product.stock > 0;
+}
+
+export function productDetails(product: Product): string | null {
+  return product.descriptionOverride ?? product.description;
 }
 
 /**

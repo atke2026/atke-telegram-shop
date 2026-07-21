@@ -46,6 +46,7 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
     costPriceUSDT: '2.00',
     markup: Money.fromDecimal('20'),
     priceOverride: null,
+    descriptionOverride: null,
     sellingPrice: Money.fromDecimal('340'),
     updatedAt: new Date(),
     ...overrides,
@@ -73,6 +74,7 @@ describe('PlaceOrderUseCase', () => {
       findBySlugOrId: vi.fn(),
       listActive: vi.fn(),
       setPriceOverride: vi.fn(),
+      setDescription: vi.fn(),
       upsertMany: vi.fn(),
       deactivateMissing: vi.fn(),
     };

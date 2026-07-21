@@ -87,6 +87,8 @@ model Product {
   slug            String   @unique
   name            String
   description     String?
+  // Operator-written product page. Survives syncs; wins over `description`.
+  descriptionOverride String? @db.Text
   stock           Int      @default(0)
   isActive        Boolean  @default(true)
   costPriceUSDT   Decimal  @db.Decimal(18, 6)

@@ -1,5 +1,7 @@
 import type { Telegraf } from 'telegraf';
 
+import { productDetails } from '../../../core/entities/Product.js';
+import { escapeHtml } from '../html.js';
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
 import { toUserMessage } from '../errorMessages.js';
@@ -93,12 +95,19 @@ export function registerBasicCommands(bot: Telegraf<BotContext>, container: Cont
     }
 
     await ctx.answerCbQuery();
+
+    const details = productDetails(product);
+    const stockLine =
+      product.stock > 0 ? `📦 In stock: <b>${product.stock}</b>` : '📦 <b>Out of stock</b>';
+
+    // HTML rather than Markdown: product copy is full of _ * ( ) and URLs that
+    // Telegram's Markdown parser rejects.
     await ctx.reply(
-      `*${product.name}*\n\n` +
-        `${product.description ?? 'No description available.'}\n\n` +
-        `💵 Price: *${product.sellingPrice.format()}*\n` +
-        `📦 Stock: ${product.stock}`,
-      { parse_mode: 'Markdown', ...confirmPurchaseKeyboard(product.id) },
+      `<b>${escapeHtml(product.name)}</b>\n\n` +
+        (details ? `${escapeHtml(details)}\n\n` : '') +
+        `💵 Price: <b>${escapeHtml(product.sellingPrice.format())}</b>\n` +
+        stockLine,
+      { parse_mode: 'HTML', ...confirmPurchaseKeyboard(product.id) },
     );
   });
 

@@ -30,6 +30,7 @@ function existingProduct(overrides: Partial<Product> = {}): Product {
     costPriceUSDT: '1',
     markup: Money.ZERO,
     priceOverride: null,
+    descriptionOverride: null,
     sellingPrice: Money.fromDecimal('160'),
     updatedAt: new Date(),
     ...overrides,
@@ -51,6 +52,7 @@ describe('SyncProductsUseCase', () => {
       findBySlugOrId: vi.fn(),
       listActive: vi.fn().mockResolvedValue([]),
       setPriceOverride: vi.fn(),
+      setDescription: vi.fn(),
       upsertMany: vi.fn().mockImplementation(async (rows: Product[]) => {
         upserted = rows;
         return rows.length;

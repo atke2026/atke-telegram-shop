@@ -47,6 +47,8 @@ export class SyncProductsUseCase {
         slug: item.slug,
         name: item.name,
         description: item.description,
+        // Written by us, not HubX — carry it across untouched.
+        descriptionOverride: current?.descriptionOverride ?? null,
         stock: item.stock,
         isActive: item.isActive,
         costPriceUSDT: item.priceUSDT,

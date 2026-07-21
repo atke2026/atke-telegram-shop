@@ -9,6 +9,7 @@ type ProductRow = {
   slug: string;
   name: string;
   description: string | null;
+  descriptionOverride: string | null;
   stock: number;
   isActive: boolean;
   costPriceUSDT: Prisma.Decimal;
@@ -24,6 +25,7 @@ export function toProduct(row: ProductRow): Product {
     slug: row.slug,
     name: row.name,
     description: row.description,
+    descriptionOverride: row.descriptionOverride,
     stock: row.stock,
     isActive: row.isActive,
     costPriceUSDT: row.costPriceUSDT.toString(),
@@ -57,6 +59,15 @@ export class PrismaProductRepository implements ProductRepository {
         priceOverrideETB: override === null ? null : new Prisma.Decimal(override.toDecimalString()),
         sellingPriceETB: new Prisma.Decimal(sellingPrice.toDecimalString()),
       },
+    });
+
+    return toProduct(row);
+  }
+
+  async setDescription(productId: string, details: string | null): Promise<Product> {
+    const row = await this.prisma.product.update({
+      where: { id: productId },
+      data: { descriptionOverride: details },
     });
 
     return toProduct(row);

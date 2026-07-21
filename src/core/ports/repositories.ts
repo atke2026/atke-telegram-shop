@@ -19,6 +19,8 @@ export interface ProductRepository {
   listActive(): Promise<Product[]>;
   /** Sets or clears the fixed retail price, storing the resulting price. */
   setPriceOverride(productId: string, override: Money | null, sellingPrice: Money): Promise<Product>;
+  /** Sets or clears the operator-written product page. */
+  setDescription(productId: string, details: string | null): Promise<Product>;
   /** Insert-or-update the synced catalogue; returns how many rows changed. */
   upsertMany(products: Product[]): Promise<number>;
   deactivateMissing(seenIds: string[]): Promise<number>;
