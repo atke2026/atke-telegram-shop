@@ -14,13 +14,34 @@ npm run prisma:migrate    # creates the schema
 npm run dev
 ```
 
-### Postgres role
+### Database
 
-If you don't have a database role yet:
+Development uses a **user-space Postgres cluster on port 5433**, owned by your login
+account — no sudo, and completely separate from any system Postgres on 5432.
 
-```sql
-CREATE ROLE yeneshop LOGIN PASSWORD 'yeneshop';
-CREATE DATABASE yeneshop OWNER yeneshop;
+```bash
+npm run db:start     # start it (data: ~/.local/share/yeneshop/pgdata)
+npm run db:status
+npm run db:stop
+```
+
+It does not survive a reboot; run `db:start` again. To recreate from scratch:
+
+```bash
+/usr/lib/postgresql/18/bin/initdb -D ~/.local/share/yeneshop/pgdata -U yeneshop \
+  --pwfile=<(echo yeneshop) -A scram-sha-256
+```
+
+To use a system Postgres instead, point `DATABASE_URL` at it — nothing in the code
+depends on the port or the role name.
+
+### Diagnostics
+
+```bash
+npm run check:config       # validates .env without printing secrets
+npm run check:hubx         # read-only: balance + catalogue + ETB pricing
+npm run sync:once          # one full sync HubX → Postgres → Redis
+npm run check:concurrency  # asserts the no-overdraft / no-double-credit invariants
 ```
 
 ## Commands
