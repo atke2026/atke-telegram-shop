@@ -28,6 +28,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     telegramId: 1n,
     username: 'tester',
     firstName: 'Test',
+    avatarUrl: null,
     balance: Money.fromDecimal('1000'),
     isBanned: false,
     createdAt: new Date(),

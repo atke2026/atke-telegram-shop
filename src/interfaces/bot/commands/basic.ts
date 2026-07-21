@@ -10,6 +10,21 @@ import { mainMenu, productListKeyboard, confirmPurchaseKeyboard } from '../keybo
 export function registerBasicCommands(bot: Telegraf<BotContext>, container: Container): void {
   const { useCases, repositories, logger } = container;
 
+  /**
+   * Onboarding stays 1-click: no phone number is requested, and a failed
+   * avatar lookup is swallowed rather than allowed to block /start.
+   */
+  const fetchAvatarFileId = async (telegramId: number): Promise<string | null> => {
+    try {
+      const photos = await bot.telegram.getUserProfilePhotos(telegramId, 0, 1);
+      // Sizes ascend; the last entry is the highest resolution.
+      return photos.photos[0]?.at(-1)?.file_id ?? null;
+    } catch (error) {
+      logger.debug({ err: error, telegramId }, 'Could not read profile photo');
+      return null;
+    }
+  };
+
   bot.start(async (ctx) => {
     const from = ctx.from;
     if (!from) return;
@@ -18,6 +33,7 @@ export function registerBasicCommands(bot: Telegraf<BotContext>, container: Cont
       telegramId: BigInt(from.id),
       username: from.username ?? null,
       firstName: from.first_name ?? null,
+      avatarUrl: await fetchAvatarFileId(from.id),
     });
 
     await ctx.reply(

@@ -9,6 +9,7 @@ export class RegisterUserUseCase {
     telegramId: bigint;
     username: string | null;
     firstName: string | null;
+    avatarUrl?: string | null;
   }): Promise<User> {
     return this.deps.users.create(input);
   }

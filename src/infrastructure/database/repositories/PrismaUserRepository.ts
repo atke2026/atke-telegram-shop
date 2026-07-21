@@ -10,6 +10,7 @@ type UserRow = {
   telegramId: bigint;
   username: string | null;
   firstName: string | null;
+  avatarUrl: string | null;
   balanceETB: Prisma.Decimal;
   isBanned: boolean;
   createdAt: Date;
@@ -21,6 +22,7 @@ export function toUser(row: UserRow): User {
     telegramId: row.telegramId,
     username: row.username,
     firstName: row.firstName,
+    avatarUrl: row.avatarUrl,
     balance: Money.fromDecimal(row.balanceETB),
     isBanned: row.isBanned,
     createdAt: row.createdAt,
@@ -40,11 +42,24 @@ export class PrismaUserRepository implements UserRepository {
     return row ? toUser(row) : null;
   }
 
-  async create(data: { telegramId: bigint; username: string | null; firstName: string | null }): Promise<User> {
+  async create(data: {
+    telegramId: bigint;
+    username: string | null;
+    firstName: string | null;
+    avatarUrl?: string | null;
+  }): Promise<User> {
+    // Telegram is the source of truth for the profile, so refresh it on every
+    // /start — but an avatar we failed to read must not erase a stored one.
+    const profile = {
+      username: data.username,
+      firstName: data.firstName,
+      ...(data.avatarUrl !== undefined && data.avatarUrl !== null ? { avatarUrl: data.avatarUrl } : {}),
+    };
+
     const row = await this.prisma.user.upsert({
       where: { telegramId: data.telegramId },
-      update: { username: data.username, firstName: data.firstName },
-      create: data,
+      update: profile,
+      create: { telegramId: data.telegramId, ...profile },
     });
 
     return toUser(row);

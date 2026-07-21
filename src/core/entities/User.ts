@@ -5,6 +5,8 @@ export interface User {
   telegramId: bigint;
   username: string | null;
   firstName: string | null;
+  /** Telegram file_id of the profile photo; resolve via getFile when needed. */
+  avatarUrl: string | null;
   balance: Money;
   isBanned: boolean;
   createdAt: Date;

@@ -7,7 +7,12 @@ import type { Money } from '../entities/Money.js';
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByTelegramId(telegramId: bigint): Promise<User | null>;
-  create(data: { telegramId: bigint; username: string | null; firstName: string | null }): Promise<User>;
+  create(data: {
+    telegramId: bigint;
+    username: string | null;
+    firstName: string | null;
+    avatarUrl?: string | null;
+  }): Promise<User>;
   /** Atomic `balance = balance + delta`; rejects if the result would go negative. */
   adjustBalance(userId: string, delta: Money): Promise<User>;
 }

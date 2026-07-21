@@ -2,6 +2,15 @@
 
 This document serves as an update/addendum to the original Implementation Plan, outlining the newly agreed-upon architectural standards, seamless authentication flow, and future Web App design constraints.
 
+**Status**
+
+| Section | State |
+| --- | --- |
+| 1. Clean Architecture | ✅ Done — `core/`, `use-cases/`, `infrastructure/`, `interfaces/` with inward-only dependencies |
+| 2. Auth & onboarding | ✅ Done for the bot — `/start` records the profile, no phone requested. Web App `initData` validation not built |
+| 3. Schema updates | ✅ Done — `avatarUrl` added; see the deviations noted below |
+| 4. Web App UI rules | ⏳ Not started — constraints for when the React/Vite frontend begins |
+
 ## 1. Architectural Upgrade: Clean Architecture
 We are upgrading the core structure from a standard Service-Oriented approach to a strict **Clean Architecture (Domain-Driven Design)**.
 
@@ -24,15 +33,38 @@ The Prisma `User` schema is updated to accommodate the frictionless onboarding r
 ```prisma
 model User {
   id          String   @id @default(uuid())
-  telegramId  String   @unique
+  telegramId  BigInt   @unique
   firstName   String?
   username    String?
   avatarUrl   String?
-  balanceETB  Float    @default(0.0)
+  balanceETB  Decimal  @default(0) @db.Decimal(18, 2)
+  isBanned    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 ```
+
+> **Two deliberate deviations from the original draft of this section.**
+>
+> **`balanceETB` is `Decimal`, not `Float`.** Floating point cannot represent
+> decimal fractions exactly — `0.1 + 0.2 === 0.30000000000000004` — so a wallet
+> built on it accumulates drift: balances that disagree with the sum of their
+> deposits, refunds that leave santim behind, and an unreliable
+> `balance >= price` check. Doubles also carry only ~15 significant digits.
+> Balances are `Decimal(18,2)` in Postgres and integer minor units (`bigint`)
+> in the domain, which is what makes the no-overdraft guarantee hold.
+> **Do not change this to `Float`.**
+>
+> **`telegramId` is `BigInt`, not `String`.** Telegram ids are integers that now
+> exceed 2^32; `BigInt` stores them exactly and sorts correctly. Note that they
+> must be converted to a string before JSON serialization — `JSON.stringify`
+> throws on a `BigInt` — which the future Web App API will need to handle.
+
+`avatarUrl` holds the Telegram **`file_id`** of the profile photo, not an HTTP
+URL: turning one into a link requires embedding the bot token, which must never
+be persisted. Consumers resolve it through `getFile` at display time. It is
+populated on `/start` and a failed lookup is ignored rather than allowed to
+interrupt onboarding.
 
 ## 4. Web App UI & Design System Rules
 When development begins on the Web App frontend (using React/Vite), it must strictly emulate the native Telegram mobile experience:

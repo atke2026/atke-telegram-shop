@@ -36,6 +36,7 @@ describe('RequestDepositUseCase', () => {
         telegramId: 1n,
         username: null,
         firstName: 'Test',
+        avatarUrl: null,
         balance: Money.ZERO,
         isBanned: false,
         createdAt: new Date(),

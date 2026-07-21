@@ -26,6 +26,9 @@ model User {
   telegramId BigInt   @unique
   username   String?
   firstName  String?
+  // Telegram file_id of the profile photo, not an HTTP URL: resolving one
+  // requires the bot token, which must never be persisted in a stored link.
+  avatarUrl  String?
   // Wallet balance in ETB. Decimal(18,2) — never use float for money.
   balanceETB Decimal  @default(0) @db.Decimal(18, 2)
   isBanned   Boolean  @default(false)
