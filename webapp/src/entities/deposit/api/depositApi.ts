@@ -10,9 +10,18 @@ export interface DepositDto {
   reviewedAt: string | null;
 }
 
+export interface PaymentMethodDto {
+  id: string;
+  name: string;
+  accountNumber: string;
+  accountName: string;
+  logoUrl: string;
+}
+
 export interface DepositsResponse {
   deposits: DepositDto[];
   minimum: MoneyDto;
+  paymentMethods: PaymentMethodDto[];
 }
 
 export const depositApi = baseApi.injectEndpoints({

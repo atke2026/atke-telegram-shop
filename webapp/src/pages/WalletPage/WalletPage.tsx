@@ -3,6 +3,7 @@ import { ClockCounterClockwise } from '@phosphor-icons/react';
 import { useGetDepositsQuery } from '@entities/deposit';
 import { useGetMeQuery } from '@entities/user';
 import { DepositForm } from '@features/request-deposit';
+import { PaymentMethods } from '@widgets/PaymentMethods';
 import { Card } from '@shared/ui/Card';
 import { Screen } from '@shared/ui/Screen';
 import { Spinner } from '@shared/ui/Spinner';
@@ -41,7 +42,15 @@ export function WalletPage() {
       ) : null}
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Top up</h2>
+        <h2 className={styles.sectionTitle}>Send payment to</h2>
+        <PaymentMethods methods={deposits?.paymentMethods ?? []} />
+        <p className={styles.note}>
+          Pay to one of the accounts above, then upload your receipt below.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Upload receipt</h2>
         {loadingDeposits ? (
           <Spinner />
         ) : (

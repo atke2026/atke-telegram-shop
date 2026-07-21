@@ -7,6 +7,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 
 import type { User } from '../../core/entities/User.js';
 import { DomainError } from '../../core/errors/DomainError.js';
+import { PAYMENT_METHODS } from '../../core/paymentMethods.js';
 import { InitDataError, verifyInitData } from '../../infrastructure/telegram/verifyInitData.js';
 import type { Container } from '../../shared/container.js';
 import {
@@ -169,6 +170,13 @@ export function createWebApi(container: Container): FastifyInstance {
     return {
       deposits: deposits.filter((deposit) => deposit.userId === user.id).map(toDepositDto),
       minimum: { amount: minimum.toDecimalString(), label: minimum.format() } satisfies MoneyDto,
+      paymentMethods: PAYMENT_METHODS.map((method) => ({
+        id: method.id,
+        name: method.name,
+        accountNumber: method.accountNumber,
+        accountName: method.accountName,
+        logoUrl: `/logos/${method.logoSlug}.webp`,
+      })),
     };
   });
 

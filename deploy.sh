@@ -335,8 +335,9 @@ configure_nginx() {
   ssh_script <<REMOTE
 set -euo pipefail
 
-# Written without TLS directives: certbot adds those itself, and re-running
-# this file must not undo its work. Certbot is idempotent about editing it.
+# Written without TLS directives; configure_tls re-applies the certificate
+# afterwards. This file is regenerated on every deploy so config changes ship,
+# which means certbot's edits are lost here and must be restored there.
 cat > /etc/nginx/sites-available/yeneshop <<'CONF'
 server {
     listen 80;
@@ -402,7 +403,19 @@ configure_tls() {
   step "TLS certificate"
 
   if ssh_run "sudo test -d /etc/letsencrypt/live/$DOMAIN"; then
-    ok "certificate already present (renewal runs from certbot's timer)"
+    # configure_nginx rewrote the site file from scratch, which removes the
+    # listen 443 / ssl_certificate lines certbot had added. Re-install the
+    # existing certificate into the fresh config rather than requesting a new
+    # one — issuing is rate-limited, installing is not.
+    info "certificate exists; re-applying it to the regenerated nginx config"
+
+    ssh_script <<REMOTE
+set -euo pipefail
+certbot install --nginx --cert-name "$DOMAIN" --redirect --non-interactive
+systemctl reload nginx
+REMOTE
+
+    ok "certificate re-applied (renewal runs from certbot's timer)"
     return
   fi
 

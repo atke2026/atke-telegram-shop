@@ -1,16 +1,14 @@
 import type { Telegraf } from 'telegraf';
 
 import { CONFIG_KEYS } from '../../../core/constants.js';
+import { paymentMethodsAsMarkdown } from '../../../core/paymentMethods.js';
 import { MAX_DEPOSIT } from '../../../use-cases/deposit/RequestDepositUseCase.js';
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
 import { toUserMessage } from '../errorMessages.js';
 
-const DEFAULT_INSTRUCTIONS =
-  'Send your payment to one of these accounts, then upload the receipt screenshot:\n\n' +
-  '📱 *Telebirr:* `0975915991`\n' +
-  '🏦 *CBE:* `1000480204941`\n\n' +
-  '👤 *Account name:* Mikiyas Mulat Asmare';
+// Shared with the web app's wallet screen so the two cannot disagree.
+const DEFAULT_INSTRUCTIONS = paymentMethodsAsMarkdown();
 
 export function registerDepositFlow(bot: Telegraf<BotContext>, container: Container): void {
   const { useCases, repositories, logger } = container;

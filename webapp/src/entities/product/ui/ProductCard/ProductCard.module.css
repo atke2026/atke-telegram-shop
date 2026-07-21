@@ -23,6 +23,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Sits over a white logo tile, so the scrim is white too. */
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(1px);
   font-size: 12px;
