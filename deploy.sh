@@ -269,13 +269,20 @@ cd "$REMOTE_DIR/server"
 # in the shell too.
 set -a; . "$REMOTE_DIR/.env"; set +a
 
-npm ci --omit=dev --no-audit --no-fund 2>&1 | tail -1
+# Full install, including devDependencies: the Prisma CLI and TypeScript are
+# both needed to produce a runnable build, and installing with --omit=dev
+# leaves Prisma's own dependency tree incomplete (it fails on empathic/package).
+# The tree is left in place rather than pruned afterwards, because pruning also
+# removes the generated Prisma client from node_modules/.prisma.
+# NODE_ENV comes from .env as "production", and npm silently skips
+# devDependencies in that case — which is exactly what breaks the build.
+NODE_ENV=development npm ci --include=dev --no-audit --no-fund 2>&1 | tail -1
+
 npx prisma generate 2>&1 | tail -1
 npx prisma migrate deploy 2>&1 | tail -2
+npm run build 2>&1 | tail -3
 
-# devDependencies were skipped, so build with the local typescript if present,
-# otherwise fetch it just for the compile step.
-npm exec --yes -- typescript@5.7.3 tsc -p tsconfig.json || npx --yes typescript@5.7.3 tsc -p tsconfig.json
+test -f dist/index.js || { echo "build produced no dist/index.js" >&2; exit 1; }
 REMOTE
 
   ok "application installed"

@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  // Tests are typechecked by `npm run typecheck`, but they must not reach the
+  // production build: dist would carry vitest imports the runtime lacks.
+  "exclude": ["node_modules", "dist", "scripts", "**/*.test.ts"]
+}

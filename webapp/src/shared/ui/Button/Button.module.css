@@ -5,7 +5,7 @@
   gap: var(--space-2);
   min-height: 48px;
   padding: 0 var(--space-5);
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-pill);
   font-size: 15px;
   font-weight: 600;
   transition: opacity 0.15s ease;
