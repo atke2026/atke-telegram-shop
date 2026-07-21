@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DepositStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id         String   @id @default(uuid())
+  telegramId BigInt   @unique
+  username   String?
+  firstName  String?
+  // Wallet balance in ETB. Decimal(18,2) — never use float for money.
+  balanceETB Decimal  @default(0) @db.Decimal(18, 2)
+  isBanned   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  deposits Deposit[]
+  orders   Order[]
+
+  @@map("users")
+}
+
+model Deposit {
+  id             String        @id @default(uuid())
+  userId         String
+  amountETB      Decimal       @db.Decimal(18, 2)
+  // Telegram file_id of the receipt screenshot.
+  screenshotUrl  String
+  status         DepositStatus @default(PENDING)
+  reviewedBy     BigInt?
+  reviewedAt     DateTime?
+  rejectionNote  String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("deposits")
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  userId         String
+  productId      String
+  productName    String
+  quantity       Int         @default(1)
+  // What the customer paid, and what it cost us upstream.
+  pricePaidETB   Decimal     @db.Decimal(18, 2)
+  costUSDT       Decimal     @db.Decimal(18, 6)
+  status         OrderStatus @default(PENDING)
+  hubxOrderId    String?
+  deliveredItems Json?
+  failureReason  String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("orders")
+}
+
+model Product {
+  id              String   @id
+  slug            String   @unique
+  name            String
+  description     String?
+  stock           Int      @default(0)
+  isActive        Boolean  @default(true)
+  costPriceUSDT   Decimal  @db.Decimal(18, 6)
+  // Markup applied on top of the converted ETB cost.
+  markupETB       Decimal  @default(0) @db.Decimal(18, 2)
+  sellingPriceETB Decimal  @db.Decimal(18, 2)
+  updatedAt       DateTime @updatedAt
+
+  orders Order[]
+
+  @@map("products")
+}
+
+model Config {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("config")
+}
