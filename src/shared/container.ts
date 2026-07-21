@@ -111,6 +111,7 @@ export function buildContainer(config: Config): Container {
     requestDeposit: new RequestDepositUseCase({
       users: repositories.users,
       deposits: repositories.deposits,
+      products: repositories.products,
     }),
     approveDeposit: new ApproveDepositUseCase({ deposits: repositories.deposits, logger }),
     rejectDeposit: new RejectDepositUseCase({ deposits: repositories.deposits, logger }),

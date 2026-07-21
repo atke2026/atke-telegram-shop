@@ -119,8 +119,7 @@ sequenceDiagram
 - **Fulfillment:** Once the order succeeds, parse the delivered items from the API response and deliver them securely to the user in a private Telegram message.
 
 ### 5. Authentication & Onboarding
-- **Seamless Auth:** The bot extracts `telegramId`, `username`, and `firstName` automatically via the Telegram payload without requiring passwords. The Web App uses the `initData` hash for secure validation.
-- **Mandatory Phone Number:** Because phone numbers are private by default, the bot's onboarding flow will block the user from shopping until they click a "📲 Share Contact" keyboard button to securely pass their phone number to the bot.
+- **Seamless Auth:** The bot extracts `telegramId`, `username`, and `firstName` automatically via the Telegram payload without requiring passwords. The Web App uses the `initData` hash for secure validation, guaranteeing a completely frictionless 1-click onboarding experience.
 
 ## Web App UI & Design System (Future Phase)
 When the React/Vite Web App is built, it will strictly follow native Telegram aesthetics to ensure a premium, integrated experience:
@@ -131,7 +130,7 @@ When the React/Vite Web App is built, it will strictly follow native Telegram ae
 ## Database Schema (PostgreSQL) & Redis Cache
 
 ### PostgreSQL Models (via Prisma)
-* **User:** `id`, `telegramId`, `firstName`, `username`, `phone`, `avatarUrl`, `balanceETB`, `createdAt`, `updatedAt`
+* **User:** `id`, `telegramId`, `firstName`, `username`, `avatarUrl`, `balanceETB`, `createdAt`, `updatedAt`
 * **Deposit:** `id`, `userId`, `amount`, `screenshotUrl`, `status` (PENDING, APPROVED, REJECTED), `createdAt`
 * **Order:** `id` (external_order_id), `userId`, `productId`, `status` (PENDING, PAID, COMPLETED, FAILED), `deliveredItems`, `hubxOrderId`, `createdAt`
 * **Product:** `id`, `slug`, `name`, `stock`, `costPriceUSDT`, `sellingPriceETB`, `updatedAt`

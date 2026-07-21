@@ -1,7 +1,7 @@
 import type { Telegraf } from 'telegraf';
 
 import { CONFIG_KEYS } from '../../../core/constants.js';
-import { MAX_DEPOSIT, MIN_DEPOSIT } from '../../../use-cases/deposit/RequestDepositUseCase.js';
+import { MAX_DEPOSIT } from '../../../use-cases/deposit/RequestDepositUseCase.js';
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
 import { toUserMessage } from '../errorMessages.js';
@@ -9,9 +9,9 @@ import { depositReviewKeyboard } from '../keyboards/menus.js';
 
 const DEFAULT_INSTRUCTIONS =
   'Send your payment to one of these accounts, then upload the receipt screenshot:\n\n' +
-  '• Telebirr: 09XX XXX XXX\n' +
-  '• CBE: 1000XXXXXXXX\n\n' +
-  '_(An admin can change these with /setinstructions)_';
+  '📱 *Telebirr:* `0975915991`\n' +
+  '🏦 *CBE:* `1000480204941`\n\n' +
+  '👤 *Account name:* Mikiyas Mulat Asmare';
 
 export function registerDepositFlow(bot: Telegraf<BotContext>, container: Container): void {
   const { useCases, repositories, config, logger } = container;
@@ -20,6 +20,7 @@ export function registerDepositFlow(bot: Telegraf<BotContext>, container: Contai
     if (!ctx.user) return ctx.reply('👋 Please send /start first.');
 
     const instructions = (await repositories.config.get(CONFIG_KEYS.depositInstructions)) ?? DEFAULT_INSTRUCTIONS;
+    const minimum = await useCases.requestDeposit.minimumDeposit();
 
     ctx.session.awaitingDepositAmount = true;
     ctx.session.awaitingReceipt = false;
@@ -28,7 +29,7 @@ export function registerDepositFlow(bot: Telegraf<BotContext>, container: Contai
     await ctx.reply(
       `➕ *Deposit*\n\n${instructions}\n\n` +
         `First, how much are you depositing (in ETB)?\n` +
-        `Minimum ${MIN_DEPOSIT.format()}, maximum ${MAX_DEPOSIT.format()}.\n\n` +
+        `Minimum ${minimum.format()}, maximum ${MAX_DEPOSIT.format()}.\n\n` +
         `Send /cancel to abort.`,
       { parse_mode: 'Markdown' },
     );

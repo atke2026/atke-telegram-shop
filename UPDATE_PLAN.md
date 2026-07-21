@@ -13,22 +13,20 @@ We are upgrading the core structure from a standard Service-Oriented approach to
   - `interfaces/`: Telegram Bot adapters, Web App REST API adapters.
 
 ## 2. Authentication & Onboarding Flow
-Telegram handles primary authentication seamlessly via the `telegramId` (for the bot) and `initData` hash (for the Web App). However, because we require the user's phone number, the onboarding process is explicitly defined:
+Telegram handles primary authentication seamlessly. Users are **not** required to share their phone numbers, ensuring a completely frictionless 1-click onboarding experience.
 
 - **Step 1:** User clicks `/start`. The bot instantly records their `telegramId`, `firstName`, and `username` in the background.
-- **Step 2 (Blocker):** The bot sends a custom keyboard button: `"📲 Share Contact"`. The user *must* tap this to securely share their phone number.
-- **Step 3:** The backend saves the `phone` number to the `User` record.
-- **Step 4:** The user is now fully authenticated and unlocked to browse products and place orders.
+- **Step 2:** The user is instantly authenticated and unlocked to browse products and place orders.
+- **Web App:** The Web App uses the `initData` hash for secure validation of the exact same user identity.
 
 ## 3. Database Schema Updates
-The Prisma `User` schema is updated to accommodate the new onboarding requirements:
+The Prisma `User` schema is updated to accommodate the frictionless onboarding requirements:
 ```prisma
 model User {
   id          String   @id @default(uuid())
   telegramId  String   @unique
   firstName   String?
   username    String?
-  phone       String?  // Captured via Share Contact button
   avatarUrl   String?
   balanceETB  Float    @default(0.0)
   createdAt   DateTime @default(now())
