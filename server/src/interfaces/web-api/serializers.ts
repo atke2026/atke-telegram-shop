@@ -1,4 +1,5 @@
 import type { Deposit } from '../../core/entities/Deposit.js';
+import type { PricedProduct } from '../../core/entities/Discount.js';
 import type { Money } from '../../core/entities/Money.js';
 import type { Order } from '../../core/entities/Order.js';
 import { isPurchasable, productDetails, type Product } from '../../core/entities/Product.js';
@@ -47,11 +48,22 @@ export interface ProductDto {
   details: string | null;
   stock: number;
   inStock: boolean;
+  /** What the customer pays. */
   price: MoneyDto;
+  /** The crossed-out price; null when no discount applies. */
+  listPrice: MoneyDto | null;
+  discountLabel: string | null;
   logoUrl: string;
 }
 
-export function toProductDto(product: Product): ProductDto {
+/**
+ * `priced` is optional so admin views can serialise a product without
+ * resolving discounts; customer-facing routes always pass it, and the price
+ * shown then matches what the purchase will charge.
+ */
+export function toProductDto(product: Product, priced?: PricedProduct): ProductDto {
+  const discounted = Boolean(priced?.discount);
+
   return {
     id: product.id,
     slug: product.slug,
@@ -59,10 +71,21 @@ export function toProductDto(product: Product): ProductDto {
     details: productDetails(product),
     stock: product.stock,
     inStock: isPurchasable(product),
-    price: money(product.sellingPrice),
+    price: money(priced?.finalPrice ?? product.sellingPrice),
+    listPrice: discounted && priced ? money(priced.listPrice) : null,
+    discountLabel: discounted && priced ? describe(priced) : null,
     // Logos are named by slug, so no lookup table is needed on the client.
     logoUrl: `/logos/${product.slug}.webp`,
   };
+}
+
+function describe(priced: PricedProduct): string | null {
+  if (!priced.discount) return null;
+  if (priced.discount.label) return priced.discount.label;
+
+  return priced.discount.type === 'PERCENT'
+    ? `${Number(priced.discount.value)}% off`
+    : `${priced.discountAmount.format()} off`;
 }
 
 export interface OrderDto {

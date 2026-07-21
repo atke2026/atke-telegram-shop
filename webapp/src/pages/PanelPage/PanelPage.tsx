@@ -7,6 +7,7 @@ import { Screen } from '@shared/ui/Screen';
 import { Spinner } from '@shared/ui/Spinner';
 import { AdminAdmins } from './sections/AdminAdmins';
 import { AdminDeposits } from './sections/AdminDeposits';
+import { AdminDiscounts } from './sections/AdminDiscounts';
 import { AdminOverview } from './sections/AdminOverview';
 import { AdminProducts } from './sections/AdminProducts';
 import { AdminUsers } from './sections/AdminUsers';
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'deposits', label: 'Deposits' },
   { id: 'products', label: 'Products' },
+  { id: 'discounts', label: 'Discounts' },
   { id: 'users', label: 'Users' },
   { id: 'admins', label: 'Admins' },
 ] as const;
@@ -66,6 +68,7 @@ export function PanelPage() {
       {tab === 'overview' ? <AdminOverview /> : null}
       {tab === 'deposits' ? <AdminDeposits /> : null}
       {tab === 'products' ? <AdminProducts /> : null}
+      {tab === 'discounts' ? <AdminDiscounts /> : null}
       {tab === 'users' ? <AdminUsers /> : null}
       {tab === 'admins' ? <AdminAdmins currentTelegramId={user.telegramId} /> : null}
     </Screen>

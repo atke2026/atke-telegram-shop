@@ -78,7 +78,15 @@ export function ProductSheet({ product, onClose }: ProductSheetProps) {
             <div className={styles.scroll}>
               <img className={styles.logo} src={product.logoUrl} alt="" width={72} height={72} />
               <h2 className={styles.name}>{product.name}</h2>
-              <p className={styles.price}>{product.price.label}</p>
+              <p className={styles.price}>
+                {product.listPrice ? (
+                  <span className={styles.wasPrice}>{product.listPrice.label}</span>
+                ) : null}
+                {product.price.label}
+              </p>
+              {product.discountLabel ? (
+                <p className={styles.discountLine}>🏷 {product.discountLabel}</p>
+              ) : null}
               <p className={styles.stock}>
                 {product.inStock ? `${product.stock} in stock` : 'Out of stock'}
               </p>

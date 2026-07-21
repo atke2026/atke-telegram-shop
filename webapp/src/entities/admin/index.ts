@@ -1,4 +1,8 @@
 export {
+  useGetDiscountsQuery,
+  useCreateDiscountMutation,
+  useSetDiscountActiveMutation,
+  useDeleteDiscountMutation,
   useGetAdminUsersQuery,
   useGetAdminUserQuery,
   useSetUserBannedMutation,
@@ -19,4 +23,5 @@ export {
   type AdminRow,
   type AdminUserRow,
   type AdminUserDetail,
+  type AdminDiscountRow,
 } from './api/adminApi';

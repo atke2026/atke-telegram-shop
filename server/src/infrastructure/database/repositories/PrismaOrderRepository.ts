@@ -48,6 +48,9 @@ export class PrismaOrderRepository implements OrderRepository {
         productName: input.productName,
         quantity: input.quantity,
         pricePaidETB: new Prisma.Decimal(input.pricePaid.toDecimalString()),
+        listPriceETB: new Prisma.Decimal(input.listPrice.toDecimalString()),
+        discountETB: new Prisma.Decimal(input.discountAmount.toDecimalString()),
+        discountId: input.discountId,
         costUSDT: new Prisma.Decimal(input.costUSDT),
       },
     });

@@ -8,6 +8,7 @@ import type {
   AdminRepository,
   ConfigRepository,
   DepositRepository,
+  DiscountRepository,
   OrderRepository,
   ProductRepository,
   UserRepository,
@@ -18,6 +19,7 @@ import { createPrismaClient, type PrismaClient } from '../infrastructure/databas
 import { PrismaAdminRepository } from '../infrastructure/database/repositories/PrismaAdminRepository.js';
 import { PrismaConfigRepository } from '../infrastructure/database/repositories/PrismaConfigRepository.js';
 import { PrismaDepositRepository } from '../infrastructure/database/repositories/PrismaDepositRepository.js';
+import { PrismaDiscountRepository } from '../infrastructure/database/repositories/PrismaDiscountRepository.js';
 import { PrismaOrderRepository } from '../infrastructure/database/repositories/PrismaOrderRepository.js';
 import { PrismaProductRepository } from '../infrastructure/database/repositories/PrismaProductRepository.js';
 import { PrismaUserRepository } from '../infrastructure/database/repositories/PrismaUserRepository.js';
@@ -48,6 +50,7 @@ export interface Container {
     deposits: DepositRepository;
     config: ConfigRepository;
     admins: AdminRepository;
+    discounts: DiscountRepository;
   };
   services: {
     hubx: HubxGateway;
@@ -89,6 +92,7 @@ export function buildContainer(config: Config): Container {
     deposits: new PrismaDepositRepository(prisma),
     config: new PrismaConfigRepository(prisma),
     admins: new PrismaAdminRepository(prisma),
+    discounts: new PrismaDiscountRepository(prisma),
   };
 
   const hubx = new HubxClient({ baseUrl: config.HUBX_API_URL, apiKey: config.HUBX_API_KEY, logger });
@@ -118,7 +122,10 @@ export function buildContainer(config: Config): Container {
       users: repositories.users,
       logger,
     }),
-    listProducts: new ListProductsUseCase({ products: repositories.products }),
+    listProducts: new ListProductsUseCase({
+      products: repositories.products,
+      discounts: repositories.discounts,
+    }),
     setProductPrice: new SetProductPriceUseCase({
       products: repositories.products,
       config: repositories.config,
@@ -136,6 +143,7 @@ export function buildContainer(config: Config): Container {
     placeOrder: new PlaceOrderUseCase({
       users: repositories.users,
       products: repositories.products,
+      discounts: repositories.discounts,
       orders: repositories.orders,
       hubx,
       notifier,

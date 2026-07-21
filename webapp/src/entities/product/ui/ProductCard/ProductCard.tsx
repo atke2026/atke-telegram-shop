@@ -21,11 +21,19 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
           height={96}
         />
         {!product.inStock ? <span className={styles.soldOut}>Sold out</span> : null}
+        {product.discountLabel ? (
+          <span className={styles.discountBadge}>{product.discountLabel}</span>
+        ) : null}
       </div>
 
       <div className={styles.body}>
         <p className={styles.name}>{product.name}</p>
-        <p className={styles.price}>{product.price.label}</p>
+        <p className={styles.price}>
+          {product.listPrice ? (
+            <span className={styles.wasPrice}>{product.listPrice.label}</span>
+          ) : null}
+          {product.price.label}
+        </p>
       </div>
     </Card>
   );

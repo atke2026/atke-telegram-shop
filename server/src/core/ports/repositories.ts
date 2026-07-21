@@ -1,5 +1,6 @@
 import type { Admin } from '../entities/Admin.js';
 import type { Deposit, DepositStatus } from '../entities/Deposit.js';
+import type { Discount, DiscountScope, DiscountType } from '../entities/Discount.js';
 import type { DeliveredItem, Order, OrderStatus } from '../entities/Order.js';
 import type { Product } from '../entities/Product.js';
 import type { User } from '../entities/User.js';
@@ -52,6 +53,10 @@ export interface CreateOrderInput {
   productName: string;
   quantity: number;
   pricePaid: Money;
+  /** What it would have cost without a discount. */
+  listPrice: Money;
+  discountAmount: Money;
+  discountId: string | null;
   costUSDT: string;
 }
 
@@ -89,4 +94,23 @@ export interface AdminRepository {
   count(): Promise<number>;
   add(telegramId: bigint, addedByTelegramId: bigint | null, note: string | null): Promise<Admin>;
   remove(telegramId: bigint): Promise<boolean>;
+}
+
+export interface DiscountRepository {
+  /** Switched-on discounts; the date window is evaluated in the domain. */
+  listActive(): Promise<Discount[]>;
+  listAll(): Promise<Discount[]>;
+  findById(id: string): Promise<Discount | null>;
+  create(input: {
+    scope: DiscountScope;
+    productId: string | null;
+    type: DiscountType;
+    value: string;
+    label: string | null;
+    startsAt: Date | null;
+    endsAt: Date | null;
+    createdByTelegramId: bigint | null;
+  }): Promise<Discount>;
+  setActive(id: string, isActive: boolean): Promise<Discount>;
+  remove(id: string): Promise<boolean>;
 }

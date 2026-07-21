@@ -23,6 +23,7 @@ export const baseApi = createApi({
     'AdminDeposit',
     'AdminProduct',
     'AdminUser',
+    'Discount',
   ],
   baseQuery: fetchBaseQuery({
     baseUrl: '/api',

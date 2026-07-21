@@ -13,6 +13,18 @@ enum DepositStatus {
   REJECTED
 }
 
+enum DiscountScope {
+  /// Applies to every product in the catalogue.
+  ALL
+  /// Applies to one product.
+  PRODUCT
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
 enum OrderStatus {
   PENDING
   PAID
@@ -69,6 +81,10 @@ model Order {
   quantity       Int         @default(1)
   // What the customer paid, and what it cost us upstream.
   pricePaidETB   Decimal     @db.Decimal(18, 2)
+  /// What the product would have cost without a discount.
+  listPriceETB   Decimal?    @db.Decimal(18, 2)
+  discountETB    Decimal     @default(0) @db.Decimal(18, 2)
+  discountId     String?
   costUSDT       Decimal     @db.Decimal(18, 6)
   status         OrderStatus @default(PENDING)
   hubxOrderId    String?
@@ -103,9 +119,38 @@ model Product {
   sellingPriceETB Decimal  @db.Decimal(18, 2)
   updatedAt       DateTime @updatedAt
 
-  orders Order[]
+  orders    Order[]
+  discounts Discount[]
 
   @@map("products")
+}
+
+/// A price reduction, either across the catalogue or on a single product.
+/// When several could apply, the one worth most to the customer wins — they
+/// never stack, so a combination cannot quietly drop a price below cost.
+model Discount {
+  id        String        @id @default(uuid())
+  scope     DiscountScope
+  /// Set when scope is PRODUCT, null for a store-wide discount.
+  productId String?
+  type      DiscountType
+  /// A percentage (0-100) when type is PERCENT, otherwise an ETB amount.
+  value     Decimal       @db.Decimal(18, 2)
+  label     String?
+  isActive  Boolean       @default(true)
+  /// Optional window; null on either side means unbounded in that direction.
+  startsAt  DateTime?
+  endsAt    DateTime?
+
+  createdByTelegramId BigInt?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([isActive, scope])
+  @@index([productId])
+  @@map("discounts")
 }
 
 /// Membership *is* the permission: a telegramId present here is an admin.

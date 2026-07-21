@@ -7,6 +7,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 
 import type { User } from '../../core/entities/User.js';
 import { DomainError } from '../../core/errors/DomainError.js';
+import { priceWithDiscounts } from '../../core/entities/Discount.js';
 import { PAYMENT_METHODS } from '../../core/paymentMethods.js';
 import { UnsupportedImageError } from '../../infrastructure/storage/ReceiptStorage.js';
 import { toUserMessage } from '../../shared/errorMessages.js';
@@ -142,8 +143,8 @@ export function createWebApi(container: Container): FastifyInstance {
   });
 
   app.get('/api/products', async () => {
-    const products = await repositories.products.listActive();
-    return { products: products.map(toProductDto) };
+    const entries = await useCases.listProducts.priced();
+    return { products: entries.map((entry) => toProductDto(entry.product, entry.priced)) };
   });
 
   app.get('/api/products/:slug', async (request, reply) => {
@@ -151,7 +152,14 @@ export function createWebApi(container: Container): FastifyInstance {
     const product = await repositories.products.findBySlugOrId(slug);
 
     if (!product || !product.isActive) return reply.code(404).send({ error: 'PRODUCT_NOT_FOUND' });
-    return { product: toProductDto(product) };
+
+    const priced = priceWithDiscounts(
+      product.sellingPrice,
+      product.id,
+      await repositories.discounts.listActive(),
+    );
+
+    return { product: toProductDto(product, priced) };
   });
 
   app.get('/api/orders', async (request) => {
@@ -172,6 +180,11 @@ export function createWebApi(container: Container): FastifyInstance {
         id: result.orderId,
         productName: result.productName,
         pricePaid: { amount: result.pricePaid.toDecimalString(), label: result.pricePaid.format() },
+        listPrice: { amount: result.listPrice.toDecimalString(), label: result.listPrice.format() },
+        discountAmount: {
+          amount: result.discountAmount.toDecimalString(),
+          label: result.discountAmount.format(),
+        },
         deliveredItems: result.deliveredItems,
       },
       balance: {

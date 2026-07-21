@@ -43,6 +43,21 @@ export class Money {
     return new Money(rounded);
   }
 
+  /**
+   * A percentage of this amount, rounded half-up to the nearest cent.
+   *
+   * Not expressible with `multiply`: converting 12.5% to a factor gives 0.875,
+   * which that method truncates to 0.87. Here the percentage keeps its own two
+   * decimal places and the division happens once, at the end.
+   */
+  percentage(percent: string | number): Money {
+    const scaled = Money.fromDecimal(percent).cents; // 12.50% -> 1250n
+    const product = this.cents * scaled;
+    const rounded = (product < 0n ? product - 5000n : product + 5000n) / 10000n;
+
+    return new Money(rounded);
+  }
+
   isNegative(): boolean {
     return this.cents < 0n;
   }

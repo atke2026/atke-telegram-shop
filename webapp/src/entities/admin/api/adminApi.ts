@@ -75,6 +75,32 @@ export interface AdminUserDetail {
   }[];
 }
 
+export interface AdminDiscountRow {
+  id: string;
+  scope: 'ALL' | 'PRODUCT';
+  productId: string | null;
+  productName: string | null;
+  type: 'PERCENT' | 'FIXED';
+  value: string;
+  label: string | null;
+  isActive: boolean;
+  /** Active *and* inside its date window. */
+  isLive: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  createdAt: string;
+}
+
+export interface CreateDiscountInput {
+  scope: 'ALL' | 'PRODUCT';
+  productId?: string;
+  type: 'PERCENT' | 'FIXED';
+  value: string;
+  label?: string;
+  startsAt?: string;
+  endsAt?: string;
+}
+
 export interface AdminRow {
   telegramId: string;
   firstName: string | null;
@@ -166,6 +192,32 @@ export const adminApi = baseApi.injectEndpoints({
       invalidatesTags: ['AdminUser'],
     }),
 
+    getDiscounts: builder.query<AdminDiscountRow[], void>({
+      query: () => '/admin/discounts',
+      transformResponse: (response: { discounts: AdminDiscountRow[] }) => response.discounts,
+      providesTags: ['Discount'],
+    }),
+
+    createDiscount: builder.mutation<{ id: string }, CreateDiscountInput>({
+      query: (body) => ({ url: '/admin/discounts', method: 'POST', body }),
+      // Prices change everywhere, so the storefront caches go too.
+      invalidatesTags: ['Discount', 'Product', 'AdminProduct'],
+    }),
+
+    setDiscountActive: builder.mutation<unknown, { id: string; isActive: boolean }>({
+      query: ({ id, isActive }) => ({
+        url: `/admin/discounts/${id}/active`,
+        method: 'POST',
+        body: { isActive },
+      }),
+      invalidatesTags: ['Discount', 'Product', 'AdminProduct'],
+    }),
+
+    deleteDiscount: builder.mutation<unknown, string>({
+      query: (id) => ({ url: `/admin/discounts/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Discount', 'Product', 'AdminProduct'],
+    }),
+
     getAdmins: builder.query<AdminRow[], void>({
       query: () => '/admin/admins',
       transformResponse: (response: { admins: AdminRow[] }) => response.admins,
@@ -185,6 +237,10 @@ export const adminApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetDiscountsQuery,
+  useCreateDiscountMutation,
+  useSetDiscountActiveMutation,
+  useDeleteDiscountMutation,
   useGetAdminUsersQuery,
   useGetAdminUserQuery,
   useSetUserBannedMutation,

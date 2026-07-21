@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import { Money } from '../../core/entities/Money.js';
 import type { User } from '../../core/entities/User.js';
+import { isDiscountLive } from '../../core/entities/Discount.js';
 import { isStoredReceipt } from '../../infrastructure/storage/ReceiptStorage.js';
 import { NotAnAdminError } from '../../use-cases/admin/ManageAdminsUseCase.js';
 import type { Container } from '../../shared/container.js';
@@ -374,6 +375,127 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
       .catch(() => undefined);
 
     return { balance: { amount: updated.balance.toDecimalString(), label: updated.balance.format() } };
+  });
+
+  // --- discounts --------------------------------------------------------
+
+  app.get('/api/admin/discounts', async (request) => {
+    await requireAdmin(request);
+
+    const [discounts, products] = await Promise.all([
+      repositories.discounts.listAll(),
+      repositories.products.listActive(),
+    ]);
+
+    const nameById = new Map(products.map((product) => [product.id, product.name]));
+    const now = new Date();
+
+    return {
+      discounts: discounts.map((discount) => ({
+        id: discount.id,
+        scope: discount.scope,
+        productId: discount.productId,
+        productName: discount.productId ? (nameById.get(discount.productId) ?? null) : null,
+        type: discount.type,
+        value: discount.value,
+        label: discount.label,
+        isActive: discount.isActive,
+        // Switched on but outside its window reads as inactive to a customer,
+        // so the panel shows that distinctly.
+        isLive: isDiscountLive(discount, now),
+        startsAt: discount.startsAt?.toISOString() ?? null,
+        endsAt: discount.endsAt?.toISOString() ?? null,
+        createdAt: discount.createdAt.toISOString(),
+      })),
+    };
+  });
+
+  app.post('/api/admin/discounts', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const body = request.body as Record<string, unknown> | undefined;
+
+    const scope = body?.scope === 'PRODUCT' ? 'PRODUCT' : 'ALL';
+    const type = body?.type === 'FIXED' ? 'FIXED' : 'PERCENT';
+    const value = typeof body?.value === 'string' ? body.value.trim() : '';
+
+    if (!/^\d+(\.\d{1,2})?$/.test(value) || Number(value) <= 0) {
+      return reply.code(400).send({ error: 'value must be a positive number' });
+    }
+
+    if (type === 'PERCENT' && Number(value) > 100) {
+      return reply.code(400).send({ error: 'a percentage cannot exceed 100' });
+    }
+
+    let productId: string | null = null;
+    if (scope === 'PRODUCT') {
+      const slugOrId = typeof body?.productId === 'string' ? body.productId : '';
+      const product = await repositories.products.findBySlugOrId(slugOrId);
+      if (!product) return reply.code(404).send({ error: 'PRODUCT_NOT_FOUND' });
+      productId = product.id;
+    }
+
+    const parseDate = (raw: unknown): Date | null => {
+      if (typeof raw !== 'string' || raw === '') return null;
+      const parsed = new Date(raw);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const startsAt = parseDate(body?.startsAt);
+    const endsAt = parseDate(body?.endsAt);
+    if (startsAt && endsAt && endsAt <= startsAt) {
+      return reply.code(400).send({ error: 'the end date must be after the start date' });
+    }
+
+    const discount = await repositories.discounts.create({
+      scope,
+      productId,
+      type,
+      value,
+      label: typeof body?.label === 'string' && body.label.trim() ? body.label.trim() : null,
+      startsAt,
+      endsAt,
+      createdByTelegramId: admin.telegramId,
+    });
+
+    // Prices change for every customer, so this is worth an audit line.
+    logger.warn(
+      { by: admin.telegramId.toString(), scope, type, value, productId },
+      'Discount created',
+    );
+
+    return reply.code(201).send({ id: discount.id });
+  });
+
+  app.post('/api/admin/discounts/:id/active', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { id } = request.params as { id: string };
+    const body = request.body as { isActive?: unknown } | undefined;
+
+    if (typeof body?.isActive !== 'boolean') {
+      return reply.code(400).send({ error: 'isActive must be true or false' });
+    }
+
+    const existing = await repositories.discounts.findById(id);
+    if (!existing) return reply.code(404).send({ error: 'DISCOUNT_NOT_FOUND' });
+
+    const updated = await repositories.discounts.setActive(id, body.isActive);
+    logger.warn(
+      { by: admin.telegramId.toString(), id, isActive: body.isActive },
+      'Discount switched',
+    );
+
+    return { isActive: updated.isActive };
+  });
+
+  app.delete('/api/admin/discounts/:id', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { id } = request.params as { id: string };
+
+    const removed = await repositories.discounts.remove(id);
+    if (!removed) return reply.code(404).send({ error: 'DISCOUNT_NOT_FOUND' });
+
+    logger.warn({ by: admin.telegramId.toString(), id }, 'Discount deleted');
+    return { removed: id };
   });
 
   // --- administrators ---------------------------------------------------

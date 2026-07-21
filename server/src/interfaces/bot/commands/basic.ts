@@ -1,6 +1,8 @@
 import type { Telegraf } from 'telegraf';
 
+import { priceWithDiscounts } from '../../../core/entities/Discount.js';
 import { productDetails } from '../../../core/entities/Product.js';
+import { describeDiscount } from '../../../use-cases/product/ListProductsUseCase.js';
 import { escapeHtml } from '../html.js';
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
@@ -112,16 +114,27 @@ export function registerBasicCommands(bot: Telegraf<BotContext>, container: Cont
 
     await ctx.answerCbQuery();
 
+    const priced = priceWithDiscounts(
+      product.sellingPrice,
+      product.id,
+      await repositories.discounts.listActive(),
+    );
+
     const details = productDetails(product);
     const stockLine =
       product.stock > 0 ? `📦 In stock: <b>${product.stock}</b>` : '📦 <b>Out of stock</b>';
+    const priceLine = priced.discount
+      ? `💵 Price: <s>${escapeHtml(priced.listPrice.format())}</s> ` +
+        `<b>${escapeHtml(priced.finalPrice.format())}</b>\n` +
+        `🏷 ${escapeHtml(describeDiscount(priced) ?? 'Discount')}`
+      : `💵 Price: <b>${escapeHtml(priced.finalPrice.format())}</b>`;
 
     // HTML rather than Markdown: product copy is full of _ * ( ) and URLs that
     // Telegram's Markdown parser rejects.
     await ctx.reply(
       `<b>${escapeHtml(product.name)}</b>\n\n` +
         (details ? `${escapeHtml(details)}\n\n` : '') +
-        `💵 Price: <b>${escapeHtml(product.sellingPrice.format())}</b>\n` +
+        `${priceLine}\n` +
         stockLine,
       { parse_mode: 'HTML', ...confirmPurchaseKeyboard(product.id) },
     );
@@ -149,10 +162,15 @@ export function registerBasicCommands(bot: Telegraf<BotContext>, container: Cont
         .map((item) => '`' + JSON.stringify(item, null, 2) + '`')
         .join('\n\n');
 
+      const savedLine = result.discountAmount.isZero()
+        ? ''
+        : `You saved: ${result.discountAmount.format()}\n`;
+
       await ctx.reply(
         `✅ *Purchase complete!*\n\n` +
           `${result.productName}\n` +
           `Paid: ${result.pricePaid.format()}\n` +
+          savedLine +
           `💰 Remaining balance: ${result.newBalance.format()}\n\n` +
           `🎁 *Your item(s):*\n${items || '_Delivery pending — contact support if it does not arrive._'}`,
         { parse_mode: 'Markdown' },

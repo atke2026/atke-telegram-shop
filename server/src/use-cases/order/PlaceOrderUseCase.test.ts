@@ -8,7 +8,12 @@ import {
   OutOfStockError,
   SystemOfflineError,
 } from '../../core/errors/DomainError.js';
-import type { OrderRepository, ProductRepository, UserRepository } from '../../core/ports/repositories.js';
+import type {
+  DiscountRepository,
+  OrderRepository,
+  ProductRepository,
+  UserRepository,
+} from '../../core/ports/repositories.js';
 import type { AdminNotifier, HubxGateway } from '../../core/ports/services.js';
 import type { Logger } from '../../shared/logger.js';
 import { PlaceOrderUseCase } from './PlaceOrderUseCase.js';
@@ -58,6 +63,7 @@ describe('PlaceOrderUseCase', () => {
   let users: UserRepository;
   let products: ProductRepository;
   let orders: OrderRepository;
+  let discounts: DiscountRepository;
   let hubx: HubxGateway;
   let notifier: AdminNotifier;
   let useCase: PlaceOrderUseCase;
@@ -82,6 +88,16 @@ describe('PlaceOrderUseCase', () => {
       deactivateMissing: vi.fn(),
     };
 
+    discounts = {
+      // No discounts by default; individual tests override this.
+      listActive: vi.fn().mockResolvedValue([]),
+      listAll: vi.fn(),
+      findById: vi.fn(),
+      create: vi.fn(),
+      setActive: vi.fn(),
+      remove: vi.fn(),
+    };
+
     orders = {
       create: vi.fn().mockImplementation(async (input) => ({ ...input, status: 'PENDING' })),
       findById: vi.fn(),
@@ -104,7 +120,15 @@ describe('PlaceOrderUseCase', () => {
 
     notifier = { alert: vi.fn().mockResolvedValue(undefined) };
 
-    useCase = new PlaceOrderUseCase({ users, products, orders, hubx, notifier, logger: silentLogger });
+    useCase = new PlaceOrderUseCase({
+      users,
+      products,
+      discounts,
+      orders,
+      hubx,
+      notifier,
+      logger: silentLogger,
+    });
   });
 
   it('debits the wallet and returns the delivered items on success', async () => {
@@ -157,6 +181,81 @@ describe('PlaceOrderUseCase', () => {
     expect(users.adjustBalance).toHaveBeenNthCalledWith(1, 'user-1', Money.fromDecimal('-340'));
     expect(users.adjustBalance).toHaveBeenNthCalledWith(2, 'user-1', Money.fromDecimal('340'));
     expect(orders.markStatus).toHaveBeenCalledWith(expect.any(String), 'REFUNDED', expect.any(String));
+  });
+
+  it('charges the discounted price, not the list price', async () => {
+    discounts.listActive = vi.fn().mockResolvedValue([
+      {
+        id: 'd1',
+        scope: 'ALL',
+        productId: null,
+        type: 'PERCENT',
+        value: '25',
+        label: null,
+        isActive: true,
+        startsAt: null,
+        endsAt: null,
+        createdAt: new Date(),
+      },
+    ]);
+
+    const result = await useCase.execute({ userId: 'user-1', productId: 'prod-1' });
+
+    // 340 list, 25% off, so 255 is debited and recorded.
+    expect(result.pricePaid.toDecimalString()).toBe('255.00');
+    expect(result.listPrice.toDecimalString()).toBe('340.00');
+    expect(result.discountAmount.toDecimalString()).toBe('85.00');
+    expect(users.adjustBalance).toHaveBeenCalledWith('user-1', Money.fromDecimal('-255'));
+    expect(orders.create).toHaveBeenCalledWith(
+      expect.objectContaining({ discountId: 'd1', pricePaid: Money.fromDecimal('255') }),
+    );
+  });
+
+  it('refunds the discounted price, not the list price', async () => {
+    discounts.listActive = vi.fn().mockResolvedValue([
+      {
+        id: 'd1',
+        scope: 'PRODUCT',
+        productId: 'prod-1',
+        type: 'FIXED',
+        value: '40',
+        label: null,
+        isActive: true,
+        startsAt: null,
+        endsAt: null,
+        createdAt: new Date(),
+      },
+    ]);
+    hubx.placeOrder = vi.fn().mockRejectedValue(new OutOfStockError('prod-1'));
+
+    await expect(useCase.execute({ userId: 'user-1', productId: 'prod-1' })).rejects.toThrow(
+      OutOfStockError,
+    );
+
+    expect(users.adjustBalance).toHaveBeenNthCalledWith(1, 'user-1', Money.fromDecimal('-300'));
+    expect(users.adjustBalance).toHaveBeenNthCalledWith(2, 'user-1', Money.fromDecimal('300'));
+  });
+
+  it('lets a discount make the balance sufficient', async () => {
+    users.findById = vi.fn().mockResolvedValue(makeUser({ balance: Money.fromDecimal('300') }));
+    discounts.listActive = vi.fn().mockResolvedValue([
+      {
+        id: 'd1',
+        scope: 'ALL',
+        productId: null,
+        type: 'PERCENT',
+        value: '20',
+        label: null,
+        isActive: true,
+        startsAt: null,
+        endsAt: null,
+        createdAt: new Date(),
+      },
+    ]);
+
+    // 340 is out of reach, 272 is not.
+    const result = await useCase.execute({ userId: 'user-1', productId: 'prod-1' });
+    expect(result.pricePaid.toDecimalString()).toBe('272.00');
   });
 
   it('escalates to the admin when even the refund fails', async () => {

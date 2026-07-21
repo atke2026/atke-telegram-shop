@@ -57,3 +57,24 @@
   font-weight: 700;
   color: var(--text);
 }
+
+.discountBadge {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--destructive);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.wasPrice {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}

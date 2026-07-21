@@ -8,6 +8,9 @@ export interface ProductDto {
   stock: number;
   inStock: boolean;
   price: MoneyDto;
+  /** Crossed-out original; null when no discount applies. */
+  listPrice: MoneyDto | null;
+  discountLabel: string | null;
   logoUrl: string;
 }
 
