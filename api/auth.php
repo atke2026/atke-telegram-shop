@@ -27,24 +27,8 @@ if ($db === null) {
             'is_admin'         => (ADMIN_CHAT_ID > 0 ? ($telegramId === ADMIN_CHAT_ID) : true),
             'created_at'       => date('Y-m-d H:i:s'),
         ],
-        'payment_methods' => [
-            'telebirr' => [
-                'name'    => 'Telebirr',
-                'account' => PAYMENT_TELEBIRR_PHONE,
-                'holder'  => PAYMENT_TELEBIRR_NAME,
-            ],
-            'cbe' => [
-                'name'    => 'Commercial Bank of Ethiopia (CBE)',
-                'account' => PAYMENT_CBE_ACCOUNT,
-                'holder'  => PAYMENT_CBE_NAME,
-            ],
-            'ebirr' => [
-                'name'    => 'EBirr',
-                'account' => PAYMENT_EBIRR_PHONE,
-                'holder'  => PAYMENT_EBIRR_NAME,
-            ],
-        ],
-        'bot_username' => BOT_USERNAME,
+        'payment_methods' => getStorePaymentMethods($db),
+        'bot_username'    => BOT_USERNAME,
     ]);
 }
 
@@ -120,23 +104,7 @@ try {
             'is_admin'         => (ADMIN_CHAT_ID > 0 ? ($telegramId === ADMIN_CHAT_ID) : true),
             'created_at'       => $userRecord['created_at'],
         ],
-        'payment_methods' => [
-            'telebirr' => [
-                'name'    => 'Telebirr',
-                'account' => PAYMENT_TELEBIRR_PHONE,
-                'holder'  => PAYMENT_TELEBIRR_NAME,
-            ],
-            'cbe' => [
-                'name'    => 'Commercial Bank of Ethiopia (CBE)',
-                'account' => PAYMENT_CBE_ACCOUNT,
-                'holder'  => PAYMENT_CBE_NAME,
-            ],
-            'ebirr' => [
-                'name'    => 'EBirr',
-                'account' => PAYMENT_EBIRR_PHONE,
-                'holder'  => PAYMENT_EBIRR_NAME,
-            ],
-        ],
+        'payment_methods' => getStorePaymentMethods($db),
         'bot_username' => BOT_USERNAME,
     ]);
 

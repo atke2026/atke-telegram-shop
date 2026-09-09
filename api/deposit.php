@@ -23,9 +23,21 @@ if ($amount <= 0) {
     jsonResponse(['error' => 'Please enter a valid deposit amount in ETB.'], 400);
 }
 
-$allowedMethods = ['Telebirr', 'CBE', 'EBirr'];
-if (!in_array($paymentMethod, $allowedMethods, true)) {
-    jsonResponse(['error' => 'Invalid payment method selected. Must be Telebirr, CBE, or EBirr.'], 400);
+$db = getDb(false);
+$activeMethods = getStorePaymentMethods($db);
+$methodMatched = false;
+foreach ($activeMethods as $m) {
+    if (strcasecmp($m['code'], $paymentMethod) === 0 || strcasecmp($m['name'], $paymentMethod) === 0) {
+        $paymentMethod = $m['name'];
+        $methodMatched = true;
+        break;
+    }
+}
+if (!$methodMatched && !empty($paymentMethod)) {
+    // Allow custom named bank if provided
+    $paymentMethod = htmlspecialchars(substr($paymentMethod, 0, 50), ENT_QUOTES, 'UTF-8');
+} elseif (!$methodMatched) {
+    jsonResponse(['error' => 'Please select a valid payment method.'], 400);
 }
 
 if (empty($receiptRaw) || mb_strlen($receiptRaw) < 5) {

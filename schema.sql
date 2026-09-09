@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `deposits` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `telegram_id` BIGINT NOT NULL,
     `amount` DECIMAL(10,2) NOT NULL,
-    `payment_method` ENUM('Telebirr', 'CBE', 'EBirr') NOT NULL,
+    `payment_method` VARCHAR(100) NOT NULL DEFAULT 'Telebirr',
     `receipt_raw` TEXT NOT NULL,
     `extracted_txn_id` VARCHAR(100) NULL UNIQUE,
     `status` ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
@@ -87,7 +87,37 @@ CREATE TABLE IF NOT EXISTS `orders` (
         REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ----------------------------------------------------------
+-- 6. Table: payment_methods (Dynamically managed in Admin Panel)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `payment_methods` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `code` VARCHAR(50) UNIQUE NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `account_number` VARCHAR(100) NOT NULL,
+    `account_name` VARCHAR(255) NOT NULL,
+    `instructions` TEXT NULL,
+    `qr_image_url` VARCHAR(500) NULL,
+    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+    `display_order` INT NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_pm_active_order` (`is_active`, `display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ==========================================================
+-- SEED PAYMENT RECEIVING ACCOUNTS (Admin Customizable)
+-- ==========================================================
+INSERT INTO `payment_methods` (`code`, `name`, `account_number`, `account_name`, `instructions`, `is_active`, `display_order`) VALUES
+('telebirr', 'Telebirr', '0906818924', 'Mohammed Abdirahman Ibrahim', 'Transfer to 0906818924 (Mohammed Abdirahman Ibrahim) via Telebirr app or *127# and submit the confirmation SMS text or Transaction ID.', 1, 1),
+('cbe', 'Commercial Bank of Ethiopia (CBE)', '1000233801837', 'Mohammed Abdirahman Ibrahim', 'Transfer to CBE Account 1000233801837 (Mohammed Abdirahman Ibrahim) via CBE Birr or Mobile Banking, and submit the confirmation SMS or Txn ID.', 1, 2),
+('ebirr', 'E-Birr (Coop / Kaafi)', '0906818924', 'Mohammed Abdirahman Ibrahim', 'Transfer via E-Birr to 0906818924 (Mohammed Abdirahman Ibrahim) and submit the transaction confirmation SMS text.', 1, 3)
+ON DUPLICATE KEY UPDATE 
+    `account_number` = VALUES(`account_number`),
+    `account_name` = VALUES(`account_name`),
+    `instructions` = VALUES(`instructions`);
 
 -- ==========================================================
 -- SEED INITIAL DIGITAL PRODUCTS & INVENTORY VAULT

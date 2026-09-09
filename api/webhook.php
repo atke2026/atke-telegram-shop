@@ -201,12 +201,16 @@ if (isset($update['callback_query'])) {
 
     // B. Deposit Guide Menu Callback
     if ($callbackData === 'menu_deposit_guide') {
+        $methods = getStorePaymentMethods($db);
+        $guideLines = [];
+        foreach ($methods as $m) {
+            $guideLines[] = "• <b>" . htmlspecialchars($m['name'], ENT_QUOTES, 'UTF-8') . ":</b> <code>" . htmlspecialchars($m['account_number'], ENT_QUOTES, 'UTF-8') . "</code> (" . htmlspecialchars($m['account_name'], ENT_QUOTES, 'UTF-8') . ")";
+        }
         $guide = "📌 <b>How to Add Funds:</b>\n\n"
             . "1. Transfer desired ETB to our verified accounts:\n"
-            . "   • <b>Telebirr:</b> <code>" . PAYMENT_TELEBIRR_PHONE . "</code> (" . PAYMENT_TELEBIRR_NAME . ")\n"
-            . "   • <b>CBE Bank:</b> <code>" . PAYMENT_CBE_ACCOUNT . "</code> (" . PAYMENT_CBE_NAME . ")\n\n"
+            . implode("\n", $guideLines) . "\n\n"
             . "2. Open the Mini App > <b>Wallet</b> tab.\n"
-            . "3. Paste your confirmation SMS or transaction ID.\n"
+            . "3. Paste your confirmation SMS text or transaction ID.\n"
             . "4. Funds are credited instantly upon verification!";
 
         answerCallbackQuery($callbackId);

@@ -520,4 +520,147 @@ if ($action === 'review_deposit' && $method === 'POST') {
     }
 }
 
+// Helper: Ensure payment_methods table exists and is seeded with Mohammed Abdirahman Ibrahim
+function ensurePaymentMethodsTable(PDO $db): void {
+    $sql = "CREATE TABLE IF NOT EXISTS `payment_methods` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `code` VARCHAR(50) UNIQUE NOT NULL,
+        `name` VARCHAR(100) NOT NULL,
+        `account_number` VARCHAR(100) NOT NULL,
+        `account_name` VARCHAR(255) NOT NULL,
+        `instructions` TEXT NULL,
+        `qr_image_url` VARCHAR(500) NULL,
+        `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+        `display_order` INT NOT NULL DEFAULT 0,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX `idx_pm_active_order` (`is_active`, `display_order`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+    $db->exec($sql);
+
+    $count = (int)$db->query("SELECT COUNT(*) FROM `payment_methods`")->fetchColumn();
+    if ($count === 0) {
+        $stmt = $db->prepare("INSERT INTO `payment_methods` (`code`, `name`, `account_number`, `account_name`, `instructions`, `is_active`, `display_order`) VALUES
+            ('telebirr', 'Telebirr', ?, ?, ?, 1, 1),
+            ('cbe', 'Commercial Bank of Ethiopia (CBE)', ?, ?, ?, 1, 2),
+            ('ebirr', 'E-Birr (Coop / Kaafi)', ?, ?, ?, 1, 3)");
+        $stmt->execute([
+            PAYMENT_TELEBIRR_PHONE, PAYMENT_TELEBIRR_NAME,
+            'Transfer to ' . PAYMENT_TELEBIRR_PHONE . ' (' . PAYMENT_TELEBIRR_NAME . ') via Telebirr app or *127# and submit confirmation SMS or Txn ID.',
+            PAYMENT_CBE_ACCOUNT, PAYMENT_CBE_NAME,
+            'Transfer to CBE Account ' . PAYMENT_CBE_ACCOUNT . ' (' . PAYMENT_CBE_NAME . ') via Mobile Banking, and submit confirmation SMS or Txn ID.',
+            PAYMENT_EBIRR_PHONE, PAYMENT_EBIRR_NAME,
+            'Transfer via E-Birr to ' . PAYMENT_EBIRR_PHONE . ' (' . PAYMENT_EBIRR_NAME . ') and submit confirmation SMS.'
+        ]);
+    }
+}
+
+// ==========================================================
+// 9. ACTION: payment_methods (List all payment accounts)
+// ==========================================================
+if ($action === 'payment_methods') {
+    if ($db === null) {
+        jsonResponse([
+            'status' => 'success',
+            'payment_methods' => array_values(getStorePaymentMethods(null))
+        ]);
+    }
+
+    try {
+        ensurePaymentMethodsTable($db);
+        $stmt = $db->query("SELECT * FROM payment_methods ORDER BY display_order ASC, id ASC");
+        $methods = $stmt->fetchAll();
+        foreach ($methods as &$m) {
+            $m['id'] = (int)$m['id'];
+            $m['is_active'] = (int)$m['is_active'];
+            $m['display_order'] = (int)$m['display_order'];
+        }
+        unset($m);
+
+        jsonResponse([
+            'status' => 'success',
+            'payment_methods' => $methods
+        ]);
+    } catch (Exception $e) {
+        error_log('Admin Payment Methods Error: ' . $e->getMessage());
+        jsonResponse(['error' => 'Failed to fetch payment methods.'], 500);
+    }
+}
+
+// ==========================================================
+// 10. ACTION: save_payment_method (Create or Edit Account)
+// ==========================================================
+if ($action === 'save_payment_method') {
+    if ($db === null) {
+        jsonResponse(['error' => 'Database connection required to save payment changes.'], 503);
+    }
+
+    $id = isset($payload['id']) && (int)$payload['id'] > 0 ? (int)$payload['id'] : null;
+    $name = trim($payload['name'] ?? '');
+    $accountNumber = trim($payload['account_number'] ?? '');
+    $accountName = trim($payload['account_name'] ?? '');
+    $instructions = trim($payload['instructions'] ?? '');
+    $code = strtolower(trim($payload['code'] ?? ''));
+    $isActive = isset($payload['is_active']) ? (int)(bool)$payload['is_active'] : 1;
+
+    if (empty($name) || empty($accountNumber) || empty($accountName)) {
+        jsonResponse(['error' => 'Account name, number, and holder name are required.'], 400);
+    }
+
+    if (empty($code)) {
+        $code = preg_replace('/[^a-z0-9]+/', '_', strtolower($name));
+        $code = trim($code, '_');
+    }
+
+    try {
+        ensurePaymentMethodsTable($db);
+
+        if ($id) {
+            $stmt = $db->prepare("UPDATE payment_methods SET name = ?, account_number = ?, account_name = ?, instructions = ?, is_active = ?, code = ? WHERE id = ?");
+            $stmt->execute([$name, $accountNumber, $accountName, $instructions, $isActive, $code, $id]);
+            $msg = "Payment account updated successfully!";
+        } else {
+            $stmt = $db->prepare("INSERT INTO payment_methods (code, name, account_number, account_name, instructions, is_active, display_order) VALUES (?, ?, ?, ?, ?, ?, 99) ON DUPLICATE KEY UPDATE name = VALUES(name), account_number = VALUES(account_number), account_name = VALUES(account_name), instructions = VALUES(instructions), is_active = VALUES(is_active)");
+            $stmt->execute([$code, $name, $accountNumber, $accountName, $instructions, $isActive]);
+            $msg = "Payment account added successfully!";
+        }
+
+        jsonResponse([
+            'status'  => 'success',
+            'message' => $msg
+        ]);
+    } catch (Exception $e) {
+        error_log("Save Payment Method Error: " . $e->getMessage());
+        jsonResponse(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
+}
+
+// ==========================================================
+// 11. ACTION: toggle_payment_method (Quick Enable/Disable)
+// ==========================================================
+if ($action === 'toggle_payment_method') {
+    if ($db === null) {
+        jsonResponse(['error' => 'Database connection required.'], 503);
+    }
+
+    $id = (int)($payload['id'] ?? 0);
+    if ($id <= 0) {
+        jsonResponse(['error' => 'Invalid payment method ID.'], 400);
+    }
+
+    try {
+        ensurePaymentMethodsTable($db);
+        $stmt = $db->prepare("UPDATE payment_methods SET is_active = 1 - is_active WHERE id = ?");
+        $stmt->execute([$id]);
+
+        jsonResponse([
+            'status' => 'success',
+            'message' => 'Status updated successfully.'
+        ]);
+    } catch (Exception $e) {
+        error_log("Toggle Payment Error: " . $e->getMessage());
+        jsonResponse(['error' => 'Failed to toggle status.'], 500);
+    }
+}
+
 jsonResponse(['error' => 'Unknown admin action.'], 400);

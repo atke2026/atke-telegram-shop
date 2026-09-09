@@ -11,16 +11,17 @@ const state = {
   products: [],
   orders: [],
   activeCategory: 'All',
-  selectedMethod: 'Telebirr',
+  selectedMethod: 'telebirr',
   paymentMethods: {
-    telebirr: { name: 'Telebirr', account: '0911223344', holder: 'Atke Tech / Digital Store' },
-    cbe: { name: 'Commercial Bank of Ethiopia (CBE)', account: '1000234567891', holder: 'Atke Tech Solutions' },
-    ebirr: { name: 'EBirr', account: '0922334455', holder: 'Atke Tech / Digital Store' }
+    telebirr: { name: 'Telebirr', account: '0906818924', holder: 'Mohammed Abdirahman Ibrahim' },
+    cbe: { name: 'Commercial Bank of Ethiopia (CBE)', account: '1000233801837', holder: 'Mohammed Abdirahman Ibrahim' },
+    ebirr: { name: 'E-Birr (Coop / Kaafi)', account: '0906818924', holder: 'Mohammed Abdirahman Ibrahim' }
   },
   pendingPurchaseProduct: null,
   deliveredPayload: '',
   adminProducts: [],
   adminDeposits: [],
+  adminPaymentMethods: [],
   adminSection: 'products',
   adminDepositFilter: 'pending'
 };
@@ -176,6 +177,7 @@ function updateUserUI() {
   }
 
   // Refresh current payment method box
+  renderWalletMethodButtons();
   renderPaymentMethodDetails();
 }
 
@@ -416,47 +418,76 @@ function viewInOrders() {
 // ==========================================================
 // 5. WALLET & DEPOSIT FLOW
 // ==========================================================
+function renderWalletMethodButtons() {
+  const container = document.getElementById('walletMethodButtonsContainer');
+  if (!container) return;
+
+  const methodsList = Object.values(state.paymentMethods).filter(m => m.is_active !== 0);
+  if (methodsList.length === 0) return;
+
+  const activeCodes = methodsList.map(m => (m.code || m.name).toLowerCase());
+  if (!activeCodes.includes(state.selectedMethod.toLowerCase())) {
+    state.selectedMethod = activeCodes[0];
+  }
+
+  container.className = `grid grid-cols-${Math.min(methodsList.length, 3)} gap-2`;
+  container.innerHTML = methodsList.map(m => {
+    const code = (m.code || m.name).toLowerCase();
+    const isSel = code === state.selectedMethod.toLowerCase();
+    let badge = 'Instant';
+    if (code.includes('telebirr')) badge = 'Superfast';
+    else if (code.includes('cbe')) badge = 'Commercial';
+    else if (code.includes('ebirr')) badge = 'Coop / Kaafi';
+
+    return `
+      <button type="button" onclick="selectDepositMethod('${code}')" id="btnMethod-${code}" class="method-btn ${isSel ? 'active py-2.5 px-3 rounded-xl bg-emerald-600/20 border border-emerald-500 text-emerald-300 font-bold' : 'py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold'} text-xs flex flex-col items-center justify-center space-y-1 transition-all">
+        <span class="truncate max-w-[90px]">${m.name}</span>
+        <span class="text-[10px] ${isSel ? 'text-emerald-400/80' : 'text-gray-500'} font-normal">${badge}</span>
+      </button>
+    `;
+  }).join('');
+}
+
 function selectDepositMethod(method) {
   triggerHaptic('light');
-  state.selectedMethod = method;
-
-  // Toggle active button style
-  ['Telebirr', 'CBE', 'EBirr'].forEach(m => {
-    const btn = document.getElementById(`btnMethod-${m}`);
-    if (m === method) {
-      btn.className = 'method-btn active py-2.5 px-3 rounded-xl bg-emerald-600/20 border border-emerald-500 text-emerald-300 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all';
-    } else {
-      btn.className = 'method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all';
-    }
-  });
-
+  state.selectedMethod = method.toLowerCase();
+  renderWalletMethodButtons();
   renderPaymentMethodDetails();
 }
 
 function renderPaymentMethodDetails() {
   const methodKey = state.selectedMethod.toLowerCase();
-  const info = state.paymentMethods[methodKey] || {
-    name: state.selectedMethod,
-    account: 'N/A',
-    holder: 'Atke Tech'
+  const info = state.paymentMethods[methodKey] || Object.values(state.paymentMethods)[0] || {
+    name: 'Telebirr',
+    account: '0906818924',
+    holder: 'Mohammed Abdirahman Ibrahim'
   };
 
-  document.getElementById('depositMethodTitle').textContent = `${info.name} Account`;
-  document.getElementById('depositAccountNumber').textContent = info.account;
-  document.getElementById('depositAccountHolder').textContent = info.holder;
+  const accountNum = info.account_number || info.account || '0906818924';
+  const holderName = info.account_name || info.holder || 'Mohammed Abdirahman Ibrahim';
+
+  const titleEl = document.getElementById('depositMethodTitle');
+  const numEl = document.getElementById('depositAccountNumber');
+  const holderEl = document.getElementById('depositAccountHolder');
+
+  if (titleEl) titleEl.textContent = `${info.name} Account`;
+  if (numEl) numEl.textContent = accountNum;
+  if (holderEl) holderEl.textContent = holderName;
 }
 
 function copyAccountInfo() {
   const methodKey = state.selectedMethod.toLowerCase();
-  const info = state.paymentMethods[methodKey];
-  if (!info?.account) return;
+  const info = state.paymentMethods[methodKey] || Object.values(state.paymentMethods)[0];
+  const num = info?.account_number || info?.account || '0906818924';
 
   triggerHaptic('light');
-  navigator.clipboard.writeText(info.account).then(() => {
+  navigator.clipboard.writeText(num).then(() => {
     const btn = document.getElementById('copyBtnText');
-    btn.textContent = 'Copied! ✓';
-    setTimeout(() => { btn.textContent = 'Copy Account'; }, 2000);
-    showToast(`${info.name} account copied!`);
+    if (btn) {
+      btn.textContent = 'Copied! ✓';
+      setTimeout(() => { btn.textContent = 'Copy Account'; }, 2000);
+    }
+    showToast(`${info.name || 'Account'} copied!`);
   });
 }
 
@@ -860,20 +891,32 @@ function switchAdminSection(section) {
 
   const btnProd = document.getElementById('btnAdminSection-products');
   const btnDep = document.getElementById('btnAdminSection-deposits');
+  const btnPay = document.getElementById('btnAdminSection-payments');
   const panelProd = document.getElementById('adminPanel-products');
   const panelDep = document.getElementById('adminPanel-deposits');
+  const panelPay = document.getElementById('adminPanel-payments');
+
+  // Reset buttons
+  if (btnProd) btnProd.className = 'px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all whitespace-nowrap';
+  if (btnDep) btnDep.className = 'px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5 whitespace-nowrap';
+  if (btnPay) btnPay.className = 'px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1 whitespace-nowrap';
+
+  // Hide panels
+  if (panelProd) panelProd.classList.add('hidden');
+  if (panelDep) panelDep.classList.add('hidden');
+  if (panelPay) panelPay.classList.add('hidden');
 
   if (section === 'products') {
-    btnProd.className = 'px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm';
-    btnDep.className = 'px-3.5 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5';
-    panelProd.classList.remove('hidden');
-    panelDep.classList.add('hidden');
-  } else {
-    btnDep.className = 'px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm flex items-center space-x-1.5';
-    btnProd.className = 'px-3.5 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all';
-    panelDep.classList.remove('hidden');
-    panelProd.classList.add('hidden');
+    if (btnProd) btnProd.className = 'px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm whitespace-nowrap';
+    if (panelProd) panelProd.classList.remove('hidden');
+  } else if (section === 'deposits') {
+    if (btnDep) btnDep.className = 'px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm flex items-center space-x-1.5 whitespace-nowrap';
+    if (panelDep) panelDep.classList.remove('hidden');
     loadAdminDeposits();
+  } else if (section === 'payments') {
+    if (btnPay) btnPay.className = 'px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all shadow-sm flex items-center space-x-1 whitespace-nowrap';
+    if (panelPay) panelPay.classList.remove('hidden');
+    loadAdminPaymentMethods();
   }
 }
 
@@ -1294,5 +1337,197 @@ async function adminRejectDeposit(depositId) {
     }
   } catch (err) {
     showToast('Failed to reject deposit.', true);
+  }
+}
+
+// ==========================================================
+// 10. 👑 ADMIN: PAYMENT RECEIVING ACCOUNTS (Telebirr, CBE, etc.)
+// ==========================================================
+
+async function loadAdminPaymentMethods() {
+  try {
+    const res = await fetch('../api/admin.php?action=payment_methods', {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': state.initData
+      }
+    });
+    const data = await res.json();
+    if (data.payment_methods) {
+      state.adminPaymentMethods = data.payment_methods;
+      renderAdminPaymentMethods();
+    }
+  } catch (err) {
+    console.error('Failed to load admin payment methods:', err);
+  }
+}
+
+function renderAdminPaymentMethods() {
+  const container = document.getElementById('adminPaymentsContainer');
+  if (!container) return;
+
+  if (!state.adminPaymentMethods || state.adminPaymentMethods.length === 0) {
+    container.innerHTML = `
+      <div class="p-8 text-center text-gray-500 space-y-2">
+        <i data-lucide="landmark" class="w-8 h-8 mx-auto text-emerald-500/50"></i>
+        <p class="text-xs">No payment accounts found. Tap "Add Account" to create one!</p>
+      </div>
+    `;
+    setupIcons();
+    return;
+  }
+
+  container.innerHTML = state.adminPaymentMethods.map(m => {
+    const isActive = m.is_active !== 0;
+    const accountNum = m.account_number || m.account || '';
+    const accountName = m.account_name || m.holder || '';
+    const instructions = m.instructions || '';
+
+    return `
+      <div class="p-4 rounded-2xl bg-gray-900 border ${isActive ? 'border-gray-800' : 'border-gray-800/40 opacity-70'} space-y-3">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <i data-lucide="landmark" class="w-5 h-5 text-emerald-400"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h4 class="text-xs font-bold text-white">${m.name}</h4>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono ${isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-gray-500'}">
+                  ${isActive ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <div class="text-xs font-mono font-bold text-emerald-400 mt-0.5">${accountNum}</div>
+              <div class="text-[10px] text-gray-400 truncate max-w-[200px]">${accountName}</div>
+            </div>
+          </div>
+          <button onclick="togglePaymentStatus(${m.id})" class="py-1 px-2.5 rounded-lg ${isActive ? 'bg-gray-800 text-gray-400 hover:text-red-400' : 'bg-emerald-950/40 text-emerald-400'} text-[10px] font-bold transition-colors">
+            ${isActive ? 'Disable' : 'Enable'}
+          </button>
+        </div>
+
+        ${instructions ? `<p class="text-[10px] text-gray-400 italic bg-black/40 p-2 rounded-lg border border-gray-800/50 leading-relaxed">${instructions}</p>` : ''}
+
+        <div class="flex items-center space-x-2 pt-2 border-t border-gray-800/70">
+          <button onclick="openEditPaymentModal(${m.id})" class="flex-1 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-amber-300 text-xs font-bold flex items-center justify-center space-x-1 transition-colors">
+            <i data-lucide="edit-2" class="w-3 h-3"></i>
+            <span>Edit Account</span>
+          </button>
+          <button onclick="copyToClipboard('${accountNum}', this)" class="py-1.5 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold flex items-center space-x-1 transition-colors">
+            <i data-lucide="copy" class="w-3 h-3"></i>
+            <span>Copy</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  setupIcons();
+}
+
+function openNewPaymentModal() {
+  triggerHaptic('light');
+  document.getElementById('editPaymentModalTitle').textContent = 'Add Bank / Payment Method';
+  document.getElementById('editPaymentId').value = '';
+  document.getElementById('editPaymentCode').value = '';
+  document.getElementById('editPaymentName').value = '';
+  document.getElementById('editPaymentNumber').value = '';
+  document.getElementById('editPaymentHolder').value = 'Mohammed Abdirahman Ibrahim';
+  document.getElementById('editPaymentInstructions').value = '';
+  document.getElementById('editPaymentActive').checked = true;
+
+  const modal = document.getElementById('editPaymentModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function openEditPaymentModal(id) {
+  triggerHaptic('light');
+  const m = state.adminPaymentMethods.find(item => item.id === id);
+  if (!m) return;
+
+  document.getElementById('editPaymentModalTitle').textContent = `Edit ${m.name}`;
+  document.getElementById('editPaymentId').value = m.id;
+  document.getElementById('editPaymentCode').value = m.code || '';
+  document.getElementById('editPaymentName').value = m.name;
+  document.getElementById('editPaymentNumber').value = m.account_number || m.account || '';
+  document.getElementById('editPaymentHolder').value = m.account_name || m.holder || '';
+  document.getElementById('editPaymentInstructions').value = m.instructions || '';
+  document.getElementById('editPaymentActive').checked = m.is_active !== 0;
+
+  const modal = document.getElementById('editPaymentModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+async function handleSavePayment(e) {
+  e.preventDefault();
+  triggerHaptic('medium');
+
+  const idVal = document.getElementById('editPaymentId').value;
+  const payload = {
+    id: idVal ? parseInt(idVal, 10) : null,
+    code: document.getElementById('editPaymentCode').value,
+    name: document.getElementById('editPaymentName').value.trim(),
+    account_number: document.getElementById('editPaymentNumber').value.trim(),
+    account_name: document.getElementById('editPaymentHolder').value.trim(),
+    instructions: document.getElementById('editPaymentInstructions').value.trim(),
+    is_active: document.getElementById('editPaymentActive').checked ? 1 : 0,
+    initData: state.initData
+  };
+
+  const btn = document.getElementById('btnSavePayment');
+  const origText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Saving...';
+
+  try {
+    const res = await fetch('../api/admin.php?action=save_payment_method', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': state.initData
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      showToast(data.error, true);
+    } else {
+      showToast(data.message || 'Payment account saved successfully! 🎉');
+      closeModal('editPaymentModal');
+      await loadAdminPaymentMethods();
+      await authenticateUser();
+    }
+  } catch (err) {
+    showToast('Failed to save payment account.', true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+    setupIcons();
+  }
+}
+
+async function togglePaymentStatus(id) {
+  triggerHaptic('medium');
+  try {
+    const res = await fetch('../api/admin.php?action=toggle_payment_method', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': state.initData
+      },
+      body: JSON.stringify({ id, initData: state.initData })
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      showToast(data.error, true);
+    } else {
+      showToast(data.message || 'Status updated.');
+      await loadAdminPaymentMethods();
+      await authenticateUser();
+    }
+  } catch (err) {
+    showToast('Failed to toggle status.', true);
   }
 }

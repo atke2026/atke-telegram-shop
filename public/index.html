@@ -202,19 +202,19 @@
           <span>Add Money to Wallet</span>
         </h2>
 
-        <!-- Method Buttons (Telebirr / CBE / EBirr) -->
-        <div class="grid grid-cols-3 gap-2">
-          <button onclick="selectDepositMethod('Telebirr')" id="btnMethod-Telebirr" class="method-btn active py-2.5 px-3 rounded-xl bg-emerald-600/20 border border-emerald-500 text-emerald-300 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
+        <!-- Dynamic Payment Method Buttons -->
+        <div class="grid grid-cols-3 gap-2" id="walletMethodButtonsContainer">
+          <button onclick="selectDepositMethod('telebirr')" id="btnMethod-telebirr" class="method-btn active py-2.5 px-3 rounded-xl bg-emerald-600/20 border border-emerald-500 text-emerald-300 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
             <span>Telebirr</span>
             <span class="text-[10px] text-emerald-400/80 font-normal">Superfast</span>
           </button>
-          <button onclick="selectDepositMethod('CBE')" id="btnMethod-CBE" class="method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
+          <button onclick="selectDepositMethod('cbe')" id="btnMethod-cbe" class="method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
             <span>CBE Bank</span>
             <span class="text-[10px] text-gray-500 font-normal">Commercial</span>
           </button>
-          <button onclick="selectDepositMethod('EBirr')" id="btnMethod-EBirr" class="method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
-            <span>EBirr</span>
-            <span class="text-[10px] text-gray-500 font-normal">Mobile Pay</span>
+          <button onclick="selectDepositMethod('ebirr')" id="btnMethod-ebirr" class="method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
+            <span>E-Birr</span>
+            <span class="text-[10px] text-gray-500 font-normal">Coop / Kaafi</span>
           </button>
         </div>
 
@@ -228,8 +228,8 @@
             </button>
           </div>
           <div class="p-3 bg-black/40 rounded-lg border border-gray-800/80 font-mono flex items-center justify-between">
-            <span id="depositAccountNumber" class="text-sm font-bold text-white tracking-wider">0911223344</span>
-            <span id="depositAccountHolder" class="text-gray-400 text-xs truncate max-w-[140px]">Atke Tech</span>
+            <span id="depositAccountNumber" class="text-sm font-bold text-white tracking-wider">0906818924</span>
+            <span id="depositAccountHolder" class="text-gray-400 text-xs truncate max-w-[170px]">Mohammed Abdirahman Ibrahim</span>
           </div>
           <p class="text-[11px] text-gray-400 leading-relaxed">
             1. Send funds using your banking app.<br>
@@ -372,13 +372,16 @@
       </div>
 
       <!-- Admin Section Switcher -->
-      <div class="flex items-center space-x-2 border-b border-gray-800 pb-2 text-xs font-semibold">
-        <button onclick="switchAdminSection('products')" id="btnAdminSection-products" class="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm">
+      <div class="flex items-center space-x-2 border-b border-gray-800 pb-2 text-xs font-semibold overflow-x-auto no-scrollbar">
+        <button onclick="switchAdminSection('products')" id="btnAdminSection-products" class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm whitespace-nowrap">
           📦 Products & Stock
         </button>
-        <button onclick="switchAdminSection('deposits')" id="btnAdminSection-deposits" class="px-3.5 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5">
-          <span>💳 Deposits Queue</span>
+        <button onclick="switchAdminSection('deposits')" id="btnAdminSection-deposits" class="px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5 whitespace-nowrap">
+          <span>💳 Deposits</span>
           <span id="adminPendingBadge" class="hidden px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">0</span>
+        </button>
+        <button onclick="switchAdminSection('payments')" id="btnAdminSection-payments" class="px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1 whitespace-nowrap">
+          <span>🏦 Bank Accounts</span>
         </button>
       </div>
 
@@ -409,6 +412,21 @@
         </div>
 
         <div id="adminDepositsContainer" class="space-y-3">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- 3. Admin Bank & Payment Accounts Panel -->
+      <div id="adminPanel-payments" class="hidden space-y-3">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-gray-400 font-medium">Payment Receiving Accounts (Telebirr, CBE, etc.)</span>
+          <button onclick="openNewPaymentModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold flex items-center space-x-1 transition-all active:scale-95 shadow-md">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Add Account</span>
+          </button>
+        </div>
+
+        <div id="adminPaymentsContainer" class="space-y-3">
           <!-- Populated by JS -->
         </div>
       </div>
@@ -703,6 +721,65 @@
       <button type="button" onclick="closeModal('vaultKeysModal')" class="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-semibold text-xs">
         Close Inspector
       </button>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       ADMIN MODAL 4: ADD / EDIT PAYMENT RECEIVING ACCOUNT
+       ========================================================== -->
+  <div id="editPaymentModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-md bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+          <i data-lucide="landmark" class="w-4 h-4 text-emerald-400"></i>
+          <span id="editPaymentModalTitle">Payment Receiving Account</span>
+        </h3>
+        <button onclick="closeModal('editPaymentModal')" class="p-1 text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="paymentAccountForm" onsubmit="handleSavePayment(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="editPaymentId" value="" />
+        <input type="hidden" id="editPaymentCode" value="" />
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Method / Bank Name</label>
+          <input type="text" id="editPaymentName" required placeholder="e.g. Telebirr, Commercial Bank of Ethiopia (CBE), Awash Bank, BOA" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Account Number / Phone Number</label>
+          <input type="text" id="editPaymentNumber" required placeholder="e.g. 0906818924 or 1000233801837" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:border-emerald-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Account Holder Full Name</label>
+          <input type="text" id="editPaymentHolder" required placeholder="e.g. Mohammed Abdirahman Ibrahim" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Customer Instructions (Optional)</label>
+          <textarea id="editPaymentInstructions" rows="2" placeholder="e.g. Transfer via mobile app and paste the SMS below..." class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500 outline-none"></textarea>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-1">
+          <input type="checkbox" id="editPaymentActive" checked class="w-4 h-4 rounded text-emerald-500 bg-gray-800 border-gray-700 focus:ring-0" />
+          <label for="editPaymentActive" class="text-gray-300 font-medium cursor-pointer">Active (Visible to customers in Wallet Tab)</label>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="closeModal('editPaymentModal')" class="w-1/3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs">
+            Cancel
+          </button>
+          <button type="submit" id="btnSavePayment" class="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1 shadow-md shadow-emerald-950/40">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Save Account</span>
+          </button>
+        </div>
+      </form>
+
     </div>
   </div>
 

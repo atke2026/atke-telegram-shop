@@ -36,17 +36,82 @@ define('DB_CHARSET', 'utf8mb4');
 // ==========================================================
 // 4. PAYMENT RECEIVING DETAILS (Ethiopian Financial Methods)
 // ==========================================================
-define('PAYMENT_TELEBIRR_PHONE', '0911223344');
-define('PAYMENT_TELEBIRR_NAME', 'Atke Tech / Digital Store');
+define('PAYMENT_TELEBIRR_PHONE', '0906818924');
+define('PAYMENT_TELEBIRR_NAME', 'Mohammed Abdirahman Ibrahim');
 
-define('PAYMENT_CBE_ACCOUNT', '1000234567891');
-define('PAYMENT_CBE_NAME', 'Atke Tech Solutions');
+define('PAYMENT_CBE_ACCOUNT', '1000233801837');
+define('PAYMENT_CBE_NAME', 'Mohammed Abdirahman Ibrahim');
 
-define('PAYMENT_EBIRR_PHONE', '0922334455');
-define('PAYMENT_EBIRR_NAME', 'Atke Tech / Digital Store');
+define('PAYMENT_EBIRR_PHONE', '0906818924');
+define('PAYMENT_EBIRR_NAME', 'Mohammed Abdirahman Ibrahim');
 
 // Referral bonus awarded in ETB when a referred user makes their first deposit/order (optional)
 define('REFERRAL_BONUS_ETB', 20.00);
+
+/**
+ * Returns dynamic payment methods from database if available,
+ * falling back gracefully to configured defaults.
+ */
+function getStorePaymentMethods(?PDO $db): array {
+    $fallback = [
+        'telebirr' => [
+            'id'             => 1,
+            'code'           => 'telebirr',
+            'name'           => 'Telebirr',
+            'account_number' => PAYMENT_TELEBIRR_PHONE,
+            'account_name'   => PAYMENT_TELEBIRR_NAME,
+            'instructions'   => 'Transfer to ' . PAYMENT_TELEBIRR_PHONE . ' (' . PAYMENT_TELEBIRR_NAME . ') via Telebirr app or *127# and submit the confirmation SMS text or Txn ID.',
+            'is_active'      => 1,
+        ],
+        'cbe' => [
+            'id'             => 2,
+            'code'           => 'cbe',
+            'name'           => 'Commercial Bank of Ethiopia (CBE)',
+            'account_number' => PAYMENT_CBE_ACCOUNT,
+            'account_name'   => PAYMENT_CBE_NAME,
+            'instructions'   => 'Transfer to CBE Account ' . PAYMENT_CBE_ACCOUNT . ' (' . PAYMENT_CBE_NAME . ') via Mobile Banking, and submit the confirmation SMS text or Txn ID.',
+            'is_active'      => 1,
+        ],
+        'ebirr' => [
+            'id'             => 3,
+            'code'           => 'ebirr',
+            'name'           => 'E-Birr (Coop / Kaafi)',
+            'account_number' => PAYMENT_EBIRR_PHONE,
+            'account_name'   => PAYMENT_EBIRR_NAME,
+            'instructions'   => 'Transfer via E-Birr to ' . PAYMENT_EBIRR_PHONE . ' (' . PAYMENT_EBIRR_NAME . ') and submit the transaction confirmation SMS text.',
+            'is_active'      => 1,
+        ],
+    ];
+
+    if ($db === null) {
+        return $fallback;
+    }
+
+    try {
+        $stmt = $db->query("SELECT id, code, name, account_number, account_name, instructions, qr_image_url, is_active FROM payment_methods WHERE is_active = 1 ORDER BY display_order ASC, id ASC");
+        $rows = $stmt->fetchAll();
+        if (empty($rows)) {
+            return $fallback;
+        }
+        $methods = [];
+        foreach ($rows as $row) {
+            $methods[$row['code']] = [
+                'id'             => (int)$row['id'],
+                'code'           => $row['code'],
+                'name'           => $row['name'],
+                'account_number' => $row['account_number'],
+                'account_name'   => $row['account_name'],
+                'instructions'   => $row['instructions'],
+                'qr_image_url'   => $row['qr_image_url'] ?? null,
+                'is_active'      => (int)$row['is_active'],
+            ];
+        }
+        return $methods;
+    } catch (Exception $e) {
+        error_log("Failed to fetch payment_methods from DB: " . $e->getMessage());
+        return $fallback;
+    }
+}
 
 // ==========================================================
 // 5. DATABASE CONNECTION SINGLETON
