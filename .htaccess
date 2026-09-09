@@ -1,0 +1,47 @@
+# ==========================================================
+# Plesk Apache / LiteSpeed Configuration for YeneShop Mini App
+# ==========================================================
+
+# 1. Disable directory browsing
+Options -Indexes
+
+# 2. Block direct web access to sensitive files
+<FilesMatch "^(schema\.sql|\.env|\.git|composer\.(json|lock))$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 3. Allow Telegram WebApp iframe embedding
+<IfModule mod_headers.c>
+    # Note: Telegram Mini Apps load in an iframe inside Telegram Desktop & Web
+    # Do NOT set X-Frame-Options to DENY or SAMEORIGIN
+    Header unset X-Frame-Options
+    Header set Content-Security-Policy "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org http://localhost:*;"
+    
+    # Security headers
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# 4. Default character set
+AddDefaultCharset UTF-8
+
+# 5. Enable Gzip Compression for Fast Mini App Loading
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>

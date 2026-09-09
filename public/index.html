@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>YeneShop - Digital Accounts & Keys</title>
+  
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- Tailwind CSS CDN with Typography & Forms -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            },
+            dark: {
+              bg: '#0b0f19',
+              card: '#111827',
+              border: '#1f2937',
+              lighter: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Prevent rubber-banding / bounce on iOS inside Telegram */
+    body {
+      touch-action: pan-x pan-y;
+      background-color: #0b0f19;
+      color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    /* Custom scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 9999px;
+    }
+
+    .glass-card {
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    
+    .badge-glow {
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
+    }
+
+    /* Tab transitions */
+    .tab-content {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    }
+    .tab-content.active {
+      display: block;
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-gray-100 min-h-screen pb-24 select-none">
+
+  <!-- ==========================================================
+       TOP APP HEADER
+       ========================================================== -->
+  <header class="sticky top-0 z-30 bg-[#0b0f19]/90 backdrop-blur-md border-b border-gray-800/80 px-4 py-3">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <!-- User Profile Pill -->
+      <div class="flex items-center space-x-2.5">
+        <div id="userAvatar" class="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-bold text-white text-sm shadow-md ring-2 ring-emerald-500/30">
+          U
+        </div>
+        <div class="flex flex-col">
+          <span id="userName" class="text-sm font-semibold tracking-wide text-white leading-tight">Loading...</span>
+          <span id="userHandle" class="text-xs text-gray-400">@...</span>
+        </div>
+      </div>
+
+      <!-- Live Wallet Balance Pill with Fast Deposit Trigger & Admin Button -->
+      <div class="flex items-center space-x-1.5">
+        <button id="headerAdminBtn" onclick="switchTab('admin')" class="hidden items-center space-x-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm shadow-amber-950/40">
+          <span>👑 Admin</span>
+        </button>
+        <button onclick="switchTab('wallet')" class="group flex items-center space-x-2 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-500/30 px-3 py-1.5 rounded-full transition-all active:scale-95">
+          <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span id="headerBalance" class="text-xs font-bold text-emerald-400">0.00 ETB</span>
+          <span class="w-4 h-4 bg-emerald-500 text-slate-950 rounded-full flex items-center justify-center text-[10px] font-black group-hover:rotate-90 transition-transform">+</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================
+       MAIN VIEW CONTAINER (4 TABS)
+       ========================================================== -->
+  <main class="max-w-md mx-auto px-4 pt-4">
+
+    <!-- --------------------------------------------------------
+         TAB 1: STORE
+         -------------------------------------------------------- -->
+    <section id="tab-store" class="tab-content active space-y-4">
+      
+      <!-- Promo Banner -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-900/40 via-teal-900/20 to-slate-900 border border-emerald-500/20 p-4">
+        <div class="relative z-10 space-y-1">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            ⚡ INSTANT BOT DELIVERY
+          </span>
+          <h1 class="text-lg font-bold text-white tracking-tight">Digital Accounts & Licenses</h1>
+          <p class="text-xs text-gray-400">Verified Gemini, Canva Pro, Telegram Premium, and VPNs.</p>
+        </div>
+        <div class="absolute -right-4 -bottom-4 opacity-10 pointer-events-none">
+          <i data-lucide="shopping-bag" class="w-28 h-28 text-emerald-400"></i>
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="flex items-center space-x-2 overflow-x-auto pb-1 no-scrollbar text-xs font-medium">
+        <button onclick="filterCategory('All')" class="cat-pill active px-3.5 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-bold whitespace-nowrap transition-all shadow-sm">
+          All
+        </button>
+        <button onclick="filterCategory('AI Tools')" class="cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all">
+          AI Tools
+        </button>
+        <button onclick="filterCategory('Design')" class="cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all">
+          Design
+        </button>
+        <button onclick="filterCategory('Social')" class="cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all">
+          Social
+        </button>
+        <button onclick="filterCategory('VPN & Security')" class="cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all">
+          VPN
+        </button>
+      </div>
+
+      <!-- Products Grid -->
+      <div id="productsGrid" class="grid grid-cols-1 gap-3">
+        <!-- Skeleton Loaders -->
+        <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse flex items-center space-x-4">
+          <div class="w-12 h-12 bg-gray-800 rounded-xl"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 bg-gray-800 rounded w-3/4"></div>
+            <div class="h-3 bg-gray-800 rounded w-1/2"></div>
+          </div>
+        </div>
+        <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse flex items-center space-x-4">
+          <div class="w-12 h-12 bg-gray-800 rounded-xl"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 bg-gray-800 rounded w-3/4"></div>
+            <div class="h-3 bg-gray-800 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------
+         TAB 2: WALLET & DEPOSIT
+         -------------------------------------------------------- -->
+    <section id="tab-wallet" class="tab-content space-y-5">
+      
+      <!-- Balance Card -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-slate-900 to-emerald-950/40 border border-gray-800 p-5 shadow-lg">
+        <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+          <span class="flex items-center space-x-1">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Verified ETB Wallet</span>
+          </span>
+          <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-mono">
+            Zero Fee
+          </span>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight" id="walletBalanceBig">
+          0.00 <span class="text-sm font-semibold text-emerald-400">ETB</span>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">Available for instant purchases and subscriptions.</p>
+      </div>
+
+      <!-- Fast Deposit Selector -->
+      <div class="space-y-3">
+        <h2 class="text-sm font-bold text-gray-200 flex items-center space-x-2">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+          <span>Add Money to Wallet</span>
+        </h2>
+
+        <!-- Method Buttons (Telebirr / CBE / EBirr) -->
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="selectDepositMethod('Telebirr')" id="btnMethod-Telebirr" class="method-btn active py-2.5 px-3 rounded-xl bg-emerald-600/20 border border-emerald-500 text-emerald-300 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
+            <span>Telebirr</span>
+            <span class="text-[10px] text-emerald-400/80 font-normal">Superfast</span>
+          </button>
+          <button onclick="selectDepositMethod('CBE')" id="btnMethod-CBE" class="method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
+            <span>CBE Bank</span>
+            <span class="text-[10px] text-gray-500 font-normal">Commercial</span>
+          </button>
+          <button onclick="selectDepositMethod('EBirr')" id="btnMethod-EBirr" class="method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
+            <span>EBirr</span>
+            <span class="text-[10px] text-gray-500 font-normal">Mobile Pay</span>
+          </button>
+        </div>
+
+        <!-- Payment Instructions Box -->
+        <div id="paymentDetailsBox" class="p-4 rounded-xl bg-gray-900/90 border border-gray-800 space-y-3 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-gray-400" id="depositMethodTitle">Telebirr Account</span>
+            <button onclick="copyAccountInfo()" class="text-emerald-400 hover:text-emerald-300 flex items-center space-x-1 font-semibold">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span id="copyBtnText">Copy Account</span>
+            </button>
+          </div>
+          <div class="p-3 bg-black/40 rounded-lg border border-gray-800/80 font-mono flex items-center justify-between">
+            <span id="depositAccountNumber" class="text-sm font-bold text-white tracking-wider">0911223344</span>
+            <span id="depositAccountHolder" class="text-gray-400 text-xs truncate max-w-[140px]">Atke Tech</span>
+          </div>
+          <p class="text-[11px] text-gray-400 leading-relaxed">
+            1. Send funds using your banking app.<br>
+            2. Copy the full SMS confirmation or transaction receipt link.<br>
+            3. Paste it below to have your wallet credited.
+          </p>
+        </div>
+
+        <!-- Receipt Submission Form -->
+        <form id="depositForm" onsubmit="submitDeposit(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1">Deposit Amount (ETB)</label>
+            <div class="relative">
+              <input type="number" step="0.01" min="10" max="50000" id="depositAmountInput" required placeholder="e.g. 350.00" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors" />
+              <span class="absolute right-3.5 top-2.5 text-xs text-gray-500 font-bold">ETB</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1">Receipt SMS / Transaction Reference</label>
+            <textarea id="depositReceiptInput" rows="3" required placeholder="Paste the complete SMS received from Telebirr or CBE here..." class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"></textarea>
+          </div>
+
+          <button type="submit" id="btnSubmitDeposit" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-sm flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg shadow-emerald-950/50">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span>Submit Deposit for Verification</span>
+          </button>
+        </form>
+
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------
+         TAB 3: ORDERS & DELIVERED KEYS
+         -------------------------------------------------------- -->
+    <section id="tab-orders" class="tab-content space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-gray-200 flex items-center space-x-2">
+          <i data-lucide="package-check" class="w-4 h-4 text-emerald-400"></i>
+          <span>My Purchased Items</span>
+        </h2>
+        <button onclick="loadOrders()" class="text-xs text-gray-400 hover:text-emerald-400 flex items-center space-x-1">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <div id="ordersList" class="space-y-3">
+        <!-- Skeleton Loaders -->
+        <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse h-24"></div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------
+         TAB 4: INVITE & EARN
+         -------------------------------------------------------- -->
+    <section id="tab-invite" class="tab-content space-y-4">
+      <!-- Referral Header Card -->
+      <div class="rounded-2xl bg-gradient-to-tr from-emerald-950/60 via-gray-900 to-teal-950/40 border border-emerald-500/30 p-5 space-y-3">
+        <div class="flex items-center space-x-2">
+          <span class="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </span>
+          <div>
+            <h2 class="text-base font-bold text-white">Invite & Earn ETB</h2>
+            <p class="text-xs text-gray-400">Earn rewards when your friends join and purchase.</p>
+          </div>
+        </div>
+
+        <!-- Referral Stats Counter -->
+        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-800/80">
+          <div class="p-3 bg-black/40 rounded-xl border border-gray-800/60 text-center">
+            <div class="text-2xl font-extrabold text-white" id="referralFriendsCount">0</div>
+            <div class="text-[11px] text-gray-400 font-medium">Friends Invited</div>
+          </div>
+          <div class="p-3 bg-black/40 rounded-xl border border-gray-800/60 text-center">
+            <div class="text-2xl font-extrabold text-emerald-400" id="referralOrdersCount">0</div>
+            <div class="text-[11px] text-gray-400 font-medium">Orders Completed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Referral Link Box -->
+      <div class="p-4 rounded-xl bg-gray-900 border border-gray-800 space-y-3">
+        <label class="block text-xs font-semibold text-gray-300">Your Exclusive Referral Link</label>
+        <div class="flex items-center space-x-2">
+          <input type="text" id="referralLinkInput" readonly value="https://t.me/..." class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono select-all focus:outline-none" />
+          <button onclick="copyReferralLink()" class="px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold flex items-center space-x-1 shrink-0">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span>Copy</span>
+          </button>
+        </div>
+
+        <button onclick="shareReferralLink()" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 transition-all active:scale-[0.98]">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
+          <span>Share with Friends on Telegram</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------
+         TAB 5: 👑 ADMIN DASHBOARD & STORE MANAGEMENT
+         -------------------------------------------------------- -->
+    <section id="tab-admin" class="tab-content space-y-5">
+      <!-- Admin Hero Card -->
+      <div class="rounded-2xl bg-gradient-to-tr from-amber-950/40 via-gray-900 to-slate-900 border border-amber-500/30 p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            👑 STORE ADMINISTRATOR
+          </span>
+          <button onclick="loadAdminAll()" class="text-xs text-amber-400 hover:text-amber-300 flex items-center space-x-1">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+        <h1 class="text-lg font-bold text-white tracking-tight">Live Store Controls</h1>
+        <p class="text-xs text-gray-400">Update prices, images, digital stock keys, and review customer deposits.</p>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-2 gap-2">
+        <div class="p-3 bg-gray-900/90 border border-gray-800 rounded-xl">
+          <span class="text-[11px] text-gray-400">Gross Sales</span>
+          <div class="text-lg font-extrabold text-white mt-0.5">
+            <span id="adminTotalRevenue">0.00</span> <span class="text-xs text-emerald-400">ETB</span>
+          </div>
+        </div>
+        <div class="p-3 bg-gray-900/90 border border-gray-800 rounded-xl">
+          <span class="text-[11px] text-gray-400">Orders Delivered</span>
+          <div class="text-lg font-extrabold text-white mt-0.5" id="adminTotalOrders">0</div>
+        </div>
+        <div class="p-3 bg-gray-900/90 border border-gray-800 rounded-xl">
+          <span class="text-[11px] text-gray-400">Unsold Stock Keys</span>
+          <div class="text-lg font-extrabold text-emerald-400 mt-0.5" id="adminAvailableKeys">0</div>
+        </div>
+        <div class="p-3 bg-gray-900/90 border border-gray-800 rounded-xl cursor-pointer" onclick="switchAdminSection('deposits')">
+          <span class="text-[11px] text-gray-400">Pending Deposits</span>
+          <div class="text-lg font-extrabold text-amber-400 mt-0.5" id="adminPendingDeposits">0</div>
+        </div>
+      </div>
+
+      <!-- Admin Section Switcher -->
+      <div class="flex items-center space-x-2 border-b border-gray-800 pb-2 text-xs font-semibold">
+        <button onclick="switchAdminSection('products')" id="btnAdminSection-products" class="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm">
+          📦 Products & Stock
+        </button>
+        <button onclick="switchAdminSection('deposits')" id="btnAdminSection-deposits" class="px-3.5 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5">
+          <span>💳 Deposits Queue</span>
+          <span id="adminPendingBadge" class="hidden px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">0</span>
+        </button>
+      </div>
+
+      <!-- 1. Admin Products & Stock Panel -->
+      <div id="adminPanel-products" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-gray-400 font-medium">Catalog & Digital Vault Inventory</span>
+          <button onclick="openNewProductModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold flex items-center space-x-1 transition-all active:scale-95 shadow-md">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>New Product</span>
+          </button>
+        </div>
+
+        <div id="adminProductsContainer" class="space-y-3">
+          <!-- Populated by JS -->
+          <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse h-28"></div>
+        </div>
+      </div>
+
+      <!-- 2. Admin Deposits Queue Panel -->
+      <div id="adminPanel-deposits" class="hidden space-y-3">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-gray-400 font-medium">Customer Verification Queue</span>
+          <div class="flex items-center space-x-1">
+            <button onclick="filterAdminDeposits('pending')" id="depFilter-pending" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold">Pending Only</button>
+            <button onclick="filterAdminDeposits('all')" id="depFilter-all" class="px-2.5 py-1 rounded-lg bg-gray-800 text-gray-400 text-[11px]">All</button>
+          </div>
+        </div>
+
+        <div id="adminDepositsContainer" class="space-y-3">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==========================================================
+       BOTTOM TAB NAVIGATION (5 TABS IF ADMIN)
+       ========================================================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#0b0f19]/95 backdrop-blur-xl border-t border-gray-800 px-4 py-2">
+    <div id="bottomNavGrid" class="max-w-md mx-auto grid grid-cols-4 gap-1 text-center transition-all">
+      
+      <button onclick="switchTab('store')" id="nav-store" class="nav-item active flex flex-col items-center py-1 text-emerald-400 transition-colors">
+        <i data-lucide="store" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px] font-semibold">Store</span>
+      </button>
+
+      <button onclick="switchTab('wallet')" id="nav-wallet" class="nav-item flex flex-col items-center py-1 text-gray-500 hover:text-gray-300 transition-colors">
+        <i data-lucide="wallet" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px] font-semibold">Wallet</span>
+      </button>
+
+      <button onclick="switchTab('orders')" id="nav-orders" class="nav-item flex flex-col items-center py-1 text-gray-500 hover:text-gray-300 transition-colors">
+        <i data-lucide="package" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px] font-semibold">Orders</span>
+      </button>
+
+      <button onclick="switchTab('invite')" id="nav-invite" class="nav-item flex flex-col items-center py-1 text-gray-500 hover:text-gray-300 transition-colors">
+        <i data-lucide="users-2" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px] font-semibold">Invite</span>
+      </button>
+
+      <button onclick="switchTab('admin')" id="nav-admin" class="nav-item hidden flex flex-col items-center py-1 text-gray-500 hover:text-amber-400 transition-colors">
+        <i data-lucide="shield-check" class="w-5 h-5 mb-0.5 text-amber-400"></i>
+        <span class="text-[10px] font-semibold text-amber-400">Admin</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- ==========================================================
+       BUY CONFIRMATION MODAL
+       ========================================================== -->
+  <div id="buyModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-sm bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
+      
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+          <i data-lucide="shopping-cart" class="w-4 h-4 text-emerald-400"></i>
+          <span>Confirm Digital Purchase</span>
+        </h3>
+        <button onclick="closeModal('buyModal')" class="p-1 text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Item Preview -->
+      <div class="p-3 bg-black/40 rounded-xl border border-gray-800/80 flex items-center space-x-3">
+        <img id="buyModalIcon" src="" alt="icon" class="w-11 h-11 rounded-lg object-contain bg-gray-800/80 p-1" />
+        <div class="flex-1 min-w-0">
+          <div id="buyModalName" class="text-xs font-bold text-white truncate">Product Name</div>
+          <div id="buyModalCategory" class="text-[10px] text-gray-400">Category</div>
+          <div id="buyModalPrice" class="text-xs font-extrabold text-emerald-400 mt-0.5">0.00 ETB</div>
+        </div>
+      </div>
+
+      <!-- Balance Check Calculation -->
+      <div class="space-y-1.5 text-xs text-gray-300 py-1 border-y border-gray-800">
+        <div class="flex justify-between">
+          <span class="text-gray-400">Current Balance:</span>
+          <span id="buyModalCurrentBal" class="font-bold text-white">0.00 ETB</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-400">Item Price:</span>
+          <span id="buyModalDeductPrice" class="font-bold text-red-400">-0.00 ETB</span>
+        </div>
+        <div class="flex justify-between pt-1 border-t border-gray-800/50">
+          <span class="text-gray-400">Balance After:</span>
+          <span id="buyModalBalAfter" class="font-bold text-emerald-400">0.00 ETB</span>
+        </div>
+      </div>
+
+      <div id="buyModalNotice" class="text-[11px] text-gray-400">
+        The digital access credentials or voucher link will be delivered on your screen and saved under Orders.
+      </div>
+
+      <!-- Action Button -->
+      <div class="flex items-center space-x-2">
+        <button onclick="closeModal('buyModal')" class="w-1/3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs">
+          Cancel
+        </button>
+        <button id="btnConfirmPurchase" onclick="executePurchase()" class="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-950/50">
+          <span>Confirm & Unlock</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       DELIVERY SUCCESS MODAL
+       ========================================================== -->
+  <div id="deliveryModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-sm bg-gray-900 border border-emerald-500/30 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+      
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center mb-2">
+          <i data-lucide="check" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-base font-bold text-white">Purchase Successful!</h3>
+        <p class="text-xs text-gray-400">Your digital product has been unlocked and delivered.</p>
+      </div>
+
+      <!-- Delivered Payload Monospace Container -->
+      <div class="space-y-1.5">
+        <label class="block text-[11px] font-semibold text-gray-300">Your Key / Credentials / Link:</label>
+        <div class="relative p-3 bg-black/70 border border-emerald-500/40 rounded-xl">
+          <pre id="deliveredPayloadText" class="text-xs text-emerald-300 font-mono break-all whitespace-pre-wrap select-all max-h-36 overflow-y-auto"></pre>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <button onclick="copyDeliveredPayload()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1.5 shadow-md">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span id="copyPayloadBtnText">Copy to Clipboard</span>
+        </button>
+        <button onclick="viewInOrders()" class="w-full py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium">
+          View in My Orders
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       ADMIN MODAL 1: EDIT / CREATE PRODUCT
+       ========================================================== -->
+  <div id="editProductModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-sm bg-gray-900 border border-amber-500/30 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+          <i data-lucide="edit-3" class="w-4 h-4 text-amber-400"></i>
+          <span id="editProductModalTitle">Edit Product</span>
+        </h3>
+        <button onclick="closeModal('editProductModal')" class="p-1 text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="editProductForm" onsubmit="handleSaveProduct(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="editProductId" value="0" />
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Product Title / Name *</label>
+          <input type="text" id="editProductName" required placeholder="e.g. Google Gemini 1.5 Advanced" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-gray-300 mb-1">Category</label>
+            <input type="text" id="editProductCategory" list="categoriesList" placeholder="e.g. AI Tools" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none" />
+            <datalist id="categoriesList">
+              <option value="AI Tools" />
+              <option value="Design" />
+              <option value="Social" />
+              <option value="VPN & Security" />
+              <option value="Entertainment" />
+              <option value="Gaming" />
+              <option value="Software" />
+            </datalist>
+          </div>
+          <div>
+            <label class="block font-semibold text-gray-300 mb-1">Price (ETB) *</label>
+            <input type="number" step="0.01" min="1" id="editProductPrice" required placeholder="350.00" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:border-amber-500 outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-semibold text-gray-300">Icon Image URL</label>
+            <span class="text-[10px] text-gray-500">Live Preview:</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <input type="url" id="editProductIcon" oninput="previewEditIcon()" placeholder="https://img.icons8.com/..." class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none" />
+            <img id="editProductIconPreview" src="https://img.icons8.com/color/480/box.png" alt="preview" class="w-9 h-9 object-contain rounded-lg bg-gray-800 p-1 border border-gray-700 shrink-0" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 items-center">
+          <div>
+            <label class="block font-semibold text-gray-300 mb-1">Badge Tag</label>
+            <input type="text" id="editProductBadge" placeholder="HOT, POPULAR, NEW" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none uppercase" />
+          </div>
+          <div class="pt-4 flex items-center space-x-2">
+            <input type="checkbox" id="editProductActive" checked class="w-4 h-4 rounded text-amber-500 bg-gray-800 border-gray-700 focus:ring-0" />
+            <label for="editProductActive" class="text-gray-300 font-medium cursor-pointer">Active in Store</label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">Description / Features</label>
+          <textarea id="editProductDescription" rows="2" placeholder="Describe features or account details..." class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none"></textarea>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="closeModal('editProductModal')" class="w-1/3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs">
+            Cancel
+          </button>
+          <button type="submit" id="btnSaveProduct" class="w-2/3 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1 shadow-md shadow-amber-950/40">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Save Product</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       ADMIN MODAL 2: BULK ADD DIGITAL KEYS (VAULT)
+       ========================================================== -->
+  <div id="addKeysModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-sm bg-gray-900 border border-emerald-500/30 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+      
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+          <i data-lucide="key" class="w-4 h-4 text-emerald-400"></i>
+          <span>Add Stock to Vault</span>
+        </h3>
+        <button onclick="closeModal('addKeysModal')" class="p-1 text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-2.5 bg-emerald-950/30 border border-emerald-500/20 rounded-xl">
+        <span class="text-[10px] text-gray-400 uppercase tracking-wider block">Target Product:</span>
+        <span id="addKeysProductName" class="text-xs font-bold text-emerald-300">Loading product...</span>
+      </div>
+
+      <form id="addKeysForm" onsubmit="handleSubmitKeys(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="addKeysProductId" value="0" />
+
+        <div>
+          <label class="block font-semibold text-gray-300 mb-1">
+            Digital Keys / Accounts (1 Per Line):
+          </label>
+          <textarea id="addKeysTextarea" rows="6" required placeholder="Paste credentials, links, or keys here...&#10;Email: user1@gmail.com | Pass: Safe#1&#10;Email: user2@gmail.com | Pass: Safe#2&#10;https://t.me/giftcode/TG-12345" class="w-full bg-black/60 border border-gray-800 rounded-xl p-3 text-emerald-300 font-mono text-[11px] focus:border-emerald-500 outline-none whitespace-pre"></textarea>
+          <p class="text-[10px] text-gray-500 mt-1">
+            💡 Each non-empty line becomes 1 distinct deliverable key in the vault and increments the available stock count.
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-1">
+          <button type="button" onclick="closeModal('addKeysModal')" class="w-1/3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs">
+            Cancel
+          </button>
+          <button type="submit" id="btnAddKeysSubmit" class="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1 shadow-md shadow-emerald-950/40">
+            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+            <span>Add Keys to Vault</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       ADMIN MODAL 3: VAULT KEYS INSPECTOR
+       ========================================================== -->
+  <div id="vaultKeysModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full max-w-sm bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+      
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+          <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+          <span>Vault Stock Inspector</span>
+        </h3>
+        <button onclick="closeModal('vaultKeysModal')" class="p-1 text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="text-xs text-gray-400" id="vaultInspectorTitle">Inspect live unsold keys in stock</div>
+
+      <div id="vaultKeysList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+        <!-- Populated by JS -->
+      </div>
+
+      <button type="button" onclick="closeModal('vaultKeysModal')" class="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-semibold text-xs">
+        Close Inspector
+      </button>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       TOAST NOTIFICATION COMPONENT
+       ========================================================== -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-slate-950 font-semibold text-xs px-4 py-2 rounded-full shadow-lg shadow-black/50 transition-all opacity-0 pointer-events-none transform -translate-y-2">
+    Notification text
+  </div>
+
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
