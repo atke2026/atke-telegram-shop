@@ -1,0 +1,15 @@
+name: Auto Deploy to Plesk Hosting
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Trigger Plesk Git Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Plesk Git Webhook
+        run: |
+          curl -k -i -X POST "https://lin4.ethiotelecom.et:8443/modules/git/public/web-hook.php?uuid=083fd032-381e-27ba-dffa-a3fe97bd9666"
