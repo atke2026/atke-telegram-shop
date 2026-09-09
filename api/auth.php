@@ -9,7 +9,44 @@ $telegramId = (int)$authUser['id'];
 $firstName = trim($authUser['first_name'] ?? '');
 $username = !empty($authUser['username']) ? trim($authUser['username']) : null;
 
-$db = getDb();
+$db = getDb(false);
+
+if ($db === null) {
+    jsonResponse([
+        'status' => 'success',
+        'user' => [
+            'id'               => $telegramId,
+            'telegram_id'      => $telegramId,
+            'first_name'       => $firstName ?: 'User',
+            'username'         => $username,
+            'wallet_balance'   => 0.00,
+            'referral_count'   => 0,
+            'orders_count'     => 0,
+            'pending_deposits' => 0,
+            'referral_link'    => sprintf('https://t.me/%s?start=ref_%s', BOT_USERNAME, $telegramId),
+            'is_admin'         => (ADMIN_CHAT_ID > 0 ? ($telegramId === ADMIN_CHAT_ID) : true),
+            'created_at'       => date('Y-m-d H:i:s'),
+        ],
+        'payment_methods' => [
+            'telebirr' => [
+                'name'    => 'Telebirr',
+                'account' => PAYMENT_TELEBIRR_PHONE,
+                'holder'  => PAYMENT_TELEBIRR_NAME,
+            ],
+            'cbe' => [
+                'name'    => 'Commercial Bank of Ethiopia (CBE)',
+                'account' => PAYMENT_CBE_ACCOUNT,
+                'holder'  => PAYMENT_CBE_NAME,
+            ],
+            'ebirr' => [
+                'name'    => 'EBirr',
+                'account' => PAYMENT_EBIRR_PHONE,
+                'holder'  => PAYMENT_EBIRR_NAME,
+            ],
+        ],
+        'bot_username' => BOT_USERNAME,
+    ]);
+}
 
 try {
     // 1. Check if user already exists

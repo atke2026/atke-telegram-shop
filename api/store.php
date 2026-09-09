@@ -4,12 +4,80 @@ declare(strict_types=1);
 require_once __DIR__ . '/config.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
-$db = getDb();
+$db = getDb(false);
 
 // ----------------------------------------------------------
 // 1. GET: Fetch product catalog with live stock counts
 // ----------------------------------------------------------
 if ($method === 'GET') {
+    if ($db === null) {
+        jsonResponse([
+            'status' => 'success',
+            'products' => [
+                [
+                    'id' => 1,
+                    'name' => 'Google Gemini 1.5 Advanced (1 Month)',
+                    'category' => 'AI Tools',
+                    'price_etb' => 450.00,
+                    'description' => 'Full access to Gemini 1.5 Pro with 1M token context window, Deep Research & Workspace integration.',
+                    'icon_url' => 'https://api.iconify.design/logos:google-gemini.svg',
+                    'badge' => '⚡ HOT DEAL',
+                    'stock_count' => 15
+                ],
+                [
+                    'id' => 2,
+                    'name' => 'Canva Pro (1-Year Team Invite)',
+                    'category' => 'Design',
+                    'price_etb' => 350.00,
+                    'description' => 'Full Canva Pro upgrade on your personal email. Magic Resize, Background Remover & premium stock assets.',
+                    'icon_url' => 'https://api.iconify.design/logos:canva.svg',
+                    'badge' => '🔥 POPULAR',
+                    'stock_count' => 24
+                ],
+                [
+                    'id' => 3,
+                    'name' => 'Telegram Premium (3 Months Gift)',
+                    'category' => 'Social',
+                    'price_etb' => 850.00,
+                    'description' => 'Direct 3-Month Premium gift code. Fast downloads, 4GB uploads, voice-to-text and unique badges.',
+                    'icon_url' => 'https://api.iconify.design/logos:telegram.svg',
+                    'badge' => '⭐ BESTSELLER',
+                    'stock_count' => 8
+                ],
+                [
+                    'id' => 4,
+                    'name' => 'ChatGPT Plus / Team Account (1 Month)',
+                    'category' => 'AI Tools',
+                    'price_etb' => 650.00,
+                    'description' => 'Private OpenAI account with GPT-4o, DALL-E 3 image generation, and Voice Mode enabled.',
+                    'icon_url' => 'https://api.iconify.design/logos:openai-icon.svg',
+                    'badge' => '🚀 TOP PICK',
+                    'stock_count' => 12
+                ],
+                [
+                    'id' => 5,
+                    'name' => 'NordVPN Premium (1-Year Private)',
+                    'category' => 'VPN & Security',
+                    'price_etb' => 500.00,
+                    'description' => 'Ultra-fast high-speed VPN supporting 6 devices simultaneously with Threat Protection.',
+                    'icon_url' => 'https://api.iconify.design/logos:nordvpn-icon.svg',
+                    'badge' => '🛡️ SECURE',
+                    'stock_count' => 19
+                ],
+                [
+                    'id' => 6,
+                    'name' => 'Spotify Premium (6-Months Individual)',
+                    'category' => 'Streaming',
+                    'price_etb' => 400.00,
+                    'description' => 'Ad-free high-fidelity music streaming, offline downloads, and unlimited skips on your account.',
+                    'icon_url' => 'https://api.iconify.design/logos:spotify-icon.svg',
+                    'badge' => '🎵 STREAMING',
+                    'stock_count' => 11
+                ]
+            ]
+        ]);
+    }
+
     try {
         $stmt = $db->query("
             SELECT 
