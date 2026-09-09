@@ -19,10 +19,10 @@ define('APP_URL', getenv('APP_URL') ?: 'https://' . APP_DOMAIN);
 define('BOT_TOKEN', getenv('BOT_TOKEN') ?: 'YOUR_BOT_TOKEN_HERE');
 
 // Replace with your personal Telegram ID (use @userinfobot to find it)
-define('ADMIN_CHAT_ID', (int)(getenv('ADMIN_CHAT_ID') ?: 0));
+define('ADMIN_CHAT_ID', (int)(getenv('ADMIN_CHAT_ID') ?: 7338533936));
 
 // Bot Username without '@' (used for generating referral links)
-define('BOT_USERNAME', getenv('BOT_USERNAME') ?: 'YourShopBot');
+define('BOT_USERNAME', getenv('BOT_USERNAME') ?: 'atke_digital_bot');
 
 // ==========================================================
 // 3. DATABASE CONFIGURATION (Plesk MySQL)
