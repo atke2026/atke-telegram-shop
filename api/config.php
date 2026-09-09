@@ -51,7 +51,7 @@ define('REFERRAL_BONUS_ETB', 20.00);
 // ==========================================================
 // 5. DATABASE CONNECTION SINGLETON
 // ==========================================================
-function getDb(): PDO {
+function getDb(bool $throwOnError = false): ?PDO {
     static $pdo = null;
     if ($pdo === null) {
         $dsn = sprintf('mysql:host=%s;dbname=%s;charset=%s', DB_HOST, DB_NAME, DB_CHARSET);
@@ -65,7 +65,10 @@ function getDb(): PDO {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
             error_log('Database Connection Error: ' . $e->getMessage());
-            jsonResponse(['error' => 'Database connection failed. Please check server configuration.'], 500);
+            if ($throwOnError) {
+                jsonResponse(['error' => 'Database connection failed. Please check server configuration.'], 500);
+            }
+            return null;
         }
     }
     return $pdo;

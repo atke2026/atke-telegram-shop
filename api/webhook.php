@@ -19,148 +19,155 @@ if (!$update) {
 
 $db = getDb();
 
-// ==========================================================
-// 1. HANDLE INCOMING MESSAGES (e.g. /start command)
-// ==========================================================
-if (isset($update['message'])) {
-    $message = $update['message'];
-    $chatId = $message['chat']['id'];
-    $userId = (int)($message['from']['id'] ?? $chatId);
-    $firstName = $message['from']['first_name'] ?? 'User';
-    $username = $message['from']['username'] ?? null;
-    $text = trim($message['text'] ?? '');
+try {
+    // ==========================================================
+    // 1. HANDLE INCOMING MESSAGES (e.g. /start command)
+    // ==========================================================
+    if (isset($update['message'])) {
+        $message = $update['message'];
+        $chatId = $message['chat']['id'];
+        $userId = (int)($message['from']['id'] ?? $chatId);
+        $firstName = $message['from']['first_name'] ?? 'User';
+        $username = $message['from']['username'] ?? null;
+        $text = trim($message['text'] ?? '');
 
-    // Handle /start and deep-linking referral codes
-    if (str_starts_with($text, '/start')) {
-        $startParam = trim(substr($text, 6)); // e.g. "ref_123456789"
-        $referredBy = null;
+        // Handle /start and deep-linking referral codes
+        if (str_starts_with($text, '/start')) {
+            $startParam = trim(substr($text, 6)); // e.g. "ref_123456789"
+            $referredBy = null;
+            $walletBalance = 0.00;
 
-        if (preg_match('/^ref_(\d+)$/', $startParam, $matches)) {
-            $refId = (int)$matches[1];
-            if ($refId !== $userId) {
-                // Verify referrer exists
-                $chk = $db->prepare("SELECT telegram_id FROM users WHERE telegram_id = ? LIMIT 1");
-                $chk->execute([$refId]);
-                if ($chk->fetch()) {
-                    $referredBy = $refId;
+            if ($db !== null) {
+                if (preg_match('/^ref_(\d+)$/', $startParam, $matches)) {
+                    $refId = (int)$matches[1];
+                    if ($refId !== $userId) {
+                        try {
+                            $chk = $db->prepare("SELECT telegram_id FROM users WHERE telegram_id = ? LIMIT 1");
+                            $chk->execute([$refId]);
+                            if ($chk->fetch()) {
+                                $referredBy = $refId;
+                            }
+                        } catch (Exception $e) {
+                            error_log("Referral check error: " . $e->getMessage());
+                        }
+                    }
+                }
+
+                // Upsert user into database
+                try {
+                    $userStmt = $db->prepare("SELECT id, wallet_balance FROM users WHERE telegram_id = ? LIMIT 1");
+                    $userStmt->execute([$userId]);
+                    $existingUser = $userStmt->fetch();
+
+                    if (!$existingUser) {
+                        $insStmt = $db->prepare("
+                            INSERT INTO users (telegram_id, first_name, username, wallet_balance, referred_by, created_at)
+                            VALUES (?, ?, ?, 0.00, ?, NOW())
+                        ");
+                        $insStmt->execute([$userId, $firstName, $username, $referredBy]);
+                        $walletBalance = 0.00;
+                    } else {
+                        $walletBalance = (float)$existingUser['wallet_balance'];
+                        // Update profile info
+                        $updStmt = $db->prepare("UPDATE users SET first_name = ?, username = ? WHERE telegram_id = ?");
+                        $updStmt->execute([$firstName, $username, $userId]);
+                    }
+                } catch (Exception $e) {
+                    error_log("Webhook User Upsert Error: " . $e->getMessage());
+                    $walletBalance = 0.00;
                 }
             }
-        }
 
-        // Upsert user into database
-        try {
-            $userStmt = $db->prepare("SELECT id, wallet_balance FROM users WHERE telegram_id = ? LIMIT 1");
-            $userStmt->execute([$userId]);
-            $existingUser = $userStmt->fetch();
+            // Construct Mini App Launch URL
+            $miniAppUrl = rtrim(APP_URL, '/') . '/public/index.html';
 
-            if (!$existingUser) {
-                $insStmt = $db->prepare("
-                    INSERT INTO users (telegram_id, first_name, username, wallet_balance, referred_by, created_at)
-                    VALUES (?, ?, ?, 0.00, ?, NOW())
-                ");
-                $insStmt->execute([$userId, $firstName, $username, $referredBy]);
-                $walletBalance = 0.00;
-            } else {
-                $walletBalance = (float)$existingUser['wallet_balance'];
-                // Update profile info
-                $updStmt = $db->prepare("UPDATE users SET first_name = ?, username = ? WHERE telegram_id = ?");
-                $updStmt->execute([$firstName, $username, $userId]);
-            }
-        } catch (Exception $e) {
-            error_log("Webhook User Upsert Error: " . $e->getMessage());
-            $walletBalance = 0.00;
-        }
+            $welcomeText = "👋 <b>Welcome to YeneShop Digital Store, " . htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8') . "!</b>\n\n"
+                . "⚡ <b>Instant Delivery for Premium Digital Accounts & Keys:</b>\n"
+                . "• Google Gemini 1.5 Advanced\n"
+                . "• Canva Pro 1-Year Invites\n"
+                . "• Telegram Premium Subscriptions\n"
+                . "• NordVPN, ChatGPT Plus, and Spotify\n\n"
+                . "💳 <b>Your Wallet Balance:</b> <b>" . number_format($walletBalance, 2) . " ETB</b>\n\n"
+                . "👇 Tap <b>Open Store</b> below to start browsing with zero fees!";
 
-        // Construct Mini App Launch URL
-        $miniAppUrl = rtrim(APP_URL, '/') . '/public/index.html';
-
-        $welcomeText = "👋 <b>Welcome to YeneShop Digital Store, " . htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8') . "!</b>\n\n"
-            . "⚡ <b>Instant Delivery for Premium Digital Accounts & Keys:</b>\n"
-            . "• Google Gemini 1.5 Advanced\n"
-            . "• Canva Pro 1-Year Invites\n"
-            . "• Telegram Premium Subscriptions\n"
-            . "• NordVPN, ChatGPT Plus, and Spotify\n\n"
-            . "💳 <b>Your Wallet Balance:</b> <b>" . number_format($walletBalance, 2) . " ETB</b>\n\n"
-            . "👇 Tap <b>Open Store</b> below to start browsing with zero fees!";
-
-        $keyboardButtons = [
-            [
-                [
-                    'text'    => '🛍️ Open Store (Mini App)',
-                    'web_app' => ['url' => $miniAppUrl]
-                ]
-            ],
-            [
-                [
-                    'text'          => '💳 How to Deposit',
-                    'callback_data' => 'menu_deposit_guide'
-                ],
-                [
-                    'text'          => '💼 My Wallet Balance',
-                    'callback_data' => 'menu_check_balance'
-                ]
-            ]
-        ];
-
-        // If the user is the store administrator, add the Admin Dashboard button
-        if (ADMIN_CHAT_ID > 0 && $userId === ADMIN_CHAT_ID) {
-            $keyboardButtons[] = [
-                [
-                    'text'    => '👑 Admin Dashboard',
-                    'web_app' => ['url' => $miniAppUrl . '?tab=admin']
-                ]
-            ];
-        }
-
-        $replyMarkup = ['inline_keyboard' => $keyboardButtons];
-
-        sendBotMessage($chatId, $welcomeText, $replyMarkup);
-        http_response_code(200);
-        echo json_encode(['ok' => true]);
-        exit;
-    }
-
-    // Handle /admin command for quick store administration
-    if (str_starts_with($text, '/admin')) {
-        if (ADMIN_CHAT_ID > 0 && $userId !== ADMIN_CHAT_ID) {
-            sendBotMessage($chatId, "⛔ <b>Access Denied:</b> This command is restricted to the store administrator.");
-            http_response_code(200);
-            exit;
-        }
-
-        $miniAppUrl = rtrim(APP_URL, '/') . '/public/index.html?tab=admin';
-
-        $adminText = "👑 <b>Store Admin Control Center</b>\n\n"
-            . "Welcome, Admin! From here you can manage all store operations:\n"
-            . "• 🏷️ Update product prices & ETB rates\n"
-            . "• 🖼️ Update product images & icons\n"
-            . "• 🔑 Bulk upload digital keys, accounts & licenses\n"
-            . "• 💳 Review & approve customer deposits\n\n"
-            . "Tap below to launch your in-app <b>Admin Dashboard</b>:";
-
-        $adminMarkup = [
-            'inline_keyboard' => [
+            $keyboardButtons = [
                 [
                     [
-                        'text'    => '👑 Launch Admin Dashboard',
+                        'text'    => '🛍️ Open Store (Mini App)',
                         'web_app' => ['url' => $miniAppUrl]
                     ]
                 ],
                 [
                     [
-                        'text'          => '📊 Quick Sales Stats',
-                        'callback_data' => 'admin_quick_stats'
+                        'text'          => '💳 How to Deposit',
+                        'callback_data' => 'menu_deposit_guide'
+                    ],
+                    [
+                        'text'          => '💼 My Wallet Balance',
+                        'callback_data' => 'menu_check_balance'
                     ]
                 ]
-            ]
-        ];
+            ];
 
-        sendBotMessage($chatId, $adminText, $adminMarkup);
-        http_response_code(200);
-        echo json_encode(['ok' => true]);
-        exit;
+            // If the user is the store administrator, add the Admin Dashboard button
+            if (ADMIN_CHAT_ID > 0 && $userId === ADMIN_CHAT_ID) {
+                $keyboardButtons[] = [
+                    [
+                        'text'    => '👑 Admin Dashboard',
+                        'web_app' => ['url' => $miniAppUrl . '?tab=admin']
+                    ]
+                ];
+            }
+
+            $replyMarkup = ['inline_keyboard' => $keyboardButtons];
+
+            sendBotMessage($chatId, $welcomeText, $replyMarkup);
+            http_response_code(200);
+            echo json_encode(['ok' => true]);
+            exit;
+        }
+
+        // Handle /admin command for quick store administration
+        if (str_starts_with($text, '/admin')) {
+            if (ADMIN_CHAT_ID > 0 && $userId !== ADMIN_CHAT_ID) {
+                sendBotMessage($chatId, "⛔ <b>Access Denied:</b> This command is restricted to the store administrator.");
+                http_response_code(200);
+                exit;
+            }
+
+            $miniAppUrl = rtrim(APP_URL, '/') . '/public/index.html?tab=admin';
+
+            $adminText = "👑 <b>Store Admin Control Center</b>\n\n"
+                . "Welcome, Admin! From here you can manage all store operations:\n"
+                . "• 🏷️ Update product prices & ETB rates\n"
+                . "• 🖼️ Update product images & icons\n"
+                . "• 🔑 Bulk upload digital keys, accounts & licenses\n"
+                . "• 💳 Review & approve customer deposits\n\n"
+                . "Tap below to launch your in-app <b>Admin Dashboard</b>:";
+
+            $adminMarkup = [
+                'inline_keyboard' => [
+                    [
+                        [
+                            'text'    => '👑 Launch Admin Dashboard',
+                            'web_app' => ['url' => $miniAppUrl]
+                        ]
+                    ],
+                    [
+                        [
+                            'text'          => '📊 Quick Sales Stats',
+                            'callback_data' => 'admin_quick_stats'
+                        ]
+                    ]
+                ]
+            ];
+
+            sendBotMessage($chatId, $adminText, $adminMarkup);
+            http_response_code(200);
+            echo json_encode(['ok' => true]);
+            exit;
+        }
     }
-}
 
 // ==========================================================
 // 2. HANDLE CALLBACK QUERIES (Admin Approvals & User Menus)
@@ -176,9 +183,16 @@ if (isset($update['callback_query'])) {
 
     // A. Check Balance Menu Callback
     if ($callbackData === 'menu_check_balance') {
-        $stmt = $db->prepare("SELECT wallet_balance FROM users WHERE telegram_id = ? LIMIT 1");
-        $stmt->execute([$callbackUserId]);
-        $bal = (float)($stmt->fetchColumn() ?: 0.00);
+        $bal = 0.00;
+        if ($db !== null) {
+            try {
+                $stmt = $db->prepare("SELECT wallet_balance FROM users WHERE telegram_id = ? LIMIT 1");
+                $stmt->execute([$callbackUserId]);
+                $bal = (float)($stmt->fetchColumn() ?: 0.00);
+            } catch (Exception $e) {
+                error_log("Balance check error: " . $e->getMessage());
+            }
+        }
 
         answerCallbackQuery($callbackId, "💳 Your balance: " . number_format($bal, 2) . " ETB", true);
         http_response_code(200);
@@ -207,6 +221,12 @@ if (isset($update['callback_query'])) {
     if ($callbackData === 'admin_quick_stats') {
         if (ADMIN_CHAT_ID > 0 && $callbackUserId !== ADMIN_CHAT_ID) {
             answerCallbackQuery($callbackId, "⛔ Unauthorized.", true);
+            http_response_code(200);
+            exit;
+        }
+
+        if ($db === null) {
+            answerCallbackQuery($callbackId, "⚠️ Database setup pending in Plesk.", true);
             http_response_code(200);
             exit;
         }
@@ -254,6 +274,12 @@ if (isset($update['callback_query'])) {
         // Security check: Only configured admin can approve
         if ($callbackUserId !== ADMIN_CHAT_ID && ADMIN_CHAT_ID !== 0) {
             answerCallbackQuery($callbackId, "⛔ Unauthorized. Admin access only.", true);
+            http_response_code(200);
+            exit;
+        }
+
+        if ($db === null) {
+            answerCallbackQuery($callbackId, "Database unavailable.", true);
             http_response_code(200);
             exit;
         }
@@ -353,6 +379,12 @@ if (isset($update['callback_query'])) {
             exit;
         }
 
+        if ($db === null) {
+            answerCallbackQuery($callbackId, "Database unavailable.", true);
+            http_response_code(200);
+            exit;
+        }
+
         $depositId = (int)substr($callbackData, 7);
 
         try {
@@ -392,6 +424,9 @@ if (isset($update['callback_query'])) {
         http_response_code(200);
         exit;
     }
+}
+} catch (\Throwable $e) {
+    error_log("Unhandled Webhook Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
 }
 
 http_response_code(200);
