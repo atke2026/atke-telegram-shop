@@ -16,7 +16,7 @@ define('APP_URL', getenv('APP_URL') ?: 'https://' . APP_DOMAIN);
 // 2. TELEGRAM BOT CONFIGURATION
 // ==========================================================
 // Replace with your Bot Token from @BotFather
-define('BOT_TOKEN', getenv('BOT_TOKEN') ?: 'YOUR_BOT_TOKEN_HERE');
+define('BOT_TOKEN', getenv('BOT_TOKEN') ?: '8735335655:AAGR-Eu3cPu2Ba9UwGR0NoAMTPZVQA9HdJY');
 
 // Replace with your personal Telegram ID (use @userinfobot to find it)
 define('ADMIN_CHAT_ID', (int)(getenv('ADMIN_CHAT_ID') ?: 7338533936));
