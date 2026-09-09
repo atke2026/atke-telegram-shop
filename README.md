@@ -186,9 +186,9 @@ No phpMyAdmin SQL queries are needed! You can manage everything directly inside 
 1. In the Admin tab, tap **+ Keys** on any product.
 2. Paste multiple license keys, accounts, or invite links into the text box (one key per line):
    ```text
-   Account: gemini-user20@hiigsan.et | Pass: SafePass2026! | Backup: 9948201
-   Account: gemini-user21@hiigsan.et | Pass: StrongPass99# | Backup: 1184920
-   https://t.me/giftcode/TG-PREM-ETB-9923847-XKLM
+   DEMO-ACCOUNT-LICENSE-KEY-001
+   DEMO-ACCOUNT-LICENSE-KEY-002
+   https://example.com/invite-link-003
    ```
 3. Tap **Upload to Vault**.
 4. The system adds each line as an unsold stock item in `product_vault` and immediately updates the live in-stock badge.

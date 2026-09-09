@@ -132,15 +132,14 @@ INSERT INTO `products` (`id`, `name`, `category`, `price_etb`, `description`, `i
 (6, 'Spotify Premium Individual (3 Months)', 'Entertainment', 300.00, 'Ad-free high-fidelity music streaming, offline downloads, and unlimited skips on any device.', 'https://img.icons8.com/color/480/spotify--v1.png', NULL, 1)
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
--- Digital Keys / Accounts for testing
+-- Digital Keys / Accounts for testing (Placeholders)
 INSERT INTO `product_vault` (`product_id`, `item_payload`, `is_sold`) VALUES
-(1, 'Account: gemini-user14@hiigsan.et | Pass: GeminiPro#2026! | Backup Code: 88492041 | Login via google.com', 0),
-(1, 'Account: gemini-user15@hiigsan.et | Pass: GeminiUltra#Et77 | Backup Code: 33918472 | Login via google.com', 0),
-(2, 'https://www.canva.com/brand/join?token=canva_pro_inv_et_993821048_team', 0),
-(2, 'https://www.canva.com/brand/join?token=canva_pro_inv_et_447291032_team', 0),
-(2, 'https://www.canva.com/brand/join?token=canva_pro_inv_et_118374920_team', 0),
-(3, 'https://t.me/giftcode/TG-PREM-ETB-9923847-XKLM', 0),
-(3, 'https://t.me/giftcode/TG-PREM-ETB-1184930-QPZR', 0),
-(4, 'NordVPN Login -> Email: vpn-eastafrica01@atke.com.et | Pass: NordFast#2026Safe', 0),
-(5, 'ChatGPT Plus -> Email: chatgpt-pro33@hiigsan.et | Pass: OpenAi#Et2026Plus | PIN: 9021', 0),
-(6, 'Spotify Family Invite: https://www.spotify.com/et/family/join/invite/6628401928472/', 0);
+(1, 'DEMO-KEY: Gemini Advanced License #001', 0),
+(1, 'DEMO-KEY: Gemini Advanced License #002', 0),
+(2, 'DEMO-INVITE: Canva Pro 1-Year Team Access Link #001', 0),
+(2, 'DEMO-INVITE: Canva Pro 1-Year Team Access Link #002', 0),
+(3, 'DEMO-GIFT: Telegram Premium 3-Month Gift Code #001', 0),
+(3, 'DEMO-GIFT: Telegram Premium 3-Month Gift Code #002', 0),
+(4, 'DEMO-CREDENTIALS: NordVPN Dedicated Account #001', 0),
+(5, 'DEMO-CREDENTIALS: ChatGPT Plus Account Access #001', 0),
+(6, 'DEMO-INVITE: Spotify Premium Invite Link #001', 0);
