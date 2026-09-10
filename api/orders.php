@@ -7,7 +7,14 @@ require_once __DIR__ . '/config.php';
 $authUser = getAuthenticatedUser();
 $telegramId = (int)$authUser['id'];
 
-$db = getDb();
+$db = getDb(false);
+
+if ($db === null) {
+    jsonResponse([
+        'status' => 'success',
+        'orders' => []
+    ]);
+}
 
 try {
     $stmt = $db->prepare("
