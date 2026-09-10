@@ -28,7 +28,7 @@ const state = {
       cost_price_etb: 220.00,
       badge: 'POPULAR',
       stock_count: 558,
-      icon_url: 'https://img.icons8.com/color/480/google-gemini.png',
+      icon_url: 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/google-gemini.png',
       description: 'Google Gemini AI Pro 18 Months subscription with 5TB Cloud storage.',
       how_to_use: "⚡ 18 Months Plan\n⚡ 5TB cloud storage included\n⚡ You can add 5 users\n⚡ No sharing — 100% private\n⚡ No card needed\n⚡ Works in any country, no verification\n⚡ Non-warranty\n⚡ May last before 18 Months sometimes\n\n📌 100% genuine Gemini AI Pro subscription activated on your own Gmail.\n📌 FULL FAMILY ACCOUNT — it is not an invite.\n\n💖 How to activate:\nPaste the received redeem link into your browser and click 'Activate Offer'. Your subscription will then be activated successfully.\n\n⚠️ Important:\nThe redeem link must be used within 24 hours of receiving the order.",
       variants: null
