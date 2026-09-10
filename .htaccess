@@ -47,7 +47,11 @@ AddDefaultCharset UTF-8
     RewriteEngine On
     RewriteBase /
 
-    # If root / is requested, route to index.php or public/index.html
+    # Forward style.css and app.js requests at root to public/
+    RewriteRule ^style\.css$ public/style.css [L,QSA]
+    RewriteRule ^app\.js$ public/app.js [L,QSA]
+
+    # If root / is requested, route to index.php
     RewriteRule ^$ index.php [L]
 
     # Allow direct access to api/ and public/
