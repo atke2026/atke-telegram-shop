@@ -85,7 +85,10 @@ if ($method === 'GET') {
                 p.name,
                 p.category,
                 p.price_etb,
+                p.cost_price_etb,
+                p.variants_json,
                 p.description,
+                p.how_to_use,
                 p.icon_url,
                 p.badge,
                 COUNT(v.id) AS stock_count
@@ -93,16 +96,18 @@ if ($method === 'GET') {
             LEFT JOIN product_vault v 
                 ON p.id = v.product_id AND v.is_sold = 0
             WHERE p.is_active = 1
-            GROUP BY p.id, p.name, p.category, p.price_etb, p.description, p.icon_url, p.badge
+            GROUP BY p.id, p.name, p.category, p.price_etb, p.cost_price_etb, p.variants_json, p.description, p.how_to_use, p.icon_url, p.badge
             ORDER BY p.id ASC
         ");
         $products = $stmt->fetchAll();
 
-        // Format numerical values
+        // Format numerical values & decode variants
         foreach ($products as &$p) {
             $p['id'] = (int)$p['id'];
             $p['price_etb'] = (float)$p['price_etb'];
+            $p['cost_price_etb'] = (float)($p['cost_price_etb'] ?? 0.00);
             $p['stock_count'] = (int)$p['stock_count'];
+            $p['variants'] = !empty($p['variants_json']) ? json_decode($p['variants_json'], true) : null;
         }
         unset($p);
 
@@ -128,6 +133,8 @@ if ($method === 'POST') {
     $payload = json_decode($rawInput, true);
 
     $productId = isset($payload['product_id']) ? (int)$payload['product_id'] : 0;
+    $selectedVariant = trim((string)($payload['variant_name'] ?? ''));
+
     if ($productId <= 0) {
         jsonResponse(['error' => 'Invalid product selected.'], 400);
     }
@@ -149,7 +156,7 @@ if ($method === 'POST') {
         $currentBalance = (float)$user['wallet_balance'];
 
         // 2. Lock and inspect product
-        $prodStmt = $db->prepare("SELECT id, name, price_etb, is_active FROM products WHERE id = ? FOR UPDATE");
+        $prodStmt = $db->prepare("SELECT id, name, price_etb, cost_price_etb, variants_json, is_active FROM products WHERE id = ? FOR UPDATE");
         $prodStmt->execute([$productId]);
         $product = $prodStmt->fetch();
 
@@ -159,6 +166,21 @@ if ($method === 'POST') {
         }
 
         $price = (float)$product['price_etb'];
+        $costPrice = (float)($product['cost_price_etb'] ?? 0.00);
+
+        // Check if a specific variant was selected
+        if (!empty($selectedVariant) && !empty($product['variants_json'])) {
+            $variants = json_decode($product['variants_json'], true);
+            if (is_array($variants)) {
+                foreach ($variants as $v) {
+                    if (strcasecmp($v['name'] ?? '', $selectedVariant) === 0) {
+                        $price = (float)($v['price'] ?? $price);
+                        $costPrice = (float)($v['cost'] ?? $costPrice);
+                        break;
+                    }
+                }
+            }
+        }
 
         // 3. Balance verification
         if ($currentBalance < $price) {
@@ -198,12 +220,21 @@ if ($method === 'POST') {
         $soldStmt = $db->prepare("UPDATE product_vault SET is_sold = 1, sold_to_user = ?, sold_at = NOW() WHERE id = ?");
         $soldStmt->execute([$telegramId, $vaultId]);
 
-        // 7. Insert into orders table
+        // 7. Calculate profit and insert into orders table
+        $profit = round($price - $costPrice, 2);
         $orderStmt = $db->prepare("
-            INSERT INTO orders (telegram_id, product_id, price_paid, delivered_payload, created_at)
-            VALUES (?, ?, ?, ?, NOW())
+            INSERT INTO orders (telegram_id, product_id, selected_variant, price_paid, cost_price, profit, delivered_payload, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ");
-        $orderStmt->execute([$telegramId, $productId, $price, $digitalPayload]);
+        $orderStmt->execute([
+            $telegramId,
+            $productId,
+            $selectedVariant ?: null,
+            $price,
+            $costPrice,
+            $profit,
+            $digitalPayload
+        ]);
         $orderId = (int)$db->lastInsertId();
 
         // Calculate remaining balance

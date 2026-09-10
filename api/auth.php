@@ -12,6 +12,7 @@ $username = !empty($authUser['username']) ? trim($authUser['username']) : null;
 $db = getDb(false);
 
 if ($db === null) {
+    $devRole = getUserRole($telegramId, null);
     jsonResponse([
         'status' => 'success',
         'user' => [
@@ -20,23 +21,29 @@ if ($db === null) {
             'first_name'       => $firstName ?: 'User',
             'username'         => $username,
             'wallet_balance'   => 0.00,
+            'role'             => $devRole,
             'referral_count'   => 0,
             'orders_count'     => 0,
             'pending_deposits' => 0,
             'referral_link'    => sprintf('https://t.me/%s?start=ref_%s', BOT_USERNAME, $telegramId),
-            'is_admin'         => (ADMIN_CHAT_ID > 0 ? ($telegramId === ADMIN_CHAT_ID) : true),
+            'is_admin'         => ($devRole === 'admin'),
+            'is_staff'         => ($devRole === 'admin' || $devRole === 'staff'),
             'created_at'       => date('Y-m-d H:i:s'),
         ],
-        'payment_methods' => getStorePaymentMethods($db),
-        'bot_username'    => BOT_USERNAME,
+        'payment_methods'   => getStorePaymentMethods($db),
+        'bot_username'      => BOT_USERNAME,
+        'support_handle'    => SUPPORT_TELEGRAM_HANDLE,
+        'marketing_channel' => MARKETING_CHANNEL_ID,
     ]);
 }
 
 try {
     // 1. Check if user already exists
-    $stmt = $db->prepare("SELECT id, telegram_id, first_name, username, wallet_balance, referred_by, created_at FROM users WHERE telegram_id = ? LIMIT 1");
+    $stmt = $db->prepare("SELECT id, telegram_id, first_name, username, wallet_balance, role, referred_by, created_at FROM users WHERE telegram_id = ? LIMIT 1");
     $stmt->execute([$telegramId]);
     $userRecord = $stmt->fetch();
+
+    $userRole = 'customer';
 
     if (!$userRecord) {
         // Handle referral parameter if passed in start_param (e.g. ref_123456789)
@@ -54,22 +61,33 @@ try {
             }
         }
 
+        // Check if this newly joining user is configured as the owner/admin
+        $initialRole = (ADMIN_CHAT_ID > 0 && $telegramId === ADMIN_CHAT_ID) ? 'admin' : 'customer';
+
         // Insert new user
         $insertStmt = $db->prepare("
-            INSERT INTO users (telegram_id, first_name, username, wallet_balance, referred_by, created_at)
-            VALUES (?, ?, ?, 0.00, ?, NOW())
+            INSERT INTO users (telegram_id, first_name, username, wallet_balance, role, referred_by, created_at)
+            VALUES (?, ?, ?, 0.00, ?, ?, NOW())
         ");
-        $insertStmt->execute([$telegramId, $firstName, $username, $referredBy]);
+        $insertStmt->execute([$telegramId, $firstName, $username, $initialRole, $referredBy]);
 
         // Re-fetch created record
         $stmt->execute([$telegramId]);
         $userRecord = $stmt->fetch();
+        $userRole = $initialRole;
     } else {
         // Update user profile info (name/username change)
         $updateStmt = $db->prepare("UPDATE users SET first_name = ?, username = ? WHERE telegram_id = ?");
         $updateStmt->execute([$firstName, $username, $telegramId]);
         $userRecord['first_name'] = $firstName;
         $userRecord['username'] = $username;
+
+        // Auto-promote configured owner to admin if not already set
+        if (ADMIN_CHAT_ID > 0 && $telegramId === ADMIN_CHAT_ID && ($userRecord['role'] ?? '') !== 'admin') {
+            $db->prepare("UPDATE users SET role = 'admin' WHERE telegram_id = ?")->execute([$telegramId]);
+            $userRecord['role'] = 'admin';
+        }
+        $userRole = $userRecord['role'] ?? 'customer';
     }
 
     // 2. Fetch user statistics
@@ -88,6 +106,9 @@ try {
     $depStmt->execute([$telegramId]);
     $pendingDeposits = (int)($depStmt->fetchColumn() ?: 0);
 
+    $isAdmin = ($userRole === 'admin' || (ADMIN_CHAT_ID > 0 && $telegramId === ADMIN_CHAT_ID));
+    $isStaff = ($isAdmin || $userRole === 'staff');
+
     // 3. Return authenticated response
     jsonResponse([
         'status' => 'success',
@@ -97,15 +118,19 @@ try {
             'first_name'       => $userRecord['first_name'],
             'username'         => $userRecord['username'],
             'wallet_balance'   => (float)$userRecord['wallet_balance'],
+            'role'             => $userRole,
             'referral_count'   => $referralCount,
             'orders_count'     => $ordersCount,
             'pending_deposits' => $pendingDeposits,
             'referral_link'    => sprintf('https://t.me/%s?start=ref_%s', BOT_USERNAME, $telegramId),
-            'is_admin'         => (ADMIN_CHAT_ID > 0 ? ($telegramId === ADMIN_CHAT_ID) : true),
+            'is_admin'         => $isAdmin,
+            'is_staff'         => $isStaff,
             'created_at'       => $userRecord['created_at'],
         ],
-        'payment_methods' => getStorePaymentMethods($db),
-        'bot_username' => BOT_USERNAME,
+        'payment_methods'   => getStorePaymentMethods($db),
+        'bot_username'      => BOT_USERNAME,
+        'support_handle'    => SUPPORT_TELEGRAM_HANDLE,
+        'marketing_channel' => MARKETING_CHANNEL_ID,
     ]);
 
 } catch (Exception $e) {

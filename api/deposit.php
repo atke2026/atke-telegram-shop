@@ -7,16 +7,29 @@ require_once __DIR__ . '/config.php';
 $authUser = getAuthenticatedUser();
 $telegramId = (int)$authUser['id'];
 
-$rawInput = file_get_contents('php://input');
-$payload = json_decode($rawInput, true);
+// Check if request is JSON or multipart/form-data
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+$isMultipart = str_contains(strtolower($contentType), 'multipart/form-data');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$payload) {
-    jsonResponse(['error' => 'Invalid request data.'], 400);
+$amount = 0.0;
+$paymentMethod = '';
+$receiptRaw = '';
+$receiptImageBase64 = '';
+
+if ($isMultipart) {
+    $amount = isset($_POST['amount']) ? (float)$_POST['amount'] : 0.0;
+    $paymentMethod = trim($_POST['payment_method'] ?? '');
+    $receiptRaw = trim($_POST['receipt_raw'] ?? '');
+} else {
+    $rawInput = file_get_contents('php://input');
+    $payload = json_decode($rawInput, true);
+    if ($payload) {
+        $amount = isset($payload['amount']) ? (float)$payload['amount'] : 0.0;
+        $paymentMethod = trim($payload['payment_method'] ?? '');
+        $receiptRaw = trim($payload['receipt_raw'] ?? '');
+        $receiptImageBase64 = trim($payload['receipt_image_base64'] ?? '');
+    }
 }
-
-$amount = isset($payload['amount']) ? (float)$payload['amount'] : 0.0;
-$paymentMethod = trim($payload['payment_method'] ?? '');
-$receiptRaw = trim($payload['receipt_raw'] ?? '');
 
 // Validation
 if ($amount <= 0) {
@@ -40,8 +53,68 @@ if (!$methodMatched && !empty($paymentMethod)) {
     jsonResponse(['error' => 'Please select a valid payment method.'], 400);
 }
 
-if (empty($receiptRaw) || mb_strlen($receiptRaw) < 5) {
-    jsonResponse(['error' => 'Please paste your complete SMS confirmation or receipt reference.'], 400);
+// ----------------------------------------------------------
+// Process Screenshot Receipt Upload (if attached)
+// ----------------------------------------------------------
+$receiptImageUrl = null;
+$uploadDir = __DIR__ . '/../public/uploads/receipts';
+
+if (!is_dir($uploadDir)) {
+    @mkdir($uploadDir, 0755, true);
+}
+
+// 1. Check $_FILES['receipt_image']
+if (!empty($_FILES['receipt_image']['tmp_name'])) {
+    $file = $_FILES['receipt_image'];
+    if ($file['error'] === UPLOAD_ERR_OK) {
+        // Max 20MB check
+        if ($file['size'] > 20 * 1024 * 1024) {
+            jsonResponse(['error' => 'Receipt screenshot exceeds 20 MB limit.'], 400);
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($file['tmp_name']);
+        $allowedMimes = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            'image/gif'  => 'gif',
+        ];
+
+        if (!isset($allowedMimes[$mime])) {
+            jsonResponse(['error' => 'Invalid image format. Allowed: JPEG, PNG, WebP, GIF.'], 400);
+        }
+
+        $ext = $allowedMimes[$mime];
+        $filename = 'receipt_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+        $targetPath = $uploadDir . '/' . $filename;
+
+        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+            $receiptImageUrl = 'uploads/receipts/' . $filename;
+        }
+    }
+} elseif (!empty($receiptImageBase64)) {
+    // 2. Base64 payload support
+    if (preg_match('/^data:image\/(jpeg|png|webp|gif);base64,(.*)$/i', $receiptImageBase64, $matches)) {
+        $ext = strtolower($matches[1]) === 'jpeg' ? 'jpg' : strtolower($matches[1]);
+        $binary = base64_decode($matches[2]);
+        if ($binary !== false && strlen($binary) <= 20 * 1024 * 1024) {
+            $filename = 'receipt_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+            $targetPath = $uploadDir . '/' . $filename;
+            if (file_put_contents($targetPath, $binary) !== false) {
+                $receiptImageUrl = 'uploads/receipts/' . $filename;
+            }
+        }
+    }
+}
+
+// Require either SMS text OR an uploaded receipt screenshot
+if (empty($receiptRaw) && empty($receiptImageUrl)) {
+    jsonResponse(['error' => 'Please paste your SMS confirmation message or upload a receipt screenshot.'], 400);
+}
+
+if (empty($receiptRaw) && !empty($receiptImageUrl)) {
+    $receiptRaw = '[Receipt Screenshot Uploaded]';
 }
 
 // ----------------------------------------------------------
@@ -49,8 +122,11 @@ if (empty($receiptRaw) || mb_strlen($receiptRaw) < 5) {
 // ----------------------------------------------------------
 function extractTransactionReference(string $text, string $method): ?string {
     $clean = trim($text);
+    if (empty($clean) || str_starts_with($clean, '[Receipt')) {
+        return null;
+    }
 
-    // 1. Check if the user simply pasted a standalone transaction code
+    // 1. Check if user pasted a standalone transaction code
     if (preg_match('/^[A-Za-z0-9\-_]{6,30}$/', $clean)) {
         return strtoupper($clean);
     }
@@ -58,7 +134,6 @@ function extractTransactionReference(string $text, string $method): ?string {
     // 2. Check for URL receipt links (e.g. telebirr.et or CBE URLs)
     if (preg_match('/https?:\/\/[^\s]+/i', $clean, $matches)) {
         $url = $matches[0];
-        // Parse query or last segment
         $pathParts = explode('/', parse_url($url, PHP_URL_PATH) ?? '');
         $lastSegment = end($pathParts);
         if ($lastSegment && strlen($lastSegment) >= 6) {
@@ -67,7 +142,7 @@ function extractTransactionReference(string $text, string $method): ?string {
     }
 
     // 3. Telebirr SMS patterns: "Transaction ID: 1048291048", "Txn ID: 9AA04K19", "Ref: CC109482"
-    if (preg_match('/(?:trans(?:action)?\s*(?:id|no\.?|ref|code)?|txn\s*(?:id)?|ref(?:erence)?\s*(?:no\.?)?)\s*[:=\-]?\s*([A-Za-z0-9]{6,25})/i', $clean, $matches)) {
+    if (preg_match('/(?:trans(?:action)?\s*(?:id|no\.?|ref|code)?|txn\s*(?:id)?|(?:reference|ref)\s*(?:no\.?)?)\s*[:=\-]?\s*([A-Za-z0-9]{6,25})/i', $clean, $matches)) {
         return strtoupper($matches[1]);
     }
 
@@ -85,7 +160,6 @@ function extractTransactionReference(string $text, string $method): ?string {
 }
 
 $extractedTxnId = extractTransactionReference($receiptRaw, $paymentMethod);
-
 $db = getDb();
 
 try {
@@ -104,14 +178,15 @@ try {
 
     // Insert deposit request into DB
     $stmt = $db->prepare("
-        INSERT INTO deposits (telegram_id, amount, payment_method, receipt_raw, extracted_txn_id, status, created_at)
-        VALUES (?, ?, ?, ?, ?, 'pending', NOW())
+        INSERT INTO deposits (telegram_id, amount, payment_method, receipt_raw, receipt_image_url, extracted_txn_id, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
     ");
     $stmt->execute([
         $telegramId,
         $amount,
         $paymentMethod,
         $receiptRaw,
+        $receiptImageUrl,
         $extractedTxnId,
     ]);
     $depositId = (int)$db->lastInsertId();
@@ -153,16 +228,22 @@ try {
             ]
         ];
 
-        sendBotMessage(ADMIN_CHAT_ID, $adminMessage, $inlineKeyboard);
+        if (!empty($receiptImageUrl)) {
+            $fullImageUrl = rtrim(APP_URL, '/') . '/public/' . $receiptImageUrl;
+            sendBotPhoto(ADMIN_CHAT_ID, $fullImageUrl, $adminMessage, $inlineKeyboard);
+        } else {
+            sendBotMessage(ADMIN_CHAT_ID, $adminMessage, $inlineKeyboard);
+        }
     }
 
     jsonResponse([
-        'status'           => 'success',
-        'deposit_id'       => $depositId,
-        'extracted_txn_id' => $extractedTxnId,
-        'amount'           => $amount,
-        'payment_method'   => $paymentMethod,
-        'message'          => 'Deposit submitted successfully! Our team will verify and credit your wallet shortly.',
+        'status'            => 'success',
+        'deposit_id'        => $depositId,
+        'extracted_txn_id'  => $extractedTxnId,
+        'amount'            => $amount,
+        'payment_method'    => $paymentMethod,
+        'receipt_image_url' => $receiptImageUrl,
+        'message'           => 'Deposit submitted successfully! Our team will verify and credit your wallet shortly.',
     ]);
 
 } catch (Exception $e) {

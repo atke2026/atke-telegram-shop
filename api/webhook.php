@@ -78,15 +78,51 @@ try {
                 }
             }
 
+            // Channel Membership Gate Check for Marketing
+            $channelConfigured = !empty(MARKETING_CHANNEL_ID);
+            $isChannelMember = $channelConfigured ? checkUserChannelMember($userId) : true;
+            $channelUsername = ltrim(MARKETING_CHANNEL_ID, '@');
+
+            // If channel is configured and user is NOT a member (and not admin)
+            if ($channelConfigured && !$isChannelMember && $userId !== ADMIN_CHAT_ID) {
+                $gateText = "👋 <b>Welcome to AtkeShop, " . htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8') . "!</b>\n\n"
+                    . "📢 <b>Channel Join Required for Store Access:</b>\n"
+                    . "To receive flash discount coupons, digital stock restock alerts, and 24/7 warranty support, please join our official Telegram channel first:\n\n"
+                    . "👉 <b>@" . htmlspecialchars($channelUsername, ENT_QUOTES, 'UTF-8') . "</b>\n\n"
+                    . "<i>Tap 'Join Channel' below, then tap 'I Have Joined (Verify)' to unlock the store:</i>";
+
+                $gateMarkup = [
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => '📢 Join Channel (@' . $channelUsername . ')',
+                                'url'  => 'https://t.me/' . $channelUsername
+                            ]
+                        ],
+                        [
+                            [
+                                'text'          => '🔄 I Have Joined (Verify)',
+                                'callback_data' => 'verify_channel_join'
+                            ]
+                        ]
+                    ]
+                ];
+
+                sendBotMessage($chatId, $gateText, $gateMarkup);
+                http_response_code(200);
+                echo json_encode(['ok' => true]);
+                exit;
+            }
+
             // Construct Mini App Launch URL
             $miniAppUrl = rtrim(APP_URL, '/') . '/public/index.html';
 
-            $welcomeText = "👋 <b>Welcome to YeneShop Digital Store, " . htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8') . "!</b>\n\n"
+            $welcomeText = "👋 <b>Welcome to AtkeShop Digital Store, " . htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8') . "!</b>\n\n"
                 . "⚡ <b>Instant Delivery for Premium Digital Accounts & Keys:</b>\n"
-                . "• Google Gemini 1.5 Advanced\n"
-                . "• Canva Pro 1-Year Invites\n"
-                . "• Telegram Premium Subscriptions\n"
-                . "• NordVPN, ChatGPT Plus, and Spotify\n\n"
+                . "• Telegram Premium (3m, 6m, 12m)\n"
+                . "• Google Gemini AI Pro 18m\n"
+                . "• Canva Pro 3-Year Upgrades\n"
+                . "• Duolingo Super, SoundCloud, Railway & Replit\n\n"
                 . "💳 <b>Your Wallet Balance:</b> <b>" . number_format($walletBalance, 2) . " ETB</b>\n\n"
                 . "👇 Tap <b>Open Store</b> below to start browsing with zero fees!";
 
@@ -180,6 +216,37 @@ if (isset($update['callback_query'])) {
     $message = $cb['message'] ?? null;
     $chatId = $message['chat']['id'] ?? null;
     $messageId = $message['message_id'] ?? null;
+
+    // 0. Verify Channel Membership Callback
+    if ($callbackData === 'verify_channel_join') {
+        $isMember = checkUserChannelMember($callbackUserId);
+        $channelUsername = ltrim(MARKETING_CHANNEL_ID, '@');
+
+        if ($isMember) {
+            answerCallbackQuery($callbackId, "✅ Verified! Welcome to AtkeShop!", true);
+            $miniAppUrl = rtrim(APP_URL, '/') . '/public/index.html';
+            $unlockedText = "🎉 <b>Verification Successful!</b>\n\n"
+                . "Thank you for joining our official updates channel <b>@" . htmlspecialchars($channelUsername, ENT_QUOTES, 'UTF-8') . "</b>!\n\n"
+                . "Your access to AtkeShop is now unlocked with zero fees and instant digital delivery.\n\n"
+                . "👇 Tap <b>Open Store</b> below to browse accounts & services:";
+
+            $unlockedMarkup = [
+                'inline_keyboard' => [
+                    [
+                        ['text' => '🛍️ Open Store (Mini App)', 'web_app' => ['url' => $miniAppUrl]]
+                    ]
+                ]
+            ];
+
+            if ($chatId && $messageId) {
+                editMessageText($chatId, $messageId, $unlockedText, $unlockedMarkup);
+            }
+        } else {
+            answerCallbackQuery($callbackId, "⚠️ You haven't joined @" . $channelUsername . " yet. Please tap 'Join Channel' first!", true);
+        }
+        http_response_code(200);
+        exit;
+    }
 
     // A. Check Balance Menu Callback
     if ($callbackData === 'menu_check_balance') {
@@ -412,11 +479,11 @@ if (isset($update['callback_query'])) {
                 }
 
                 // Notify customer of rejection
-                $custFailMsg = "⚠️ <b>Deposit Request Update</b>\n\n"
+                $customerFailMsg = "⚠️ <b>Deposit Request Update</b>\n\n"
                     . "Your deposit request for <b>" . number_format((float)$deposit['amount'], 2) . " ETB</b> (Txn: " . ($deposit['extracted_txn_id'] ?? 'N/A') . ") could not be verified.\n\n"
                     . "Please ensure the transaction was successful and that the exact reference number was provided. If you believe this is an error, please contact customer support.";
 
-                sendBotMessage((int)$deposit['telegram_id'], $custFailMsg);
+                sendBotMessage((int)$deposit['telegram_id'], $customerFailMsg);
             } else {
                 answerCallbackQuery($callbackId, "Deposit already processed or not found.", true);
             }

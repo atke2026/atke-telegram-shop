@@ -7,17 +7,18 @@ require_once __DIR__ . '/config.php';
 $authUser = getAuthenticatedUser();
 $telegramId = (int)$authUser['id'];
 
-// 2. Strict Admin Authorization Check
-// When ADMIN_CHAT_ID is set (> 0), strictly enforce that only the configured admin can execute actions.
-// If ADMIN_CHAT_ID is 0 in local dev mode with mock token, allow for testing.
-if (ADMIN_CHAT_ID > 0 && $telegramId !== ADMIN_CHAT_ID) {
+// 2. Strict Role-Based Authorization Check (Super Admin / Staff)
+$db = getDb(false);
+$userRole = getUserRole($telegramId, $db);
+
+if ($userRole === 'customer') {
     jsonResponse([
-        'error' => 'Unauthorized. Admin access required.',
+        'error' => 'Unauthorized. Admin or staff privileges required.',
         'code'  => 403
     ], 403);
 }
 
-$db = getDb(false);
+$isOwner = ($userRole === 'admin');
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -56,9 +57,13 @@ if ($action === 'stats') {
         // Total registered users
         $usersCount = (int)$db->query("SELECT COUNT(*) FROM users")->fetchColumn();
 
-        // Total orders & gross revenue
+        // Total orders, gross revenue & net profit
         $orderStats = $db->query("
-            SELECT COUNT(*) AS total_orders, COALESCE(SUM(price_paid), 0) AS total_revenue 
+            SELECT 
+                COUNT(*) AS total_orders, 
+                COALESCE(SUM(price_paid), 0) AS total_revenue,
+                COALESCE(SUM(cost_price), 0) AS total_cost,
+                COALESCE(SUM(profit), 0) AS total_profit
             FROM orders
         ")->fetch();
 
@@ -79,17 +84,25 @@ if ($action === 'stats') {
         // Total active products
         $prodCount = (int)$db->query("SELECT COUNT(*) FROM products WHERE is_active = 1")->fetchColumn();
 
+        $gross = (float)($orderStats['total_revenue'] ?? 0.00);
+        $profit = (float)($orderStats['total_profit'] ?? 0.00);
+        $margin = $gross > 0 ? round(($profit / $gross) * 100, 1) : 0.0;
+
         jsonResponse([
             'status' => 'success',
             'stats'  => [
                 'users_count'      => $usersCount,
                 'orders_count'     => (int)($orderStats['total_orders'] ?? 0),
-                'total_revenue'    => (float)($orderStats['total_revenue'] ?? 0.00),
+                'total_revenue'    => $isOwner ? $gross : 0.00,
+                'total_cost'       => $isOwner ? (float)($orderStats['total_cost'] ?? 0.00) : 0.00,
+                'total_profit'     => $isOwner ? $profit : 0.00,
+                'profit_margin'    => $isOwner ? $margin : 0.0,
                 'pending_deposits' => (int)($depStats['pending_count'] ?? 0),
                 'pending_amount'   => (float)($depStats['pending_amount'] ?? 0.00),
                 'available_keys'   => (int)($stockStats['available_keys'] ?? 0),
                 'delivered_keys'   => (int)($stockStats['delivered_keys'] ?? 0),
                 'active_products'  => $prodCount,
+                'is_owner'         => $isOwner,
             ]
         ]);
     } catch (Exception $e) {
@@ -106,12 +119,19 @@ if ($action === 'products') {
         jsonResponse([
             'status' => 'success',
             'products' => [
-                ['id' => 1, 'name' => 'Google Gemini 1.5 Advanced (1 Month)', 'category' => 'AI Tools', 'price_etb' => 450.00, 'description' => 'Full access to Gemini 1.5 Pro', 'icon_url' => 'https://api.iconify.design/logos:google-gemini.svg', 'badge' => '⚡ HOT DEAL', 'is_active' => 1, 'unsold_keys' => 15, 'sold_keys' => 0],
-                ['id' => 2, 'name' => 'Canva Pro (1-Year Team Invite)', 'category' => 'Design', 'price_etb' => 350.00, 'description' => 'Full Canva Pro upgrade', 'icon_url' => 'https://api.iconify.design/logos:canva.svg', 'badge' => '🔥 POPULAR', 'is_active' => 1, 'unsold_keys' => 24, 'sold_keys' => 0],
-                ['id' => 3, 'name' => 'Telegram Premium (3 Months Gift)', 'category' => 'Social', 'price_etb' => 850.00, 'description' => 'Direct 3-Month Premium gift code', 'icon_url' => 'https://api.iconify.design/logos:telegram.svg', 'badge' => '⭐ BESTSELLER', 'is_active' => 1, 'unsold_keys' => 8, 'sold_keys' => 0],
-                ['id' => 4, 'name' => 'ChatGPT Plus / Team Account (1 Month)', 'category' => 'AI Tools', 'price_etb' => 650.00, 'description' => 'Private OpenAI account with GPT-4o', 'icon_url' => 'https://api.iconify.design/logos:openai-icon.svg', 'badge' => '🚀 TOP PICK', 'is_active' => 1, 'unsold_keys' => 12, 'sold_keys' => 0],
-                ['id' => 5, 'name' => 'NordVPN Premium (1-Year Private)', 'category' => 'VPN & Security', 'price_etb' => 500.00, 'description' => 'Ultra-fast VPN for 6 devices', 'icon_url' => 'https://api.iconify.design/logos:nordvpn-icon.svg', 'badge' => '🛡️ SECURE', 'is_active' => 1, 'unsold_keys' => 19, 'sold_keys' => 0],
-                ['id' => 6, 'name' => 'Spotify Premium (6-Months Individual)', 'category' => 'Streaming', 'price_etb' => 400.00, 'description' => 'Ad-free music streaming', 'icon_url' => 'https://api.iconify.design/logos:spotify-icon.svg', 'badge' => '🎵 STREAMING', 'is_active' => 1, 'unsold_keys' => 11, 'sold_keys' => 0],
+                [
+                    'id' => 1,
+                    'name' => 'Gemini AI Pro 18m',
+                    'category' => 'AI Tools',
+                    'price_etb' => 385.00,
+                    'description' => 'Full Gemini Advanced access with 5TB storage.',
+                    'how_to_use' => "⚡ 18 Months Plan\n⚡ 5TB cloud storage included\n⚡ You can add 5 users",
+                    'icon_url' => 'https://img.icons8.com/color/480/google-gemini.png',
+                    'badge' => 'POPULAR',
+                    'is_active' => 1,
+                    'unsold_keys' => 2,
+                    'sold_keys' => 0
+                ]
             ]
         ]);
     }
@@ -123,6 +143,7 @@ if ($action === 'products') {
                 p.category,
                 p.price_etb,
                 p.description,
+                p.how_to_use,
                 p.icon_url,
                 p.badge,
                 p.is_active,
@@ -131,7 +152,7 @@ if ($action === 'products') {
                 COUNT(CASE WHEN v.is_sold = 1 THEN 1 END) AS sold_keys
             FROM products p
             LEFT JOIN product_vault v ON p.id = v.product_id
-            GROUP BY p.id, p.name, p.category, p.price_etb, p.description, p.icon_url, p.badge, p.is_active, p.created_at
+            GROUP BY p.id, p.name, p.category, p.price_etb, p.description, p.how_to_use, p.icon_url, p.badge, p.is_active, p.created_at
             ORDER BY p.id ASC
         ");
         $products = $stmt->fetchAll();
@@ -163,11 +184,15 @@ if ($action === 'save_product' && $method === 'POST') {
     $name = trim((string)($payload['name'] ?? ''));
     $category = trim((string)($payload['category'] ?? 'Services'));
     $price = isset($payload['price_etb']) ? (float)$payload['price_etb'] : 0.00;
+    $costPrice = isset($payload['cost_price_etb']) ? (float)$payload['cost_price_etb'] : 0.00;
+    $variantsJson = !empty($payload['variants_json']) ? (string)$payload['variants_json'] : null;
     $description = trim((string)($payload['description'] ?? ''));
+    $howToUse = trim((string)($payload['how_to_use'] ?? ''));
     $iconUrl = trim((string)($payload['icon_url'] ?? ''));
     $badge = trim((string)($payload['badge'] ?? ''));
     $badge = $badge === '' ? null : $badge;
     $isActive = isset($payload['is_active']) ? (int)$payload['is_active'] : 1;
+    $broadcast = !empty($payload['broadcast_to_channel']);
 
     if (empty($name)) {
         jsonResponse(['error' => 'Product title/name is required.'], 400);
@@ -177,35 +202,59 @@ if ($action === 'save_product' && $method === 'POST') {
     }
 
     try {
+        $savedId = $id;
         if ($id > 0) {
             // Update existing product
             $stmt = $db->prepare("
                 UPDATE products 
-                SET name = ?, category = ?, price_etb = ?, description = ?, icon_url = ?, badge = ?, is_active = ?
+                SET name = ?, category = ?, price_etb = ?, cost_price_etb = ?, variants_json = ?, description = ?, how_to_use = ?, icon_url = ?, badge = ?, is_active = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$name, $category, $price, $description, $iconUrl, $badge, $isActive, $id]);
-
-            jsonResponse([
-                'status'  => 'success',
-                'message' => 'Product updated successfully!',
-                'id'      => $id
-            ]);
+            $stmt->execute([$name, $category, $price, $costPrice, $variantsJson, $description, $howToUse, $iconUrl, $badge, $isActive, $id]);
+            $msg = 'Product updated successfully!';
         } else {
             // Insert new product
             $stmt = $db->prepare("
-                INSERT INTO products (name, category, price_etb, description, icon_url, badge, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO products (name, category, price_etb, cost_price_etb, variants_json, description, how_to_use, icon_url, badge, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
-            $stmt->execute([$name, $category, $price, $description, $iconUrl, $badge, $isActive]);
-            $newId = (int)$db->lastInsertId();
-
-            jsonResponse([
-                'status'  => 'success',
-                'message' => 'New product created successfully!',
-                'id'      => $newId
-            ]);
+            $stmt->execute([$name, $category, $price, $costPrice, $variantsJson, $description, $howToUse, $iconUrl, $badge, $isActive]);
+            $savedId = (int)$db->lastInsertId();
+            $msg = 'New product created successfully!';
         }
+
+        // Automatic Marketing Broadcast to Telegram Channel/Group
+        $broadcastResult = null;
+        if ($broadcast && $isActive === 1 && !empty(MARKETING_CHANNEL_ID)) {
+            $channelMsg = "🔥 <b>NEW PRODUCT AVAILABLE IN STORE!</b>\n\n"
+                . "📦 <b>" . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . "</b>\n"
+                . "💰 <b>Price:</b> <b>" . number_format($price, 2) . " ETB</b>\n"
+                . "🏷️ <b>Category:</b> " . htmlspecialchars($category, ENT_QUOTES, 'UTF-8') . "\n\n"
+                . (!empty($description) ? "📝 <i>" . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . "</i>\n\n" : "")
+                . "⚡ <b>Instant Bot Delivery & Zero Fees!</b>\n\n"
+                . "👇 Tap the button below to buy instantly in our Mini App:";
+
+            $productAppUrl = rtrim(APP_URL, '/') . '/public/index.html';
+            $channelMarkup = [
+                'inline_keyboard' => [
+                    [
+                        ['text' => '🛍️ Buy Now in Mini App', 'web_app' => ['url' => $productAppUrl]]
+                    ]
+                ]
+            ];
+
+            $broadcastResult = broadcastToChannel($channelMsg, !empty($iconUrl) ? $iconUrl : null, $channelMarkup);
+            if (!empty($broadcastResult['ok'])) {
+                $msg .= ' 📢 Broadcasted to channel!';
+            }
+        }
+
+        jsonResponse([
+            'status'           => 'success',
+            'message'          => $msg,
+            'id'               => $savedId,
+            'broadcast_result' => $broadcastResult
+        ]);
     } catch (Exception $e) {
         error_log('Admin Save Product Error: ' . $e->getMessage());
         jsonResponse(['error' => 'Database error while saving product.'], 500);
@@ -386,6 +435,7 @@ if ($action === 'deposits') {
                 d.amount,
                 d.payment_method,
                 d.receipt_raw,
+                d.receipt_image_url,
                 d.extracted_txn_id,
                 d.status,
                 d.created_at,
@@ -591,6 +641,10 @@ if ($action === 'payment_methods') {
 // 10. ACTION: save_payment_method (Create or Edit Account)
 // ==========================================================
 if ($action === 'save_payment_method') {
+    if (!$isOwner) {
+        jsonResponse(['error' => 'Permission denied. Only the store owner can modify receiving bank accounts.'], 403);
+    }
+
     if ($db === null) {
         jsonResponse(['error' => 'Database connection required to save payment changes.'], 503);
     }
@@ -639,6 +693,10 @@ if ($action === 'save_payment_method') {
 // 11. ACTION: toggle_payment_method (Quick Enable/Disable)
 // ==========================================================
 if ($action === 'toggle_payment_method') {
+    if (!$isOwner) {
+        jsonResponse(['error' => 'Permission denied. Only the store owner can modify receiving bank accounts.'], 403);
+    }
+
     if ($db === null) {
         jsonResponse(['error' => 'Database connection required.'], 503);
     }
@@ -660,6 +718,137 @@ if ($action === 'toggle_payment_method') {
     } catch (Exception $e) {
         error_log("Toggle Payment Error: " . $e->getMessage());
         jsonResponse(['error' => 'Failed to toggle status.'], 500);
+    }
+}
+
+// ==========================================================
+// 12. ACTION: get_staff (List all staff members)
+// ==========================================================
+if ($action === 'get_staff') {
+    if (!$isOwner) {
+        jsonResponse(['error' => 'Permission denied. Staff management is restricted to the store owner.'], 403);
+    }
+
+    try {
+        $stmt = $db->query("SELECT id, telegram_id, first_name, username, role, created_at FROM users WHERE role IN ('admin', 'staff') ORDER BY (role = 'admin') DESC, id ASC");
+        $staff = $stmt->fetchAll();
+        jsonResponse(['status' => 'success', 'staff' => $staff]);
+    } catch (Exception $e) {
+        error_log("Get Staff Error: " . $e->getMessage());
+        jsonResponse(['error' => 'Failed to fetch staff list.'], 500);
+    }
+}
+
+// ==========================================================
+// 13. ACTION: save_staff (Promote user to staff/admin)
+// ==========================================================
+if ($action === 'save_staff' && $method === 'POST') {
+    if (!$isOwner) {
+        jsonResponse(['error' => 'Permission denied. Staff management is restricted to the store owner.'], 403);
+    }
+
+    $targetTgId = (int)($payload['telegram_id'] ?? 0);
+    $newRole = strtolower(trim((string)($payload['role'] ?? 'staff')));
+
+    if ($targetTgId <= 0 || !in_array($newRole, ['staff', 'admin'], true)) {
+        jsonResponse(['error' => 'Please provide a valid Telegram ID and role.'], 400);
+    }
+
+    try {
+        $chk = $db->prepare("SELECT id, first_name FROM users WHERE telegram_id = ? LIMIT 1");
+        $chk->execute([$targetTgId]);
+        $existing = $chk->fetch();
+
+        if ($existing) {
+            $upd = $db->prepare("UPDATE users SET role = ? WHERE telegram_id = ?");
+            $upd->execute([$newRole, $targetTgId]);
+        } else {
+            $ins = $db->prepare("INSERT INTO users (telegram_id, first_name, wallet_balance, role, created_at) VALUES (?, 'Staff Member', 0.00, ?, NOW())");
+            $ins->execute([$targetTgId, $newRole]);
+        }
+
+        jsonResponse([
+            'status'  => 'success',
+            'message' => "User {$targetTgId} permissions updated to {$newRole}!"
+        ]);
+    } catch (Exception $e) {
+        error_log("Save Staff Error: " . $e->getMessage());
+        jsonResponse(['error' => 'Failed to save staff permissions.'], 500);
+    }
+}
+
+// ==========================================================
+// 14. ACTION: remove_staff (Demote user to customer)
+// ==========================================================
+if ($action === 'remove_staff' && $method === 'POST') {
+    if (!$isOwner) {
+        jsonResponse(['error' => 'Permission denied. Staff management is restricted to the store owner.'], 403);
+    }
+
+    $targetTgId = (int)($payload['telegram_id'] ?? 0);
+    if ($targetTgId <= 0) {
+        jsonResponse(['error' => 'Invalid Telegram ID.'], 400);
+    }
+
+    if (ADMIN_CHAT_ID > 0 && $targetTgId === ADMIN_CHAT_ID) {
+        jsonResponse(['error' => 'Cannot demote the primary store owner.'], 400);
+    }
+
+    try {
+        $upd = $db->prepare("UPDATE users SET role = 'customer' WHERE telegram_id = ?");
+        $upd->execute([$targetTgId]);
+
+        jsonResponse([
+            'status'  => 'success',
+            'message' => "Staff permissions revoked for user {$targetTgId}."
+        ]);
+    } catch (Exception $e) {
+        error_log("Remove Staff Error: " . $e->getMessage());
+        jsonResponse(['error' => 'Failed to remove staff privileges.'], 500);
+    }
+}
+
+// ==========================================================
+// 15. ACTION: broadcast_marketing (Post Announcement to Channel)
+// ==========================================================
+if ($action === 'broadcast_marketing' && $method === 'POST') {
+    if (!$isOwner) {
+        jsonResponse(['error' => 'Permission denied. Marketing broadcasts are restricted to the store owner.'], 403);
+    }
+
+    $messageText = trim((string)($payload['message'] ?? ''));
+    $photoUrl    = trim((string)($payload['photo_url'] ?? ''));
+    $buttonText  = trim((string)($payload['button_text'] ?? '🛍️ Open Store'));
+    $buttonUrl   = trim((string)($payload['button_url'] ?? rtrim(APP_URL, '/') . '/public/index.html'));
+
+    if (empty($messageText)) {
+        jsonResponse(['error' => 'Broadcast message content cannot be empty.'], 400);
+    }
+
+    if (empty(MARKETING_CHANNEL_ID)) {
+        jsonResponse(['error' => 'MARKETING_CHANNEL_ID is not configured in api/config.php.'], 400);
+    }
+
+    $channelMarkup = [
+        'inline_keyboard' => [
+            [
+                ['text' => $buttonText, 'web_app' => ['url' => $buttonUrl]]
+            ]
+        ]
+    ];
+
+    $result = broadcastToChannel($messageText, !empty($photoUrl) ? $photoUrl : null, $channelMarkup);
+
+    if (!empty($result['ok'])) {
+        jsonResponse([
+            'status'  => 'success',
+            'message' => 'Broadcast delivered to channel/group successfully! 📢',
+            'result'  => $result
+        ]);
+    } else {
+        jsonResponse([
+            'error' => 'Telegram broadcast failed: ' . ($result['description'] ?? 'Verify bot is an administrator in your channel.')
+        ], 400);
     }
 }
 

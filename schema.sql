@@ -15,9 +15,11 @@ CREATE TABLE IF NOT EXISTS `users` (
     `first_name` VARCHAR(255) NOT NULL DEFAULT '',
     `username` VARCHAR(255) NULL,
     `wallet_balance` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `role` ENUM('customer', 'staff', 'admin') NOT NULL DEFAULT 'customer',
     `referred_by` BIGINT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_users_telegram_id` (`telegram_id`),
+    INDEX `idx_users_role` (`role`),
     INDEX `idx_users_referred_by` (`referred_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -29,7 +31,10 @@ CREATE TABLE IF NOT EXISTS `products` (
     `name` VARCHAR(255) NOT NULL,
     `category` VARCHAR(100) NOT NULL DEFAULT 'Services',
     `price_etb` DECIMAL(10,2) NOT NULL,
+    `cost_price_etb` DECIMAL(10,2) NOT NULL DEFAULT 0.00, -- Wholesale / acquisition cost for profit tracking
+    `variants_json` TEXT NULL, -- JSON array for multi-tiered items (e.g. 3m, 6m, 12m) triggers "Choose" button
     `description` TEXT NULL,
+    `how_to_use` TEXT NULL, -- Bullet points/guide shown under "Show my item" in Orders
     `icon_url` VARCHAR(500) NULL,
     `badge` VARCHAR(50) NULL, -- e.g. 'HOT', 'POPULAR', '1 YEAR', 'LIMITED'
     `is_active` TINYINT(1) NOT NULL DEFAULT 1,
@@ -43,6 +48,7 @@ CREATE TABLE IF NOT EXISTS `products` (
 CREATE TABLE IF NOT EXISTS `product_vault` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `product_id` INT NOT NULL,
+    `variant_name` VARCHAR(100) NULL, -- Optional link to variant (e.g. '3 months', '12 months')
     `item_payload` TEXT NOT NULL, -- Activation link, serial key, license code, or account credentials
     `is_sold` TINYINT(1) NOT NULL DEFAULT 0,
     `sold_to_user` BIGINT NULL,
@@ -63,6 +69,7 @@ CREATE TABLE IF NOT EXISTS `deposits` (
     `amount` DECIMAL(10,2) NOT NULL,
     `payment_method` VARCHAR(100) NOT NULL DEFAULT 'Telebirr',
     `receipt_raw` TEXT NOT NULL,
+    `receipt_image_url` VARCHAR(500) NULL, -- Uploaded screenshot path
     `extracted_txn_id` VARCHAR(100) NULL UNIQUE,
     `status` ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -72,13 +79,16 @@ CREATE TABLE IF NOT EXISTS `deposits` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------
--- 5. Table: orders (Delivered purchases)
+-- 5. Table: orders (Delivered purchases with profit tracking)
 -- ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `orders` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `telegram_id` BIGINT NOT NULL,
     `product_id` INT NOT NULL,
+    `selected_variant` VARCHAR(100) NULL,
     `price_paid` DECIMAL(10,2) NOT NULL,
+    `cost_price` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    `profit` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `delivered_payload` TEXT NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_orders_user` (`telegram_id`),
@@ -123,14 +133,14 @@ ON DUPLICATE KEY UPDATE
 -- SEED INITIAL DIGITAL PRODUCTS & INVENTORY VAULT
 -- ==========================================================
 
-INSERT INTO `products` (`id`, `name`, `category`, `price_etb`, `description`, `icon_url`, `badge`, `is_active`) VALUES
-(1, 'Gemini Pro 1.5 Advanced (1 Month)', 'AI Tools', 350.00, 'Google Gemini Advanced account with 1M token context, Python code execution, and priority access.', 'https://img.icons8.com/color/480/google-gemini.png', 'POPULAR', 1),
-(2, 'Canva Pro Premium (1 Year Invite)', 'Design', 250.00, 'Direct educational/team invite to your personal Canva email. Unlimited premium templates, magic studio, and 1TB storage.', 'https://img.icons8.com/color/480/canva.png', 'BESTSELLER', 1),
-(3, 'Telegram Premium (3 Months)', 'Social', 550.00, 'Telegram Premium gift code. 4GB uploads, double limits, voice-to-text transcriptions, and animated emoji status.', 'https://img.icons8.com/color/480/telegram-app.png', 'HOT', 1),
-(4, 'NordVPN Ultra (1 Year Account)', 'VPN & Security', 400.00, 'Dedicated login credentials for NordVPN. 60+ countries, bypass geo-blocks, ultra-fast servers with Obfuscation.', 'https://img.icons8.com/color/480/nordvpn.png', 'FEATURED', 1),
-(5, 'ChatGPT Plus Shared Account (1 Month)', 'AI Tools', 450.00, 'GPT-4o, DALL-E 3 image generation, and custom GPT store access. Instant delivery with setup guide.', 'https://img.icons8.com/color/480/chatgpt.png', 'NEW', 1),
-(6, 'Spotify Premium Individual (3 Months)', 'Entertainment', 300.00, 'Ad-free high-fidelity music streaming, offline downloads, and unlimited skips on any device.', 'https://img.icons8.com/color/480/spotify--v1.png', NULL, 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+INSERT INTO `products` (`id`, `name`, `category`, `price_etb`, `cost_price_etb`, `variants_json`, `description`, `how_to_use`, `icon_url`, `badge`, `is_active`) VALUES
+(1, 'Telegram Premium', 'Social', 2500.00, 1900.00, '[{"name":"3 months","price":2500.00,"cost":1900.00,"status":"Available"},{"name":"6 months","price":3400.00,"cost":2600.00,"status":"Available"},{"name":"12 months","price":6200.00,"cost":4800.00,"status":"Available"}]', 'Official Telegram Premium subscription gift. 4GB uploads, faster downloads, voice-to-text, and exclusive badge.', '⚡ Direct Gift Link or Activation\n⚡ 4GB file uploads\n⚡ Voice-to-text audio transcriptions\n⚡ Animated profile badges & emoji status\n⚡ Zero ads across all channels', 'https://img.icons8.com/color/480/telegram-app.png', 'POPULAR', 1),
+(2, 'SoundCloud Artist Pro', 'Services', 400.00, 250.00, NULL, 'Unlimited track uploads, advanced audience analytics, and spotlight profile styling for musicians and creators.', '⚡ Unlimited Track Uploads\n⚡ Advanced Listener Demographics\n⚡ Monetization Ready\n⚡ Custom Spotlight Header & Bio', 'https://img.icons8.com/color/480/soundcloud.png', NULL, 1),
+(3, 'Railway Hobby 12m', 'Services', 3850.00, 3000.00, NULL, '1-Year Railway Hobby plan for hosting cloud applications, background workers, Postgres, and Redis databases.', '⚡ 1 Year Railway Hobby Plan\n⚡ $5/mo usage credits included\n⚡ 8GB RAM per container\n⚡ Custom Domains & Auto SSL', 'https://img.icons8.com/ios-filled/500/train.png', 'POPULAR', 1),
+(4, 'Replit Core 12m', 'Services', 45000.00, 38000.00, NULL, 'Full Replit Core membership for 12 months with AI Agent code completion, unlimited private cloud Repls.', '⚡ 1 Year Replit Core Plan\n⚡ Advanced AI Code Generator\n⚡ Unlimited Private Repls\n⚡ Persistent Background Cloud VMs', 'https://img.icons8.com/color/480/replit.png', 'POPULAR', 1),
+(5, 'Gemini AI Pro 18m', 'AI Tools', 385.00, 200.00, NULL, 'Full Google Gemini Advanced plan with 5TB Google One cloud storage and priority access.', '⚡ 18 Months Plan\n⚡ 5TB cloud storage included\n⚡ You can add 5 users\n⚡ No sharing — 100% private\n⚡ No card needed\n⚡ Works in any country, no verification\n⚡ Non-warranty\n⚡ May last before 18 Months sometimes', 'https://img.icons8.com/color/480/google-gemini.png', 'POPULAR', 1),
+(6, 'Canva Pro 3 Year', 'Design', 300.00, 150.00, NULL, 'Direct educational/team upgrade to your personal Canva email. Unlimited premium assets and Magic Studio.', '⚡ 3-Year Canva Pro Access\n⚡ Connects directly to your email\n⚡ Magic Studio & AI tools included\n⚡ 1TB Cloud Storage\n⚡ Millions of premium fonts & templates', 'https://img.icons8.com/color/480/canva.png', 'POPULAR', 1)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `price_etb` = VALUES(`price_etb`), `cost_price_etb` = VALUES(`cost_price_etb`), `variants_json` = VALUES(`variants_json`), `how_to_use` = VALUES(`how_to_use`);
 
 -- Digital Keys / Accounts for testing (Placeholders)
 INSERT INTO `product_vault` (`product_id`, `item_payload`, `is_sold`) VALUES

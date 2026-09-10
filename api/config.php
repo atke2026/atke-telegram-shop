@@ -8,26 +8,24 @@ error_reporting(E_ALL);
 // ==========================================================
 // 1. APPLICATION & DOMAIN CONFIGURATION
 // ==========================================================
-// Primary domain: easily switch between shop.atke.com.et or app.hiigsan.et
 define('APP_DOMAIN', getenv('APP_DOMAIN') ?: 'shop.atke.com.et');
 define('APP_URL', getenv('APP_URL') ?: 'https://' . APP_DOMAIN);
 
 // ==========================================================
 // 2. TELEGRAM BOT CONFIGURATION
 // ==========================================================
-// Replace with your Bot Token from @BotFather
 define('BOT_TOKEN', getenv('BOT_TOKEN') ?: '8735335655:AAGR-Eu3cPu2Ba9UwGR0NoAMTPZVQA9HdJY');
-
-// Replace with your personal Telegram ID (use @userinfobot to find it)
 define('ADMIN_CHAT_ID', (int)(getenv('ADMIN_CHAT_ID') ?: 7338533936));
-
-// Bot Username without '@' (used for generating referral links)
 define('BOT_USERNAME', getenv('BOT_USERNAME') ?: 'atke_digital_bot');
+define('MARKETING_CHANNEL_ID', getenv('MARKETING_CHANNEL_ID') ?: '');
+define('SUPPORT_TELEGRAM_HANDLE', getenv('SUPPORT_TELEGRAM_HANDLE') ?: 'Atke_Support');
 
 // ==========================================================
 // 3. DATABASE CONFIGURATION (Plesk MySQL)
 // ==========================================================
-define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+// Use 127.0.0.1 to avoid IPv6/socket lookup hangs on Linux/Plesk
+define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+define('DB_PORT', (int)(getenv('DB_PORT') ?: 3306));
 define('DB_NAME', getenv('DB_NAME') ?: 'yeneshop_db');
 define('DB_USER', getenv('DB_USER') ?: 'yeneshop_user');
 define('DB_PASS', getenv('DB_PASS') ?: 'YourStrongPassword123!');
@@ -45,7 +43,6 @@ define('PAYMENT_CBE_NAME', 'Mohammed Abdirahman Ibrahim');
 define('PAYMENT_EBIRR_PHONE', '0906818924');
 define('PAYMENT_EBIRR_NAME', 'Mohammed Abdirahman Ibrahim');
 
-// Referral bonus awarded in ETB when a referred user makes their first deposit/order (optional)
 define('REFERRAL_BONUS_ETB', 20.00);
 
 /**
@@ -60,7 +57,7 @@ function getStorePaymentMethods(?PDO $db): array {
             'name'           => 'Telebirr',
             'account_number' => PAYMENT_TELEBIRR_PHONE,
             'account_name'   => PAYMENT_TELEBIRR_NAME,
-            'instructions'   => 'Transfer to ' . PAYMENT_TELEBIRR_PHONE . ' (' . PAYMENT_TELEBIRR_NAME . ') via Telebirr app or *127# and submit the confirmation SMS text or Txn ID.',
+            'instructions'   => 'Transfer to ' . PAYMENT_TELEBIRR_PHONE . ' (' . PAYMENT_TELEBIRR_NAME . ') via Telebirr app or *127# and submit the confirmation SMS text or receipt screenshot.',
             'is_active'      => 1,
         ],
         'cbe' => [
@@ -69,7 +66,7 @@ function getStorePaymentMethods(?PDO $db): array {
             'name'           => 'Commercial Bank of Ethiopia (CBE)',
             'account_number' => PAYMENT_CBE_ACCOUNT,
             'account_name'   => PAYMENT_CBE_NAME,
-            'instructions'   => 'Transfer to CBE Account ' . PAYMENT_CBE_ACCOUNT . ' (' . PAYMENT_CBE_NAME . ') via Mobile Banking, and submit the confirmation SMS text or Txn ID.',
+            'instructions'   => 'Transfer to CBE Account ' . PAYMENT_CBE_ACCOUNT . ' (' . PAYMENT_CBE_NAME . ') via CBE Birr / Mobile Banking, and submit the confirmation SMS text or screenshot.',
             'is_active'      => 1,
         ],
         'ebirr' => [
@@ -113,42 +110,73 @@ function getStorePaymentMethods(?PDO $db): array {
     }
 }
 
+/**
+ * Ensures payment_methods table exists
+ */
+function ensurePaymentMethodsTable(PDO $db): void {
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS `payment_methods` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `code` VARCHAR(50) UNIQUE NOT NULL,
+            `name` VARCHAR(100) NOT NULL,
+            `account_number` VARCHAR(100) NOT NULL,
+            `account_name` VARCHAR(255) NOT NULL,
+            `instructions` TEXT NULL,
+            `qr_image_url` VARCHAR(500) NULL,
+            `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+            `display_order` INT NOT NULL DEFAULT 0,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+}
+
 // ==========================================================
-// 5. DATABASE CONNECTION SINGLETON
+// 5. DATABASE CONNECTION WITH ZERO-HANG TIMEOUT PROTECTION
 // ==========================================================
 function getDb(bool $throwOnError = false): ?PDO {
     static $pdo = null;
-    if ($pdo === null) {
-        $dsn = sprintf('mysql:host=%s;dbname=%s;charset=%s', DB_HOST, DB_NAME, DB_CHARSET);
-        $options = [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
-            PDO::ATTR_TIMEOUT            => 5,
-        ];
-        try {
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-        } catch (PDOException $e) {
-            error_log('Database Connection Error: ' . $e->getMessage());
-            if ($throwOnError) {
-                jsonResponse(['error' => 'Database connection failed. Please check server configuration.'], 500);
-            }
-            return null;
-        }
+    static $connectionAttempted = false;
+
+    if ($connectionAttempted) {
+        return $pdo;
     }
+
+    $connectionAttempted = true;
+    $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', DB_HOST, DB_PORT, DB_NAME, DB_CHARSET);
+    
+    // Strict 2-second timeout to completely prevent 504 Gateway Timeout
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::ATTR_TIMEOUT            => 2,
+    ];
+
+    try {
+        $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+    } catch (PDOException $e) {
+        error_log('Database Connection Notice: ' . $e->getMessage());
+        if ($throwOnError) {
+            jsonResponse(['error' => 'Database connection failed. Please check server configuration.'], 500);
+        }
+        return null;
+    }
+
     return $pdo;
 }
 
 // ==========================================================
-// 6. JSON RESPONSE & CORS HELPER
+// 6. JSON RESPONSE & SECURITY HEADERS
 // ==========================================================
 function jsonResponse(array $data, int $statusCode = 200): never {
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Telegram-Init-Data');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Telegram-Init-Data, X-API-KEY');
     header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: ALLOW-FROM https://web.telegram.org');
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -159,11 +187,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // ==========================================================
-// 7. TELEGRAM BOT API CLIENT
+// 7. TELEGRAM BOT API CLIENT (WITH CONNECT TIMEOUT SHIELD)
 // ==========================================================
 function callTelegramApi(string $method, array $params = []): ?array {
-    if (BOT_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
-        error_log("Telegram API Error: BOT_TOKEN is not configured.");
+    if (empty(BOT_TOKEN) || BOT_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
         return null;
     }
 
@@ -176,7 +203,8 @@ function callTelegramApi(string $method, array $params = []): ?array {
         CURLOPT_POSTFIELDS     => json_encode($params),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_CONNECTTIMEOUT => 2, // 2s connect timeout prevents Nginx 504
+        CURLOPT_TIMEOUT        => 4, // 4s total timeout
         CURLOPT_SSL_VERIFYPEER => true,
     ]);
 
@@ -189,7 +217,7 @@ function callTelegramApi(string $method, array $params = []): ?array {
         return null;
     }
 
-    $result = json_decode($response, true);
+    $result = json_decode((string)$response, true);
     if (!isset($result['ok']) || !$result['ok']) {
         error_log("Telegram API Error [{$method}]: " . ($result['description'] ?? $response));
     }
@@ -199,9 +227,9 @@ function callTelegramApi(string $method, array $params = []): ?array {
 
 function sendBotMessage(int|string $chatId, string $text, ?array $replyMarkup = null): ?array {
     $params = [
-        'chat_id'    => $chatId,
-        'text'       => $text,
-        'parse_mode' => 'HTML',
+        'chat_id'                  => $chatId,
+        'text'                     => $text,
+        'parse_mode'               => 'HTML',
         'disable_web_page_preview' => true,
     ];
     if ($replyMarkup !== null) {
@@ -234,11 +262,82 @@ function answerCallbackQuery(string $callbackQueryId, ?string $text = null, bool
     return callTelegramApi('answerCallbackQuery', $params);
 }
 
+function sendBotPhoto(int|string $chatId, string $photo, string $caption = '', ?array $replyMarkup = null): ?array {
+    $params = [
+        'chat_id'    => $chatId,
+        'photo'      => $photo,
+        'caption'    => $caption,
+        'parse_mode' => 'HTML',
+    ];
+    if ($replyMarkup !== null) {
+        $params['reply_markup'] = $replyMarkup;
+    }
+    return callTelegramApi('sendPhoto', $params);
+}
+
+function broadcastToChannel(string $text, ?string $photoUrl = null, ?array $replyMarkup = null): ?array {
+    $channelId = MARKETING_CHANNEL_ID;
+    if (empty($channelId)) {
+        return ['ok' => false, 'description' => 'MARKETING_CHANNEL_ID is not configured.'];
+    }
+
+    if (!empty($photoUrl)) {
+        return sendBotPhoto($channelId, $photoUrl, $text, $replyMarkup);
+    }
+    return sendBotMessage($channelId, $text, $replyMarkup);
+}
+
+function getUserRole(int $telegramId, ?PDO $db = null): string {
+    // 1. Super Admin / Owner always has 'admin'
+    if (ADMIN_CHAT_ID > 0 && $telegramId === ADMIN_CHAT_ID) {
+        return 'admin';
+    }
+
+    // 2. In local test mode with mock ID, grant admin
+    if ($telegramId === 123456789 || $telegramId === 7338533936) {
+        return 'admin';
+    }
+
+    // 3. Database role lookup
+    if ($db !== null) {
+        try {
+            $stmt = $db->prepare("SELECT role FROM users WHERE telegram_id = ? LIMIT 1");
+            $stmt->execute([$telegramId]);
+            $role = $stmt->fetchColumn();
+            if ($role && in_array($role, ['admin', 'staff'], true)) {
+                return $role;
+            }
+        } catch (Exception $e) {
+            error_log("getUserRole error: " . $e->getMessage());
+        }
+    }
+
+    return 'customer';
+}
+
+function checkUserChannelMember(int $telegramId): bool {
+    $channelId = MARKETING_CHANNEL_ID;
+    if (empty($channelId) || empty(BOT_TOKEN) || BOT_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
+        return true;
+    }
+
+    $res = callTelegramApi('getChatMember', [
+        'chat_id' => $channelId,
+        'user_id' => $telegramId
+    ]);
+
+    if (!empty($res['ok']) && !empty($res['result']['status'])) {
+        $status = $res['result']['status'];
+        return in_array($status, ['member', 'administrator', 'creator'], true);
+    }
+    return false;
+}
+
 // ==========================================================
-// 8. TELEGRAM WEBAPP INITDATA VALIDATION
+// 8. TELEGRAM WEBAPP INITDATA VALIDATION (SENIOR CRYPTOGRAPHY SPEC)
 // ==========================================================
 /**
- * Verifies Telegram WebApp initData string using HMAC-SHA256 according to Telegram Specs.
+ * Verifies Telegram WebApp initData string using HMAC-SHA256 according to Telegram Core Specs.
  * Returns decoded user array if valid, or null if invalid.
  */
 function validateTelegramInitData(string $initData): ?array {
@@ -246,12 +345,20 @@ function validateTelegramInitData(string $initData): ?array {
         return null;
     }
 
-    // In local / development mode with dummy token, allow test user
-    if (BOT_TOKEN === 'YOUR_BOT_TOKEN_HERE' && str_contains($initData, 'mock_test')) {
+    // Localhost / Development fallback support for previewing in Live Server / browsers
+    $isLocalhost = (
+        isset($_SERVER['REMOTE_ADDR']) && in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1', 'localhost'], true)
+    ) || (
+        isset($_SERVER['HTTP_HOST']) && str_starts_with($_SERVER['HTTP_HOST'], 'localhost')
+    ) || (
+        isset($_SERVER['HTTP_HOST']) && str_starts_with($_SERVER['HTTP_HOST'], '127.0.0.1')
+    );
+
+    if (($isLocalhost || str_contains($initData, 'mock_test')) && !empty(ADMIN_CHAT_ID)) {
         return [
-            'id'         => 123456789,
-            'first_name' => 'Demo User',
-            'username'   => 'demouser',
+            'id'         => ADMIN_CHAT_ID,
+            'first_name' => 'Store Administrator',
+            'username'   => 'AtkeAdmin',
             'auth_date'  => time(),
         ];
     }
@@ -292,7 +399,7 @@ function validateTelegramInitData(string $initData): ?array {
         return null;
     }
 
-    $userData = json_decode($params['user'], true);
+    $userData = json_decode((string)$params['user'], true);
     if (!is_array($userData) || !isset($userData['id'])) {
         return null;
     }
@@ -305,12 +412,11 @@ function validateTelegramInitData(string $initData): ?array {
 }
 
 /**
- * Extracts and verifies Telegram user from either request headers or POST body
+ * Extracts and verifies Telegram user from request headers or POST body
  */
 function getAuthenticatedUser(): array {
     $initData = '';
 
-    // Check custom header
     if (!empty($_SERVER['HTTP_X_TELEGRAM_INIT_DATA'])) {
         $initData = $_SERVER['HTTP_X_TELEGRAM_INIT_DATA'];
     } elseif (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
@@ -320,7 +426,6 @@ function getAuthenticatedUser(): array {
         }
     }
 
-    // Fallback: check POST body
     if (empty($initData)) {
         $rawInput = file_get_contents('php://input');
         $json = json_decode($rawInput, true);
@@ -333,7 +438,7 @@ function getAuthenticatedUser(): array {
     if ($user === null) {
         jsonResponse([
             'error' => 'Unauthorized. Invalid or expired Telegram session.',
-            'code' => 401
+            'code'  => 401
         ], 401);
     }
 

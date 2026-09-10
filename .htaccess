@@ -6,7 +6,7 @@
 Options -Indexes
 
 # 2. Block direct web access to sensitive files
-<FilesMatch "^(schema\.sql|\.env|\.git|composer\.(json|lock))$">
+<FilesMatch "^(schema\.sql|\.env|\.git|composer\.(json|lock)|.*\.log)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
@@ -18,12 +18,8 @@ Options -Indexes
 
 # 3. Allow Telegram WebApp iframe embedding
 <IfModule mod_headers.c>
-    # Note: Telegram Mini Apps load in an iframe inside Telegram Desktop & Web
-    # Do NOT set X-Frame-Options to DENY or SAMEORIGIN
     Header unset X-Frame-Options
     Header set Content-Security-Policy "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org http://localhost:*;"
-    
-    # Security headers
     Header set X-Content-Type-Options "nosniff"
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
@@ -44,4 +40,18 @@ AddDefaultCharset UTF-8
     AddOutputFilterByType DEFLATE application/javascript
     AddOutputFilterByType DEFLATE application/x-javascript
     AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# 6. Enable URL Rewriting for Root Routing
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # If root / is requested, route to index.php or public/index.html
+    RewriteRule ^$ index.php [L]
+
+    # Allow direct access to api/ and public/
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
 </IfModule>

@@ -2,432 +2,475 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>YeneShop - Digital Accounts & Keys</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>AtkeShop - Digital Accounts & Subscriptions</title>
   
-  <!-- Telegram WebApp SDK -->
+  <!-- Telegram WebApp SDK (Fast CDN with Immediate Ready Signal) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Tailwind CSS CDN with Typography & Forms -->
-  <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f0fdf4',
-              500: '#22c55e',
-              600: '#16a34a',
-              700: '#15803d',
-            },
-            dark: {
-              bg: '#0b0f19',
-              card: '#111827',
-              border: '#1f2937',
-              lighter: '#1e293b'
-            }
-          }
-        }
-      }
+    // Critical: Dismiss Telegram native loading spinner immediately
+    if (window.Telegram && window.Telegram.WebApp) {
+      try {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+      } catch (e) {}
     }
   </script>
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- Senior Production Native CSS Design System (Zero Runtime Tailwind CDN) -->
+  <link rel="stylesheet" href="style.css" />
+
   <style>
-    /* Prevent rubber-banding / bounce on iOS inside Telegram */
-    body {
-      touch-action: pan-x pan-y;
-      background-color: #0b0f19;
-      color: #f3f4f6;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    /* Critical Inline Layout Styles for Instant Paint */
+    .view-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-card);
+    }
+    .badge-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .badge-green {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--brand-green);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .badge-amber {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-red {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
     }
     
-    /* Custom scrollbar styling */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #374151;
-      border-radius: 9999px;
-    }
+    /* Bank Brands */
+    .bank-telebirr { border-color: #0072bc !important; }
+    .bank-cbe { border-color: #83226a !important; }
+    .bank-ebirr { border-color: #f37021 !important; }
 
-    .glass-card {
-      background: rgba(17, 24, 39, 0.85);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+    /* Drag & drop receipt zone */
+    .receipt-dropzone {
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      text-align: center;
+      background: var(--bg-input);
+      cursor: pointer;
+      transition: border-color 0.2s ease;
     }
-    
-    .badge-glow {
-      box-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
-    }
-
-    /* Tab transitions */
-    .tab-content {
-      display: none;
-      opacity: 0;
-      transition: opacity 0.2s ease-in-out;
-    }
-    .tab-content.active {
-      display: block;
-      opacity: 1;
+    .receipt-dropzone:hover {
+      border-color: var(--brand-green);
     }
   </style>
 </head>
-<body class="bg-[#0b0f19] text-gray-100 min-h-screen pb-24 select-none">
+<body>
 
   <!-- ==========================================================
        TOP APP HEADER
        ========================================================== -->
-  <header class="sticky top-0 z-30 bg-[#0b0f19]/90 backdrop-blur-md border-b border-gray-800/80 px-4 py-3">
-    <div class="max-w-md mx-auto flex items-center justify-between">
-      <!-- User Profile Pill -->
-      <div class="flex items-center space-x-2.5">
-        <div id="userAvatar" class="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-bold text-white text-sm shadow-md ring-2 ring-emerald-500/30">
-          U
+  <header class="app-header">
+    <div class="header-inner">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="font-size:19px; font-weight:900; letter-spacing:-0.5px; color:var(--text-primary); display:flex; align-items:center; gap:3px;">
+          <span>Atke</span><span style="color:var(--brand-green);">Shop</span>
         </div>
-        <div class="flex flex-col">
-          <span id="userName" class="text-sm font-semibold tracking-wide text-white leading-tight">Loading...</span>
-          <span id="userHandle" class="text-xs text-gray-400">@...</span>
+        <div class="user-profile" style="border-left:1px solid var(--border-color); padding-left:10px;">
+          <div id="userAvatar" class="user-avatar">A</div>
+          <div class="user-info">
+            <span id="userName" class="name">Loading...</span>
+            <span id="userHandle" class="handle">@...</span>
+          </div>
         </div>
       </div>
 
-      <!-- Live Wallet Balance Pill with Fast Deposit Trigger & Admin Button -->
-      <div class="flex items-center space-x-1.5">
-        <button id="headerAdminBtn" onclick="switchTab('admin')" class="hidden items-center space-x-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm shadow-amber-950/40">
-          <span>👑 Admin</span>
+      <div class="header-actions">
+        <!-- Theme Switcher -->
+        <button id="themeToggleBtn" onclick="toggleTheme()" class="theme-toggle-btn" title="Toggle Light/Dark Theme">
+          <i id="themeToggleIcon" data-lucide="moon" style="width:16px;height:16px;"></i>
         </button>
-        <button onclick="switchTab('wallet')" class="group flex items-center space-x-2 bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-500/30 px-3 py-1.5 rounded-full transition-all active:scale-95">
-          <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span id="headerBalance" class="text-xs font-bold text-emerald-400">0.00 ETB</span>
-          <span class="w-4 h-4 bg-emerald-500 text-slate-950 rounded-full flex items-center justify-center text-[10px] font-black group-hover:rotate-90 transition-transform">+</span>
+
+        <!-- Admin Shortcut (Hidden unless admin/staff) -->
+        <button id="headerAdminBtn" onclick="switchTab('admin')" class="admin-header-btn">
+          👑 Admin
+        </button>
+
+        <!-- Live Wallet Balance Pill -->
+        <button onclick="switchTab('wallet')" class="wallet-balance-pill">
+          <i data-lucide="wallet" style="width:14px;height:14px;"></i>
+          <span id="headerBalance">0.00 ETB</span>
+          <span class="wallet-plus">+</span>
         </button>
       </div>
     </div>
   </header>
 
   <!-- ==========================================================
-       MAIN VIEW CONTAINER (4 TABS)
+       FLOATING SUPPORT HEADPHONE BUTTON (Bottom-Right)
        ========================================================== -->
-  <main class="max-w-md mx-auto px-4 pt-4">
+  <a id="supportFloatingBtn" href="https://t.me/Atke_Support" target="_blank" class="floating-support-btn" title="Contact Telegram Support">
+    <i data-lucide="headphones" style="width:22px;height:22px;"></i>
+  </a>
+
+  <!-- ==========================================================
+       MAIN VIEW CONTAINER (4 CUSTOMER TABS + 1 ADMIN TAB)
+       ========================================================== -->
+  <main class="app-container">
 
     <!-- --------------------------------------------------------
          TAB 1: STORE
          -------------------------------------------------------- -->
-    <section id="tab-store" class="tab-content active space-y-4">
+    <section id="tab-store" class="tab-content active">
       
-      <!-- Promo Banner -->
-      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-900/40 via-teal-900/20 to-slate-900 border border-emerald-500/20 p-4">
-        <div class="relative z-10 space-y-1">
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            ⚡ INSTANT BOT DELIVERY
-          </span>
-          <h1 class="text-lg font-bold text-white tracking-tight">Digital Accounts & Licenses</h1>
-          <p class="text-xs text-gray-400">Verified Gemini, Canva Pro, Telegram Premium, and VPNs.</p>
-        </div>
-        <div class="absolute -right-4 -bottom-4 opacity-10 pointer-events-none">
-          <i data-lucide="shopping-bag" class="w-28 h-28 text-emerald-400"></i>
-        </div>
+      <!-- Store Search Bar -->
+      <div class="search-container">
+        <i data-lucide="search" class="search-icon" style="width:16px;height:16px;"></i>
+        <input 
+          type="text" 
+          id="storeSearchInput" 
+          oninput="handleStoreSearch(this.value)" 
+          placeholder="Search products and services" 
+          class="search-input" 
+        />
+        <button id="storeSearchClear" onclick="clearStoreSearch()" class="search-clear">
+          <i data-lucide="x" style="width:16px;height:16px;"></i>
+        </button>
       </div>
 
       <!-- Category Filter Pills -->
-      <div class="flex items-center space-x-2 overflow-x-auto pb-1 no-scrollbar text-xs font-medium">
-        <button onclick="filterCategory('All')" class="cat-pill active px-3.5 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-bold whitespace-nowrap transition-all shadow-sm">
-          All
-        </button>
-        <button onclick="filterCategory('AI Tools')" class="cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all">
-          AI Tools
-        </button>
-        <button onclick="filterCategory('Design')" class="cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all">
-          Design
-        </button>
-        <button onclick="filterCategory('Social')" class="cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all">
-          Social
-        </button>
-        <button onclick="filterCategory('VPN & Security')" class="cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all">
-          VPN
-        </button>
+      <div class="category-pills">
+        <button onclick="filterCategory('All')" class="cat-pill active">All</button>
+        <button onclick="filterCategory('Services')" class="cat-pill">Services</button>
+        <button onclick="filterCategory('AI Tools')" class="cat-pill">AI Tools</button>
+        <button onclick="filterCategory('Design')" class="cat-pill">Design</button>
+        <button onclick="filterCategory('Social')" class="cat-pill">Social</button>
+        <button onclick="filterCategory('VPN & Security')" class="cat-pill">VPN</button>
+        <button onclick="filterCategory('Software')" class="cat-pill">Software</button>
       </div>
 
-      <!-- Products Grid -->
-      <div id="productsGrid" class="grid grid-cols-1 gap-3">
-        <!-- Skeleton Loaders -->
-        <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse flex items-center space-x-4">
-          <div class="w-12 h-12 bg-gray-800 rounded-xl"></div>
-          <div class="flex-1 space-y-2">
-            <div class="h-4 bg-gray-800 rounded w-3/4"></div>
-            <div class="h-3 bg-gray-800 rounded w-1/2"></div>
-          </div>
-        </div>
-        <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse flex items-center space-x-4">
-          <div class="w-12 h-12 bg-gray-800 rounded-xl"></div>
-          <div class="flex-1 space-y-2">
-            <div class="h-4 bg-gray-800 rounded w-3/4"></div>
-            <div class="h-3 bg-gray-800 rounded w-1/2"></div>
-          </div>
-        </div>
+      <!-- 2-Column Responsive Product Grid (Matches Clone) -->
+      <div id="productsGrid" class="product-grid">
+        <!-- Rendered instantly by app.js -->
       </div>
     </section>
 
     <!-- --------------------------------------------------------
          TAB 2: WALLET & DEPOSIT
          -------------------------------------------------------- -->
-    <section id="tab-wallet" class="tab-content space-y-5">
+    <section id="tab-wallet" class="tab-content" style="display:none;">
       
       <!-- Balance Card -->
-      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-slate-900 to-emerald-950/40 border border-gray-800 p-5 shadow-lg">
-        <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
-          <span class="flex items-center space-x-1">
-            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span>Verified ETB Wallet</span>
+      <div class="view-card" style="background: linear-gradient(135deg, #0f172a, #062615); border-color: var(--border-highlight); margin-bottom: 14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; color:var(--text-secondary); margin-bottom: 6px;">
+          <span style="display:flex; align-items:center; gap:5px;">
+            <i data-lucide="shield-check" style="width:14px;height:14px;color:var(--brand-green);"></i>
+            Verified ETB Wallet
           </span>
-          <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-mono">
-            Zero Fee
-          </span>
+          <span class="badge-pill badge-green">Zero Fee</span>
         </div>
-        <div class="text-3xl font-extrabold text-white tracking-tight" id="walletBalanceBig">
-          0.00 <span class="text-sm font-semibold text-emerald-400">ETB</span>
+        <div style="font-size: 32px; font-weight: 900; color: #fff; letter-spacing: -0.5px;" id="walletBalanceBig">
+          0.00 <span style="font-size: 14px; color: var(--brand-green); font-weight: 700;">ETB</span>
         </div>
-        <p class="text-xs text-gray-400 mt-1">Available for instant purchases and subscriptions.</p>
+        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Available for instant digital purchases, license activations, and API ordering.</p>
       </div>
 
-      <!-- Fast Deposit Selector -->
-      <div class="space-y-3">
-        <h2 class="text-sm font-bold text-gray-200 flex items-center space-x-2">
-          <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-          <span>Add Money to Wallet</span>
-        </h2>
+      <!-- Payment Method Selection -->
+      <div class="view-card" style="margin-bottom: 14px;">
+        <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="plus-circle" style="width:15px;height:15px;color:var(--brand-green);"></i>
+          <span>Add Funds to Wallet</span>
+        </h3>
 
         <!-- Dynamic Payment Method Buttons -->
-        <div class="grid grid-cols-3 gap-2" id="walletMethodButtonsContainer">
-          <button onclick="selectDepositMethod('telebirr')" id="btnMethod-telebirr" class="method-btn active py-2.5 px-3 rounded-xl bg-emerald-600/20 border border-emerald-500 text-emerald-300 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
-            <span>Telebirr</span>
-            <span class="text-[10px] text-emerald-400/80 font-normal">Superfast</span>
-          </button>
-          <button onclick="selectDepositMethod('cbe')" id="btnMethod-cbe" class="method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
-            <span>CBE Bank</span>
-            <span class="text-[10px] text-gray-500 font-normal">Commercial</span>
-          </button>
-          <button onclick="selectDepositMethod('ebirr')" id="btnMethod-ebirr" class="method-btn py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold text-xs flex flex-col items-center justify-center space-y-1 transition-all">
-            <span>E-Birr</span>
-            <span class="text-[10px] text-gray-500 font-normal">Coop / Kaafi</span>
-          </button>
+        <div id="walletMethodButtonsContainer" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:12px;">
+          <!-- Populated by JS -->
         </div>
 
         <!-- Payment Instructions Box -->
-        <div id="paymentDetailsBox" class="p-4 rounded-xl bg-gray-900/90 border border-gray-800 space-y-3 text-xs">
-          <div class="flex items-center justify-between">
-            <span class="text-gray-400" id="depositMethodTitle">Telebirr Account</span>
-            <button onclick="copyAccountInfo()" class="text-emerald-400 hover:text-emerald-300 flex items-center space-x-1 font-semibold">
-              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+        <div id="paymentDetailsBox" style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:8px;">
+            <span id="depositMethodTitle" style="color:var(--text-secondary); font-weight:600;">Telebirr Account</span>
+            <button onclick="copyAccountInfo()" style="background:none; border:none; color:var(--brand-green); font-weight:700; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+              <i data-lucide="copy" style="width:12px;height:12px;"></i>
               <span id="copyBtnText">Copy Account</span>
             </button>
           </div>
-          <div class="p-3 bg-black/40 rounded-lg border border-gray-800/80 font-mono flex items-center justify-between">
-            <span id="depositAccountNumber" class="text-sm font-bold text-white tracking-wider">0906818924</span>
-            <span id="depositAccountHolder" class="text-gray-400 text-xs truncate max-w-[170px]">Mohammed Abdirahman Ibrahim</span>
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; display:flex; justify-content:space-between; align-items:center; font-family:monospace;">
+            <span id="depositAccountNumber" style="font-size: 14px; font-weight:800; color:#fff;">0906818924</span>
+            <span id="depositAccountHolder" style="font-size: 11px; color:var(--text-secondary); text-align:right;">Mohammed Abdirahman</span>
           </div>
-          <p class="text-[11px] text-gray-400 leading-relaxed">
-            1. Send funds using your banking app.<br>
-            2. Copy the full SMS confirmation or transaction receipt link.<br>
-            3. Paste it below to have your wallet credited.
+          <p style="font-size: 10.5px; color: var(--text-muted); line-height: 1.5; margin-top: 8px;">
+            1. Transfer funds using your mobile banking or Telebirr app.<br>
+            2. Take a screenshot or copy the SMS reference.<br>
+            3. Attach and submit below for immediate credit.
           </p>
         </div>
 
-        <!-- Receipt Submission Form -->
-        <form id="depositForm" onsubmit="submitDeposit(event)" class="space-y-3">
+        <!-- Deposit Submission Form -->
+        <form id="depositForm" onsubmit="submitDeposit(event)" style="display:flex; flex-direction:column; gap:10px;">
           <div>
-            <label class="block text-xs font-semibold text-gray-300 mb-1">Deposit Amount (ETB)</label>
-            <div class="relative">
-              <input type="number" step="0.01" min="10" max="50000" id="depositAmountInput" required placeholder="e.g. 350.00" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors" />
-              <span class="absolute right-3.5 top-2.5 text-xs text-gray-500 font-bold">ETB</span>
+            <label style="display:block; font-size:11px; font-weight:700; margin-bottom:4px; color:var(--text-secondary);">Deposit Amount (ETB) *</label>
+            <div style="position:relative;">
+              <input type="number" step="0.01" min="10" max="100000" id="depositAmountInput" required placeholder="e.g. 350.00" style="width:100%; height:38px; padding:0 45px 0 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-weight:700; outline:none;" />
+              <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:11px; font-weight:700; color:var(--text-muted);">ETB</span>
+            </div>
+          </div>
+
+          <!-- Screenshot Dropzone -->
+          <div>
+            <label style="display:block; font-size:11px; font-weight:700; margin-bottom:4px; color:var(--text-secondary);">Receipt Screenshot (Optional, Up to 20MB)</label>
+            <div id="receiptDropzone" onclick="document.getElementById('receiptFileInput').click()" class="receipt-dropzone">
+              <input type="file" id="receiptFileInput" accept="image/*" style="display:none;" onchange="handleReceiptFileSelect(event)" />
+              <div id="receiptUploadPlaceholder" style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                <i data-lucide="image-plus" style="width:20px;height:20px;color:var(--text-muted);"></i>
+                <span style="font-size:11px; color:var(--text-secondary); font-weight:600;">Tap to attach receipt screenshot</span>
+                <span style="font-size:9.5px; color:var(--text-muted);">JPG, PNG, WebP up to 20MB</span>
+              </div>
+              <div id="receiptPreviewContainer" style="display:none; align-items:center; justify-content:space-between;">
+                <img id="receiptPreviewImg" src="" alt="preview" style="width:44px; height:44px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color);" />
+                <div style="flex:1; padding:0 10px; text-align:left;">
+                  <div id="receiptFileName" style="font-size:11px; font-weight:600; color:#fff; word-break:break-all;">receipt.jpg</div>
+                  <div id="receiptFileSize" style="font-size:10px; color:var(--text-muted);">0 KB</div>
+                </div>
+                <button type="button" onclick="clearReceiptFile(event)" style="background:none; border:none; color:var(--accent-red); cursor:pointer; padding:6px;">
+                  <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+                </button>
+              </div>
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-gray-300 mb-1">Receipt SMS / Transaction Reference</label>
-            <textarea id="depositReceiptInput" rows="3" required placeholder="Paste the complete SMS received from Telebirr or CBE here..." class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"></textarea>
+            <label style="display:block; font-size:11px; font-weight:700; margin-bottom:4px; color:var(--text-secondary);">Receipt SMS / Transaction Reference *</label>
+            <textarea id="depositReceiptInput" rows="2" required placeholder="Paste the confirmation SMS from Telebirr or CBE here..." style="width:100%; padding:8px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-size:11px; outline:none; font-family:monospace;"></textarea>
           </div>
 
-          <button type="submit" id="btnSubmitDeposit" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-sm flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg shadow-emerald-950/50">
-            <i data-lucide="send" class="w-4 h-4"></i>
+          <button type="submit" id="btnSubmitDeposit" class="btn-sheet-buy" style="margin-top:4px; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="send" style="width:16px;height:16px;"></i>
             <span>Submit Deposit for Verification</span>
           </button>
         </form>
-
       </div>
+
     </section>
 
     <!-- --------------------------------------------------------
          TAB 3: ORDERS & DELIVERED KEYS
          -------------------------------------------------------- -->
-    <section id="tab-orders" class="tab-content space-y-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-bold text-gray-200 flex items-center space-x-2">
-          <i data-lucide="package-check" class="w-4 h-4 text-emerald-400"></i>
+    <section id="tab-orders" class="tab-content" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="package-check" style="width:16px;height:16px;color:var(--brand-green);"></i>
           <span>My Purchased Items</span>
-        </h2>
-        <button onclick="loadOrders()" class="text-xs text-gray-400 hover:text-emerald-400 flex items-center space-x-1">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+        </h3>
+        <button onclick="loadOrders()" style="background:none; border:none; color:var(--text-secondary); font-size:11px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+          <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i>
           <span>Refresh</span>
         </button>
       </div>
 
-      <div id="ordersList" class="space-y-3">
-        <!-- Skeleton Loaders -->
-        <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse h-24"></div>
+      <div id="ordersList" style="display:flex; flex-direction:column; gap:10px;">
+        <!-- Populated by JS -->
       </div>
     </section>
 
     <!-- --------------------------------------------------------
          TAB 4: INVITE & EARN
          -------------------------------------------------------- -->
-    <section id="tab-invite" class="tab-content space-y-4">
-      <!-- Referral Header Card -->
-      <div class="rounded-2xl bg-gradient-to-tr from-emerald-950/60 via-gray-900 to-teal-950/40 border border-emerald-500/30 p-5 space-y-3">
-        <div class="flex items-center space-x-2">
-          <span class="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl">
-            <i data-lucide="users" class="w-5 h-5"></i>
-          </span>
-          <div>
-            <h2 class="text-base font-bold text-white">Invite & Earn ETB</h2>
-            <p class="text-xs text-gray-400">Earn rewards when your friends join and purchase.</p>
-          </div>
+    <section id="tab-invite" class="tab-content" style="display:none;">
+      
+      <!-- Invite Reward Showcase Card (Exact Video Parity) -->
+      <div class="view-card" style="text-align:center; padding:24px 16px; margin-bottom:14px;">
+        <div style="width:48px; height:48px; border-radius:50%; background:rgba(16,185,129,0.12); color:var(--brand-green); display:flex; align-items:center; justify-content:center; margin:0 auto 10px;">
+          <i data-lucide="gift" style="width:24px;height:24px;"></i>
+        </div>
+        
+        <div style="font-size:10.5px; font-weight:800; color:var(--brand-green); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">INVITE & EARN</div>
+        <h2 style="font-size:18px; font-weight:900; color:var(--text-primary); margin-bottom:4px; line-height:1.2;">Get Gemini AI Pro 18m<br><span style="color:var(--brand-green);">FREE</span></h2>
+        <p style="font-size:11.5px; color:var(--text-secondary); margin-bottom:14px;">Invite 5 friends who complete their first purchase.</p>
+
+        <!-- Product Chip -->
+        <div style="display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; background:var(--bg-input); border:1px solid var(--border-color); font-size:11px; font-weight:700; color:var(--text-primary); margin-bottom:14px;">
+          <span>✨</span>
+          <span>Gemini AI Pro 18m</span>
         </div>
 
-        <!-- Referral Stats Counter -->
-        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-gray-800/80">
-          <div class="p-3 bg-black/40 rounded-xl border border-gray-800/60 text-center">
-            <div class="text-2xl font-extrabold text-white" id="referralFriendsCount">0</div>
-            <div class="text-[11px] text-gray-400 font-medium">Friends Invited</div>
-          </div>
-          <div class="p-3 bg-black/40 rounded-xl border border-gray-800/60 text-center">
-            <div class="text-2xl font-extrabold text-emerald-400" id="referralOrdersCount">0</div>
-            <div class="text-[11px] text-gray-400 font-medium">Orders Completed</div>
-          </div>
+        <!-- Big 0/5 Progress Counter -->
+        <div style="font-size:32px; font-weight:900; color:var(--text-primary); letter-spacing:-0.5px; margin-bottom:6px;">
+          <span id="refProgressText">0</span> <span style="font-size:20px; color:var(--text-muted);">/ 5</span>
         </div>
-      </div>
 
-      <!-- Referral Link Box -->
-      <div class="p-4 rounded-xl bg-gray-900 border border-gray-800 space-y-3">
-        <label class="block text-xs font-semibold text-gray-300">Your Exclusive Referral Link</label>
-        <div class="flex items-center space-x-2">
-          <input type="text" id="referralLinkInput" readonly value="https://t.me/..." class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono select-all focus:outline-none" />
-          <button onclick="copyReferralLink()" class="px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold flex items-center space-x-1 shrink-0">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-            <span>Copy</span>
+        <!-- 5 Dot Progress Indicators -->
+        <div id="refDotsContainer" style="display:flex; justify-content:center; gap:8px; margin-bottom:8px;">
+          <span class="ref-dot active"></span>
+          <span class="ref-dot"></span>
+          <span class="ref-dot"></span>
+          <span class="ref-dot"></span>
+          <span class="ref-dot"></span>
+        </div>
+
+        <p id="refFriendsRemaining" style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:16px;">5 more friends to unlock your reward</p>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button onclick="shareReferralLink()" class="btn-sheet-buy" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-size:13px;">
+            <i data-lucide="send" style="width:16px;height:16px;"></i>
+            <span>Invite Friends</span>
+          </button>
+          
+          <button onclick="copyReferralLink()" style="width:100%; padding:10px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); color:var(--text-primary); font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="copy" style="width:15px;height:15px;"></i>
+            <span id="refCopyBtnText">Copy Link</span>
           </button>
         </div>
 
-        <button onclick="shareReferralLink()" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 transition-all active:scale-[0.98]">
-          <i data-lucide="share-2" class="w-4 h-4"></i>
-          <span>Share with Friends on Telegram</span>
-        </button>
+        <p style="font-size:10px; color:var(--text-muted); margin-top:10px;">Friends count after completing their first paid order.</p>
+        <input type="hidden" id="referralLinkInput" value="https://t.me/atke_digital_bot?start=ref_0" />
+      </div>
+
+      <!-- Friends List Section -->
+      <div class="view-card">
+        <h4 style="font-size:12.5px; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="users" style="width:16px;height:16px;color:var(--brand-green);"></i>
+          <span>Your Friends</span>
+        </h4>
+        
+        <div id="friendsListContainer" style="text-align:center; padding:24px 12px; color:var(--text-muted);">
+          <div style="width:40px; height:40px; border-radius:50%; background:var(--bg-input); display:flex; align-items:center; justify-content:center; margin:0 auto 8px; color:var(--text-muted);">
+            <i data-lucide="user-plus" style="width:20px;height:20px;"></i>
+          </div>
+          <div style="font-size:12px; font-weight:700; color:var(--text-primary); margin-bottom:2px;">No invited friends yet</div>
+          <div style="font-size:10.5px;">Share your link to get started.</div>
+        </div>
       </div>
     </section>
 
     <!-- --------------------------------------------------------
-         TAB 5: 👑 ADMIN DASHBOARD & STORE MANAGEMENT
+         TAB 5: 👑 ADMIN DASHBOARD
          -------------------------------------------------------- -->
-    <section id="tab-admin" class="tab-content space-y-5">
-      <!-- Admin Hero Card -->
-      <div class="rounded-2xl bg-gradient-to-tr from-amber-950/40 via-gray-900 to-slate-900 border border-amber-500/30 p-4 space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            👑 STORE ADMINISTRATOR
-          </span>
-          <button onclick="loadAdminAll()" class="text-xs text-amber-400 hover:text-amber-300 flex items-center space-x-1">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+    <section id="tab-admin" class="tab-content" style="display:none;">
+      <div class="view-card" style="background: linear-gradient(135deg, #2b1803, #0f172a); border-color: rgba(245,158,11,0.3); margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span class="badge-pill badge-amber">👑 STORE MANAGEMENT</span>
+          <button onclick="loadAdminAll()" style="background:none; border:none; color:var(--accent-amber); font-size:11px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+            <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i>
             <span>Refresh</span>
           </button>
         </div>
-        <h1 class="text-lg font-bold text-white tracking-tight">Live Store Controls</h1>
-        <p class="text-xs text-gray-400">Update prices, images, digital stock keys, and review customer deposits.</p>
+        <h2 style="font-size:15px; font-weight:800; color:#fff;">Store Financials & Controls</h2>
+        <p style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Track profit margins, staff roles, vault keys, and broadcasts.</p>
       </div>
 
-      <!-- Quick Metrics Grid -->
-      <div class="grid grid-cols-2 gap-2">
-        <div class="p-3 bg-gray-900/90 border border-gray-800 rounded-xl">
-          <span class="text-[11px] text-gray-400">Gross Sales</span>
-          <div class="text-lg font-extrabold text-white mt-0.5">
-            <span id="adminTotalRevenue">0.00</span> <span class="text-xs text-emerald-400">ETB</span>
+      <!-- Financial Metrics Grid -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+        <div class="view-card" style="padding:10px;">
+          <span style="font-size:10.5px; color:var(--text-muted);">Gross Sales</span>
+          <div style="font-size:16px; font-weight:900; color:#fff; margin-top:2px;">
+            <span id="adminTotalRevenue">0.00</span> <span style="font-size:10px; color:var(--brand-green);">ETB</span>
           </div>
         </div>
-        <div class="p-3 bg-gray-900/90 border border-gray-800 rounded-xl">
-          <span class="text-[11px] text-gray-400">Orders Delivered</span>
-          <div class="text-lg font-extrabold text-white mt-0.5" id="adminTotalOrders">0</div>
+        <div class="view-card" style="padding:10px;">
+          <span style="font-size:10.5px; color:var(--text-muted);">Net Profit</span>
+          <div style="font-size:16px; font-weight:900; color:var(--brand-green); margin-top:2px;">
+            <span id="adminTotalProfit">0.00</span> <span style="font-size:10px;">ETB</span>
+          </div>
         </div>
-        <div class="p-3 bg-gray-900/90 border border-gray-800 rounded-xl">
-          <span class="text-[11px] text-gray-400">Unsold Stock Keys</span>
-          <div class="text-lg font-extrabold text-emerald-400 mt-0.5" id="adminAvailableKeys">0</div>
+        <div class="view-card" style="padding:10px;">
+          <span style="font-size:10.5px; color:var(--text-muted);">Profit Margin</span>
+          <div style="font-size:16px; font-weight:900; color:var(--accent-blue); margin-top:2px;">
+            <span id="adminProfitMargin">0.0</span>%
+          </div>
         </div>
-        <div class="p-3 bg-gray-900/90 border border-gray-800 rounded-xl cursor-pointer" onclick="switchAdminSection('deposits')">
-          <span class="text-[11px] text-gray-400">Pending Deposits</span>
-          <div class="text-lg font-extrabold text-amber-400 mt-0.5" id="adminPendingDeposits">0</div>
+        <div class="view-card" style="padding:10px; cursor:pointer;" onclick="switchAdminSection('deposits')">
+          <span style="font-size:10.5px; color:var(--text-muted);">Pending Deposits</span>
+          <div style="font-size:16px; font-weight:900; color:var(--accent-amber); margin-top:2px;" id="adminPendingDeposits">0</div>
         </div>
       </div>
 
-      <!-- Admin Section Switcher -->
-      <div class="flex items-center space-x-2 border-b border-gray-800 pb-2 text-xs font-semibold overflow-x-auto no-scrollbar">
-        <button onclick="switchAdminSection('products')" id="btnAdminSection-products" class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm whitespace-nowrap">
-          📦 Products & Stock
-        </button>
-        <button onclick="switchAdminSection('deposits')" id="btnAdminSection-deposits" class="px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5 whitespace-nowrap">
-          <span>💳 Deposits</span>
-          <span id="adminPendingBadge" class="hidden px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">0</span>
-        </button>
-        <button onclick="switchAdminSection('payments')" id="btnAdminSection-payments" class="px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1 whitespace-nowrap">
-          <span>🏦 Bank Accounts</span>
-        </button>
+      <!-- Admin Subsections -->
+      <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px; scrollbar-width:none;">
+        <button onclick="switchAdminSection('products')" id="btnAdminSection-products" class="cat-pill active">📦 Products</button>
+        <button onclick="switchAdminSection('deposits')" id="btnAdminSection-deposits" class="cat-pill">💳 Deposits</button>
+        <button onclick="switchAdminSection('payments')" id="btnAdminSection-payments" class="cat-pill">🏦 Accounts</button>
+        <button onclick="switchAdminSection('staff')" id="btnAdminSection-staff" class="cat-pill">👥 Staff</button>
+        <button onclick="switchAdminSection('marketing')" id="btnAdminSection-marketing" class="cat-pill">📢 Marketing</button>
       </div>
 
       <!-- 1. Admin Products & Stock Panel -->
-      <div id="adminPanel-products" class="space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs text-gray-400 font-medium">Catalog & Digital Vault Inventory</span>
-          <button onclick="openNewProductModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold flex items-center space-x-1 transition-all active:scale-95 shadow-md">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+      <div id="adminPanel-products">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:11px; color:var(--text-secondary); font-weight:600;">Catalog & Resell Pricing</span>
+          <button onclick="openNewProductModal()" style="padding:5px 10px; border-radius:14px; background:var(--brand-green); color:var(--brand-green-text); font-size:11px; font-weight:700; border:none; cursor:pointer; display:flex; align-items:center; gap:4px;">
+            <i data-lucide="plus" style="width:13px;height:13px;"></i>
             <span>New Product</span>
           </button>
         </div>
-
-        <div id="adminProductsContainer" class="space-y-3">
-          <!-- Populated by JS -->
-          <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse h-28"></div>
-        </div>
+        <div id="adminProductsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
 
       <!-- 2. Admin Deposits Queue Panel -->
-      <div id="adminPanel-deposits" class="hidden space-y-3">
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-gray-400 font-medium">Customer Verification Queue</span>
-          <div class="flex items-center space-x-1">
-            <button onclick="filterAdminDeposits('pending')" id="depFilter-pending" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold">Pending Only</button>
-            <button onclick="filterAdminDeposits('all')" id="depFilter-all" class="px-2.5 py-1 rounded-lg bg-gray-800 text-gray-400 text-[11px]">All</button>
+      <div id="adminPanel-deposits" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:11px;">
+          <span style="color:var(--text-secondary); font-weight:600;">Customer Deposit Queue</span>
+          <div style="display:flex; gap:4px;">
+            <button onclick="filterAdminDeposits('pending')" id="depFilter-pending" class="badge-pill badge-amber" style="cursor:pointer; border:none;">Pending Only</button>
+            <button onclick="filterAdminDeposits('all')" id="depFilter-all" class="badge-pill" style="cursor:pointer; border:1px solid var(--border-color); background:none; color:var(--text-secondary);">All</button>
           </div>
         </div>
-
-        <div id="adminDepositsContainer" class="space-y-3">
-          <!-- Populated by JS -->
-        </div>
+        <div id="adminDepositsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
 
-      <!-- 3. Admin Bank & Payment Accounts Panel -->
-      <div id="adminPanel-payments" class="hidden space-y-3">
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-gray-400 font-medium">Payment Receiving Accounts (Telebirr, CBE, etc.)</span>
-          <button onclick="openNewPaymentModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold flex items-center space-x-1 transition-all active:scale-95 shadow-md">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-            <span>Add Account</span>
-          </button>
+      <!-- 3. Admin Bank Accounts Panel -->
+      <div id="adminPanel-payments" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:11px; color:var(--text-secondary); font-weight:600;">Payment Accounts (Telebirr, CBE, etc.)</span>
+          <button onclick="openNewPaymentModal()" style="padding:5px 10px; border-radius:14px; background:var(--brand-green); color:var(--brand-green-text); font-size:11px; font-weight:700; border:none; cursor:pointer;">+ Add Account</button>
         </div>
+        <div id="adminPaymentsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
 
-        <div id="adminPaymentsContainer" class="space-y-3">
-          <!-- Populated by JS -->
+      <!-- 4. Admin Staff Management Panel -->
+      <div id="adminPanel-staff" style="display:none;">
+        <div class="view-card" style="margin-bottom:12px;">
+          <h4 style="font-size:12px; font-weight:700; margin-bottom:4px;">Assign Staff Member</h4>
+          <p style="font-size:10.5px; color:var(--text-muted); margin-bottom:10px;">Staff can verify customer deposits and upload digital vault keys without viewing your revenue or editing receiving accounts.</p>
+          <form onsubmit="handleSaveStaff(event)" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:grid; grid-template-columns:2fr 1fr; gap:6px;">
+              <input type="number" id="staffTelegramIdInput" required placeholder="Telegram User ID" style="height:36px; padding:0 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-size:11px; font-family:monospace; outline:none;" />
+              <select id="staffRoleSelect" style="height:36px; padding:0 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-size:11px; outline:none;">
+                <option value="staff">Staff</option>
+                <option value="admin">Co-Admin</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-sheet-buy" style="padding:9px; font-size:12px;">Assign Staff Permissions</button>
+          </form>
+        </div>
+        <div id="adminStaffListContainer" style="display:flex; flex-direction:column; gap:6px;"></div>
+      </div>
+
+      <!-- 5. Admin Marketing Broadcast Panel -->
+      <div id="adminPanel-marketing" style="display:none;">
+        <div class="view-card">
+          <h4 style="font-size:12px; font-weight:700; margin-bottom:4px;">📢 Broadcast to Marketing Channel</h4>
+          <p style="font-size:10.5px; color:var(--text-muted); margin-bottom:10px;">Deliver formatted announcements with an interactive <b>"🛍️ Open Store"</b> button directly to your channel subscribers.</p>
+          <form onsubmit="handleBroadcastMarketing(event)" style="display:flex; flex-direction:column; gap:8px;">
+            <textarea id="broadcastMessageInput" rows="3" required placeholder="Write your announcement text here..." style="width:100%; padding:8px 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-size:11px; outline:none;"></textarea>
+            <input type="url" id="broadcastPhotoInput" placeholder="Banner image URL (Optional)" style="height:36px; padding:0 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-size:11px; outline:none;" />
+            <button type="submit" id="btnSendBroadcast" class="btn-sheet-buy" style="padding:10px; font-size:12px;">Send Channel Broadcast</button>
+          </form>
         </div>
       </div>
 
@@ -436,359 +479,266 @@
   </main>
 
   <!-- ==========================================================
-       BOTTOM TAB NAVIGATION (5 TABS IF ADMIN)
+       BOTTOM TAB NAVIGATION (4 CUSTOMER TABS + 1 ADMIN TAB)
        ========================================================== -->
-  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#0b0f19]/95 backdrop-blur-xl border-t border-gray-800 px-4 py-2">
-    <div id="bottomNavGrid" class="max-w-md mx-auto grid grid-cols-4 gap-1 text-center transition-all">
-      
-      <button onclick="switchTab('store')" id="nav-store" class="nav-item active flex flex-col items-center py-1 text-emerald-400 transition-colors">
-        <i data-lucide="store" class="w-5 h-5 mb-0.5"></i>
-        <span class="text-[10px] font-semibold">Store</span>
+  <nav class="bottom-nav">
+    <div id="bottomNavGrid" class="bottom-nav-grid">
+      <button onclick="switchTab('store')" id="nav-store" class="nav-item active">
+        <i data-lucide="store" style="width:18px;height:18px;"></i>
+        <span>Store</span>
       </button>
-
-      <button onclick="switchTab('wallet')" id="nav-wallet" class="nav-item flex flex-col items-center py-1 text-gray-500 hover:text-gray-300 transition-colors">
-        <i data-lucide="wallet" class="w-5 h-5 mb-0.5"></i>
-        <span class="text-[10px] font-semibold">Wallet</span>
+      <button onclick="switchTab('wallet')" id="nav-wallet" class="nav-item">
+        <i data-lucide="wallet" style="width:18px;height:18px;"></i>
+        <span>Wallet</span>
       </button>
-
-      <button onclick="switchTab('orders')" id="nav-orders" class="nav-item flex flex-col items-center py-1 text-gray-500 hover:text-gray-300 transition-colors">
-        <i data-lucide="package" class="w-5 h-5 mb-0.5"></i>
-        <span class="text-[10px] font-semibold">Orders</span>
+      <button onclick="switchTab('orders')" id="nav-orders" class="nav-item">
+        <i data-lucide="package" style="width:18px;height:18px;"></i>
+        <span>Orders</span>
       </button>
-
-      <button onclick="switchTab('invite')" id="nav-invite" class="nav-item flex flex-col items-center py-1 text-gray-500 hover:text-gray-300 transition-colors">
-        <i data-lucide="users-2" class="w-5 h-5 mb-0.5"></i>
-        <span class="text-[10px] font-semibold">Invite</span>
+      <button onclick="switchTab('invite')" id="nav-invite" class="nav-item">
+        <i data-lucide="gift" style="width:18px;height:18px;"></i>
+        <span>Invite</span>
       </button>
-
-      <button onclick="switchTab('admin')" id="nav-admin" class="nav-item hidden flex flex-col items-center py-1 text-gray-500 hover:text-amber-400 transition-colors">
-        <i data-lucide="shield-check" class="w-5 h-5 mb-0.5 text-amber-400"></i>
-        <span class="text-[10px] font-semibold text-amber-400">Admin</span>
+      <button onclick="switchTab('admin')" id="nav-admin" class="nav-item admin" style="display:none;">
+        <i data-lucide="shield-check" style="width:18px;height:18px;"></i>
+        <span>Admin</span>
       </button>
-
     </div>
   </nav>
 
   <!-- ==========================================================
+       BOTTOM SHEET MODAL: VARIANT SELECTION ("Choose" Drawer)
+       ========================================================== -->
+  <div id="variantModal" class="modal-overlay" onclick="if(event.target===this)closeModal('variantModal')">
+    <div class="bottom-sheet">
+      <div class="drawer-drag-handle"></div>
+      
+      <div class="sheet-header">
+        <div class="sheet-product-info">
+          <img id="variantModalIcon" src="" alt="icon" class="sheet-product-icon" />
+          <div>
+            <h3 id="variantModalTitle" style="font-size:15px; font-weight:800; color:#fff; line-height:1.2;">Product Name</h3>
+            <span id="variantModalCategory" style="font-size:11px; color:var(--text-secondary);">Subscription</span>
+          </div>
+        </div>
+        <button onclick="closeModal('variantModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px;">
+          <i data-lucide="x" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
+
+      <div style="font-size:11px; font-weight:700; color:var(--text-secondary); margin-top:10px;">Choose an option</div>
+      <div id="variantOptionsContainer" class="variant-options-grid">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="sheet-price-row">
+        <div>
+          <div id="variantModalPriceBig" class="sheet-big-price">2,500.00 ETB</div>
+          <div class="sheet-stock-tag">
+            <span style="width:6px; height:6px; border-radius:50%; background:var(--brand-green);"></span>
+            <span id="variantModalStockStatus">In stock</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible Info Box -->
+      <div id="variantInfoBox" style="display:none; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px; font-size:11px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px; white-space:pre-wrap;"></div>
+
+      <div class="sheet-action-row">
+        <button id="btnProceedVariantBuy" onclick="proceedVariantToBuyModal()" class="btn-sheet-buy">
+          <span id="variantBuyButtonText">Buy for 2,500.00 ETB</span>
+        </button>
+        <button type="button" onclick="toggleVariantInfo()" class="btn-sheet-info">
+          <i data-lucide="info" style="width:14px;height:14px;"></i>
+          <span>Info</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
        BUY CONFIRMATION MODAL
        ========================================================== -->
-  <div id="buyModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full max-w-sm bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
-      
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
-          <i data-lucide="shopping-cart" class="w-4 h-4 text-emerald-400"></i>
+  <div id="buyModal" class="modal-overlay" onclick="if(event.target===this)closeModal('buyModal')">
+    <div class="bottom-sheet" style="max-width:400px; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="font-size:14px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="shopping-cart" style="width:16px;height:16px;color:var(--brand-green);"></i>
           <span>Confirm Digital Purchase</span>
         </h3>
-        <button onclick="closeModal('buyModal')" class="p-1 text-gray-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button onclick="closeModal('buyModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
         </button>
       </div>
 
-      <!-- Item Preview -->
-      <div class="p-3 bg-black/40 rounded-xl border border-gray-800/80 flex items-center space-x-3">
-        <img id="buyModalIcon" src="" alt="icon" class="w-11 h-11 rounded-lg object-contain bg-gray-800/80 p-1" />
-        <div class="flex-1 min-w-0">
-          <div id="buyModalName" class="text-xs font-bold text-white truncate">Product Name</div>
-          <div id="buyModalCategory" class="text-[10px] text-gray-400">Category</div>
-          <div id="buyModalPrice" class="text-xs font-extrabold text-emerald-400 mt-0.5">0.00 ETB</div>
+      <div style="display:flex; align-items:center; gap:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px; margin-bottom:14px;">
+        <img id="buyModalIcon" src="" alt="icon" style="width:40px; height:40px; object-fit:contain; border-radius:8px; background:rgba(255,255,255,0.05); padding:4px;" />
+        <div style="flex:1; min-width:0;">
+          <div id="buyModalName" style="font-size:12px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Product</div>
+          <div id="buyModalVariant" style="font-size:10px; color:var(--brand-green); font-weight:600;">Single Tier</div>
+          <div id="buyModalPrice" style="font-size:12px; font-weight:800; color:var(--brand-green); margin-top:2px;">0.00 ETB</div>
         </div>
       </div>
 
-      <!-- Balance Check Calculation -->
-      <div class="space-y-1.5 text-xs text-gray-300 py-1 border-y border-gray-800">
-        <div class="flex justify-between">
-          <span class="text-gray-400">Current Balance:</span>
-          <span id="buyModalCurrentBal" class="font-bold text-white">0.00 ETB</span>
+      <div style="border-top:1px solid var(--border-color); border-bottom:1px solid var(--border-color); padding:10px 0; font-size:11.5px; display:flex; flex-direction:column; gap:6px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; color:var(--text-secondary);">
+          <span>Current Balance:</span>
+          <span id="buyModalCurrentBal" style="font-weight:700; color:#fff;">0.00 ETB</span>
         </div>
-        <div class="flex justify-between">
-          <span class="text-gray-400">Item Price:</span>
-          <span id="buyModalDeductPrice" class="font-bold text-red-400">-0.00 ETB</span>
+        <div style="display:flex; justify-content:space-between; color:var(--text-secondary);">
+          <span>Item Price:</span>
+          <span id="buyModalDeductPrice" style="font-weight:700; color:var(--accent-red);">-0.00 ETB</span>
         </div>
-        <div class="flex justify-between pt-1 border-t border-gray-800/50">
-          <span class="text-gray-400">Balance After:</span>
-          <span id="buyModalBalAfter" class="font-bold text-emerald-400">0.00 ETB</span>
+        <div style="display:flex; justify-content:space-between; color:var(--text-secondary); padding-top:4px; border-top:1px solid var(--border-subtle);">
+          <span>Balance After:</span>
+          <span id="buyModalBalAfter" style="font-weight:800; color:var(--brand-green);">0.00 ETB</span>
         </div>
       </div>
 
-      <div id="buyModalNotice" class="text-[11px] text-gray-400">
-        The digital access credentials or voucher link will be delivered on your screen and saved under Orders.
+      <div id="buyModalNotice" style="font-size:10.5px; color:var(--text-muted); line-height:1.4; margin-bottom:16px;">
+        The digital access credentials or voucher link will be unlocked instantly.
       </div>
 
-      <!-- Action Button -->
-      <div class="flex items-center space-x-2">
-        <button onclick="closeModal('buyModal')" class="w-1/3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs">
+      <div style="display:flex; gap:8px;">
+        <button onclick="closeModal('buyModal')" style="flex:1; padding:10px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-size:12px; font-weight:700; cursor:pointer;">
           Cancel
         </button>
-        <button id="btnConfirmPurchase" onclick="executePurchase()" class="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-950/50">
-          <span>Confirm & Unlock</span>
+        <button id="btnConfirmPurchase" onclick="executePurchase()" class="btn-sheet-buy" style="flex:2; padding:10px;">
+          Confirm & Unlock
         </button>
       </div>
-
     </div>
   </div>
 
   <!-- ==========================================================
        DELIVERY SUCCESS MODAL
        ========================================================== -->
-  <div id="deliveryModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full max-w-sm bg-gray-900 border border-emerald-500/30 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
-      
-      <div class="text-center space-y-1">
-        <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center mb-2">
-          <i data-lucide="check" class="w-6 h-6"></i>
+  <div id="deliveryModal" class="modal-overlay">
+    <div class="bottom-sheet" style="max-width:400px; padding:22px; text-align:center;">
+      <div style="width:44px; height:44px; border-radius:50%; background:rgba(34,197,94,0.15); color:var(--brand-green); display:flex; align-items:center; justify-content:center; margin:0 auto 10px;">
+        <i data-lucide="check" style="width:24px;height:24px;"></i>
+      </div>
+      <h3 style="font-size:15px; font-weight:800; color:#fff; margin-bottom:4px;">Purchase Successful!</h3>
+      <p style="font-size:11px; color:var(--text-secondary); margin-bottom:14px;">Your digital credentials have been delivered below.</p>
+
+      <div style="text-align:left; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); margin-bottom:4px;">
+          <span>Delivered Key / Payload:</span>
+          <span style="color:var(--brand-green);">Tap box to copy</span>
         </div>
-        <h3 class="text-base font-bold text-white">Purchase Successful!</h3>
-        <p class="text-xs text-gray-400">Your digital product has been unlocked and delivered.</p>
+        <div onclick="copyDeliveredPayload()" style="background:#05070d; border:1px solid var(--border-highlight); border-radius:var(--radius-md); padding:12px; font-family:monospace; font-size:11px; color:#86efac; word-break:break-all; cursor:pointer;">
+          <pre id="deliveredPayloadText" style="white-space:pre-wrap; margin:0; font-family:monospace;"></pre>
+        </div>
       </div>
 
-      <!-- Delivered Payload Monospace Container -->
-      <div class="space-y-1.5">
-        <label class="block text-[11px] font-semibold text-gray-300">Your Key / Credentials / Link:</label>
-        <div class="relative p-3 bg-black/70 border border-emerald-500/40 rounded-xl">
-          <pre id="deliveredPayloadText" class="text-xs text-emerald-300 font-mono break-all whitespace-pre-wrap select-all max-h-36 overflow-y-auto"></pre>
-        </div>
-      </div>
-
-      <div class="space-y-2">
-        <button onclick="copyDeliveredPayload()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1.5 shadow-md">
-          <i data-lucide="copy" class="w-4 h-4"></i>
-          <span id="copyPayloadBtnText">Copy to Clipboard</span>
-        </button>
-        <button onclick="viewInOrders()" class="w-full py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium">
-          View in My Orders
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ==========================================================
-       ADMIN MODAL 1: EDIT / CREATE PRODUCT
-       ========================================================== -->
-  <div id="editProductModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full max-w-sm bg-gray-900 border border-amber-500/30 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-      
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
-          <i data-lucide="edit-3" class="w-4 h-4 text-amber-400"></i>
-          <span id="editProductModalTitle">Edit Product</span>
-        </h3>
-        <button onclick="closeModal('editProductModal')" class="p-1 text-gray-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <form id="editProductForm" onsubmit="handleSaveProduct(event)" class="space-y-3 text-xs">
-        <input type="hidden" id="editProductId" value="0" />
-
-        <div>
-          <label class="block font-semibold text-gray-300 mb-1">Product Title / Name *</label>
-          <input type="text" id="editProductName" required placeholder="e.g. Google Gemini 1.5 Advanced" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none" />
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block font-semibold text-gray-300 mb-1">Category</label>
-            <input type="text" id="editProductCategory" list="categoriesList" placeholder="e.g. AI Tools" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none" />
-            <datalist id="categoriesList">
-              <option value="AI Tools" />
-              <option value="Design" />
-              <option value="Social" />
-              <option value="VPN & Security" />
-              <option value="Entertainment" />
-              <option value="Gaming" />
-              <option value="Software" />
-            </datalist>
-          </div>
-          <div>
-            <label class="block font-semibold text-gray-300 mb-1">Price (ETB) *</label>
-            <input type="number" step="0.01" min="1" id="editProductPrice" required placeholder="350.00" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:border-amber-500 outline-none" />
-          </div>
-        </div>
-
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="font-semibold text-gray-300">Icon Image URL</label>
-            <span class="text-[10px] text-gray-500">Live Preview:</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <input type="url" id="editProductIcon" oninput="previewEditIcon()" placeholder="https://img.icons8.com/..." class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none" />
-            <img id="editProductIconPreview" src="https://img.icons8.com/color/480/box.png" alt="preview" class="w-9 h-9 object-contain rounded-lg bg-gray-800 p-1 border border-gray-700 shrink-0" />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 items-center">
-          <div>
-            <label class="block font-semibold text-gray-300 mb-1">Badge Tag</label>
-            <input type="text" id="editProductBadge" placeholder="HOT, POPULAR, NEW" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none uppercase" />
-          </div>
-          <div class="pt-4 flex items-center space-x-2">
-            <input type="checkbox" id="editProductActive" checked class="w-4 h-4 rounded text-amber-500 bg-gray-800 border-gray-700 focus:ring-0" />
-            <label for="editProductActive" class="text-gray-300 font-medium cursor-pointer">Active in Store</label>
-          </div>
-        </div>
-
-        <div>
-          <label class="block font-semibold text-gray-300 mb-1">Description / Features</label>
-          <textarea id="editProductDescription" rows="2" placeholder="Describe features or account details..." class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-amber-500 outline-none"></textarea>
-        </div>
-
-        <div class="flex items-center space-x-2 pt-2">
-          <button type="button" onclick="closeModal('editProductModal')" class="w-1/3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs">
-            Cancel
-          </button>
-          <button type="submit" id="btnSaveProduct" class="w-2/3 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1 shadow-md shadow-amber-950/40">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-            <span>Save Product</span>
-          </button>
-        </div>
-      </form>
-
-    </div>
-  </div>
-
-  <!-- ==========================================================
-       ADMIN MODAL 2: BULK ADD DIGITAL KEYS (VAULT)
-       ========================================================== -->
-  <div id="addKeysModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full max-w-sm bg-gray-900 border border-emerald-500/30 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
-      
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
-          <i data-lucide="key" class="w-4 h-4 text-emerald-400"></i>
-          <span>Add Stock to Vault</span>
-        </h3>
-        <button onclick="closeModal('addKeysModal')" class="p-1 text-gray-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="p-2.5 bg-emerald-950/30 border border-emerald-500/20 rounded-xl">
-        <span class="text-[10px] text-gray-400 uppercase tracking-wider block">Target Product:</span>
-        <span id="addKeysProductName" class="text-xs font-bold text-emerald-300">Loading product...</span>
-      </div>
-
-      <form id="addKeysForm" onsubmit="handleSubmitKeys(event)" class="space-y-3 text-xs">
-        <input type="hidden" id="addKeysProductId" value="0" />
-
-        <div>
-          <label class="block font-semibold text-gray-300 mb-1">
-            Digital Keys / Accounts (1 Per Line):
-          </label>
-          <textarea id="addKeysTextarea" rows="6" required placeholder="Paste credentials, links, or keys here (one item per line)...&#10;KEY-CODE-SAMPLE-1001&#10;KEY-CODE-SAMPLE-1002" class="w-full bg-black/60 border border-gray-800 rounded-xl p-3 text-emerald-300 font-mono text-[11px] focus:border-emerald-500 outline-none whitespace-pre"></textarea>
-          <p class="text-[10px] text-gray-500 mt-1">
-            💡 Each non-empty line becomes 1 distinct deliverable key in the vault and increments the available stock count.
-          </p>
-        </div>
-
-        <div class="flex items-center space-x-2 pt-1">
-          <button type="button" onclick="closeModal('addKeysModal')" class="w-1/3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs">
-            Cancel
-          </button>
-          <button type="submit" id="btnAddKeysSubmit" class="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1 shadow-md shadow-emerald-950/40">
-            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
-            <span>Add Keys to Vault</span>
-          </button>
-        </div>
-      </form>
-
-    </div>
-  </div>
-
-  <!-- ==========================================================
-       ADMIN MODAL 3: VAULT KEYS INSPECTOR
-       ========================================================== -->
-  <div id="vaultKeysModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full max-w-sm bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
-      
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
-          <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
-          <span>Vault Stock Inspector</span>
-        </h3>
-        <button onclick="closeModal('vaultKeysModal')" class="p-1 text-gray-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="text-xs text-gray-400" id="vaultInspectorTitle">Inspect live unsold keys in stock</div>
-
-      <div id="vaultKeysList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-        <!-- Populated by JS -->
-      </div>
-
-      <button type="button" onclick="closeModal('vaultKeysModal')" class="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-semibold text-xs">
-        Close Inspector
+      <button onclick="copyDeliveredPayload()" class="btn-sheet-buy" style="width:100%; margin-bottom:8px;">
+        <span id="copyPayloadBtnText">Copy to Clipboard</span>
+      </button>
+      <button onclick="viewInOrders()" style="width:100%; padding:10px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-size:11.5px; font-weight:700; cursor:pointer;">
+        View in Orders
       </button>
     </div>
   </div>
 
   <!-- ==========================================================
-       ADMIN MODAL 4: ADD / EDIT PAYMENT RECEIVING ACCOUNT
+       ADMIN MODALS (Product Edit, Keys, Accounts, Preview)
        ========================================================== -->
-  <div id="editPaymentModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full max-w-md bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-      
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
-          <i data-lucide="landmark" class="w-4 h-4 text-emerald-400"></i>
-          <span id="editPaymentModalTitle">Payment Receiving Account</span>
-        </h3>
-        <button onclick="closeModal('editPaymentModal')" class="p-1 text-gray-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
+  <div id="editProductModal" class="modal-overlay" onclick="if(event.target===this)closeModal('editProductModal')">
+    <div class="bottom-sheet" style="max-height:90vh; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 id="editProductModalTitle" style="font-size:14px; font-weight:800; color:#fff;">Edit Product</h3>
+        <button onclick="closeModal('editProductModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
         </button>
       </div>
 
-      <form id="paymentAccountForm" onsubmit="handleSavePayment(event)" class="space-y-3 text-xs">
-        <input type="hidden" id="editPaymentId" value="" />
-        <input type="hidden" id="editPaymentCode" value="" />
+      <form id="editProductForm" onsubmit="handleSaveProduct(event)" style="display:flex; flex-direction:column; gap:10px; font-size:11px;">
+        <input type="hidden" id="editProductId" value="0" />
+        
+        <div>
+          <label style="display:block; font-weight:700; margin-bottom:3px; color:var(--text-secondary);">Product Title *</label>
+          <input type="text" id="editProductName" required placeholder="e.g. Telegram Premium" style="width:100%; height:36px; padding:0 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; outline:none;" />
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+          <div>
+            <label style="display:block; font-weight:700; margin-bottom:3px; color:var(--text-secondary);">Category</label>
+            <input type="text" id="editProductCategory" list="categoriesList" placeholder="Social" style="width:100%; height:36px; padding:0 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; outline:none;" />
+            <datalist id="categoriesList">
+              <option value="AI Tools" />
+              <option value="Design" />
+              <option value="Social" />
+              <option value="VPN & Security" />
+              <option value="Software" />
+            </datalist>
+          </div>
+          <div>
+            <label style="display:block; font-weight:700; margin-bottom:3px; color:var(--text-secondary);">Cost Price</label>
+            <input type="number" step="0.01" min="0" id="editProductCostPrice" placeholder="Wholesale" oninput="calcEditProfitPreview()" style="width:100%; height:36px; padding:0 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-family:monospace; outline:none;" />
+          </div>
+          <div>
+            <label style="display:block; font-weight:700; margin-bottom:3px; color:var(--text-secondary);">Sell Price *</label>
+            <input type="number" step="0.01" min="1" id="editProductPrice" required placeholder="Retail" oninput="calcEditProfitPreview()" style="width:100%; height:36px; padding:0 8px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-family:monospace; outline:none;" />
+          </div>
+        </div>
+
+        <div style="background:rgba(34,197,94,0.1); border:1px solid var(--border-highlight); border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:var(--text-muted);">Estimated Net Profit per Sale:</span>
+          <span id="editProfitPreviewText" style="font-weight:800; color:var(--brand-green);">0.00 ETB (0.0% margin)</span>
+        </div>
 
         <div>
-          <label class="block font-semibold text-gray-300 mb-1">Method / Bank Name</label>
-          <input type="text" id="editPaymentName" required placeholder="e.g. Telebirr, Commercial Bank of Ethiopia (CBE), Awash Bank, BOA" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500 outline-none" />
+          <label style="display:block; font-weight:700; margin-bottom:3px; color:var(--text-secondary);">Icon URL</label>
+          <input type="url" id="editProductIcon" placeholder="https://..." style="width:100%; height:36px; padding:0 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; outline:none;" />
         </div>
 
         <div>
-          <label class="block font-semibold text-gray-300 mb-1">Account Number / Phone Number</label>
-          <input type="text" id="editPaymentNumber" required placeholder="e.g. 0906818924 or 1000233801837" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:border-emerald-500 outline-none" />
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+            <label style="font-weight:700; color:var(--text-secondary);">Multi-tier Variants (JSON format)</label>
+            <button type="button" onclick="fillVariantsTemplate()" style="background:none; border:none; color:var(--brand-green); font-weight:700; font-size:10px; cursor:pointer;">+ Insert 3m/6m/12m Template</button>
+          </div>
+          <textarea id="editProductVariants" rows="2" placeholder='[{"duration":"3 months","price_etb":2500,"cost_price_etb":2000}]' style="width:100%; padding:6px 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-family:monospace; font-size:10.5px; outline:none;"></textarea>
         </div>
 
         <div>
-          <label class="block font-semibold text-gray-300 mb-1">Account Holder Full Name</label>
-          <input type="text" id="editPaymentHolder" required placeholder="e.g. Mohammed Abdirahman Ibrahim" class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500 outline-none" />
+          <label style="display:block; font-weight:700; margin-bottom:3px; color:var(--text-secondary);">📖 How to Use / Activation Guide</label>
+          <textarea id="editProductHowToUse" rows="2" placeholder="⚡ Instructions delivered after checkout..." style="width:100%; padding:6px 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; outline:none;"></textarea>
         </div>
 
-        <div>
-          <label class="block font-semibold text-gray-300 mb-1">Customer Instructions (Optional)</label>
-          <textarea id="editPaymentInstructions" rows="2" placeholder="e.g. Transfer via mobile app and paste the SMS below..." class="w-full bg-black/50 border border-gray-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500 outline-none"></textarea>
-        </div>
-
-        <div class="flex items-center space-x-2 pt-1">
-          <input type="checkbox" id="editPaymentActive" checked class="w-4 h-4 rounded text-emerald-500 bg-gray-800 border-gray-700 focus:ring-0" />
-          <label for="editPaymentActive" class="text-gray-300 font-medium cursor-pointer">Active (Visible to customers in Wallet Tab)</label>
-        </div>
-
-        <div class="flex items-center space-x-2 pt-2">
-          <button type="button" onclick="closeModal('editPaymentModal')" class="w-1/3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs">
-            Cancel
-          </button>
-          <button type="submit" id="btnSavePayment" class="w-2/3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center space-x-1 shadow-md shadow-emerald-950/40">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-            <span>Save Account</span>
-          </button>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button type="button" onclick="closeModal('editProductModal')" style="flex:1; padding:10px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-weight:700; cursor:pointer;">Cancel</button>
+          <button type="submit" class="btn-sheet-buy" style="flex:2; padding:10px;">Save Product</button>
         </div>
       </form>
-
     </div>
   </div>
 
-  <!-- ==========================================================
-       TOAST NOTIFICATION COMPONENT
-       ========================================================== -->
-  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-slate-950 font-semibold text-xs px-4 py-2 rounded-full shadow-lg shadow-black/50 transition-all opacity-0 pointer-events-none transform -translate-y-2">
-    Notification text
+  <!-- Add Keys Modal -->
+  <div id="addKeysModal" class="modal-overlay" onclick="if(event.target===this)closeModal('addKeysModal')">
+    <div class="bottom-sheet" style="max-width:400px; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:14px; font-weight:800; color:#fff;">Add Digital Keys to Vault</h3>
+        <button onclick="closeModal('addKeysModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+      </div>
+      <div id="addKeysProductName" style="font-size:11px; font-weight:700; color:var(--brand-green); margin-bottom:10px;">Product</div>
+      <form id="addKeysForm" onsubmit="handleSubmitKeys(event)" style="display:flex; flex-direction:column; gap:10px;">
+        <input type="hidden" id="addKeysProductId" value="0" />
+        <textarea id="addKeysTextarea" rows="6" required placeholder="Paste keys/credentials (1 per line)..." style="width:100%; padding:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#86efac; font-family:monospace; font-size:11px; outline:none;"></textarea>
+        <button type="submit" id="btnAddKeysSubmit" class="btn-sheet-buy" style="padding:10px;">Upload Keys to Stock</button>
+      </form>
+    </div>
   </div>
+
+  <!-- Receipt Image Preview Modal -->
+  <div id="receiptImageModal" class="modal-overlay" onclick="closeModal('receiptImageModal')">
+    <div style="max-width:360px; width:100%; background:var(--bg-card); border-radius:var(--radius-lg); padding:16px; text-align:center;">
+      <img id="adminReceiptFullImg" src="" alt="Receipt" style="max-width:100%; max-height:70vh; object-fit:contain; border-radius:8px; margin-bottom:12px;" />
+      <button onclick="closeModal('receiptImageModal')" class="btn-sheet-info" style="width:100%;">Close</button>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast" class="toast">Notification text</div>
 
   <!-- Main Application Script -->
   <script src="app.js"></script>

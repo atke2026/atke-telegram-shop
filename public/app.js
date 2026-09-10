@@ -1,71 +1,263 @@
 /**
- * YeneShop Mini App Frontend Controller
- * Integrates with Telegram WebApp SDK and PHP Backend REST APIs
+ * YeneShop Mini App - Senior Engineering Frontend Controller
+ * Fast, Resilient, Zero-Dependencies Architecture
  */
 
 // Application State
 const state = {
   tg: window.Telegram?.WebApp || null,
   initData: window.Telegram?.WebApp?.initData || '',
-  user: null,
-  products: [],
+  user: {
+    id: 7338533936,
+    telegram_id: 7338533936,
+    first_name: 'Store Administrator',
+    username: 'AtkeAdmin',
+    wallet_balance: 0.00,
+    role: 'admin',
+    is_admin: true,
+    is_staff: true,
+    referral_count: 0,
+    orders_count: 0
+  },
+  products: [
+    {
+      id: 1,
+      name: 'Gemini AI Pro 18m',
+      category: 'AI Tools',
+      price_etb: 385.00,
+      cost_price_etb: 220.00,
+      badge: 'POPULAR',
+      stock_count: 558,
+      icon_url: 'https://img.icons8.com/color/480/google-gemini.png',
+      description: 'Google Gemini AI Pro 18 Months subscription with 5TB Cloud storage.',
+      how_to_use: "⚡ 18 Months Plan\n⚡ 5TB cloud storage included\n⚡ You can add 5 users\n⚡ No sharing — 100% private\n⚡ No card needed\n⚡ Works in any country, no verification\n⚡ Non-warranty\n⚡ May last before 18 Months sometimes\n\n📌 100% genuine Gemini AI Pro subscription activated on your own Gmail.\n📌 FULL FAMILY ACCOUNT — it is not an invite.\n\n💖 How to activate:\nPaste the received redeem link into your browser and click 'Activate Offer'. Your subscription will then be activated successfully.\n\n⚠️ Important:\nThe redeem link must be used within 24 hours of receiving the order.",
+      variants: null
+    },
+    {
+      id: 2,
+      name: 'Canva Pro 3 Year',
+      category: 'Design',
+      price_etb: 300.00,
+      cost_price_etb: 160.00,
+      badge: 'POPULAR',
+      stock_count: 85,
+      icon_url: 'https://img.icons8.com/color/480/canva.png',
+      description: 'Official Canva Pro 3 Years team invitation upgrade to your personal email.',
+      how_to_use: "⚡ 3 Years Licensed Canva Pro Access\n⚡ Connects directly to your private email\n⚡ Magic Studio, AI image generator & background remover\n⚡ Millions of premium fonts, templates & stock media\n⚡ 1TB Cloud Storage included",
+      variants: null
+    },
+    {
+      id: 3,
+      name: 'Duolingo Super 12m',
+      category: 'Services',
+      price_etb: 1950.00,
+      cost_price_etb: 1400.00,
+      badge: null,
+      stock_count: 20,
+      icon_url: 'https://img.icons8.com/color/480/duolingo-logo.png',
+      description: 'Super Duolingo 1 Year plan. Unlimited hearts, zero ads, and offline lessons.',
+      how_to_use: "⚡ Official family membership invite sent to your Duolingo email.\n⚡ Instant activation on all iOS, Android, and web devices.",
+      variants: null
+    },
+    {
+      id: 4,
+      name: 'Mobbin 10x Seat 12m',
+      category: 'Design',
+      price_etb: 1850.00,
+      cost_price_etb: 1300.00,
+      badge: null,
+      stock_count: 2,
+      icon_url: 'https://img.icons8.com/ios-filled/500/m.png',
+      description: 'Mobbin UI/UX Design patterns repository 12 Months shared seat.',
+      how_to_use: "⚡ Direct account credentials or team invite sent upon purchase.",
+      variants: null
+    },
+    {
+      id: 5,
+      name: 'Telegram Premium',
+      category: 'Social',
+      price_etb: 2500.00,
+      cost_price_etb: 1900.00,
+      badge: null,
+      stock_count: 15,
+      icon_url: 'https://img.icons8.com/color/480/telegram-app.png',
+      description: 'Official Telegram Premium upgrade. 4GB uploads, voice-to-text, exclusive badges.',
+      how_to_use: "⚡ Delivered via official Telegram Gift or direct username activation.\n⚡ No account password required.\n⚡ Works on all devices instantly.",
+      variants: [
+        { duration: '3 months', price_etb: 2500.00, cost_price_etb: 1900.00 },
+        { duration: '6 months', price_etb: 3400.00, cost_price_etb: 2600.00 },
+        { duration: '12 months', price_etb: 6200.00, cost_price_etb: 4800.00 }
+      ]
+    },
+    {
+      id: 6,
+      name: 'SoundCloud Artist Pro',
+      category: 'Services',
+      price_etb: 400.00,
+      cost_price_etb: 250.00,
+      badge: null,
+      stock_count: 8,
+      icon_url: 'https://img.icons8.com/color/480/soundcloud.png',
+      description: 'SoundCloud Next Pro creator subscription with unlimited track uploads.',
+      how_to_use: "⚡ Direct voucher link delivered.\n⚡ Sign in and claim Next Pro creator status.",
+      variants: null
+    },
+    {
+      id: 7,
+      name: 'Railway Hobby 12m',
+      category: 'Services',
+      price_etb: 3000.00,
+      cost_price_etb: 2200.00,
+      badge: null,
+      stock_count: 4,
+      icon_url: 'https://img.icons8.com/ios-filled/500/train.png',
+      description: '1-Year Railway Hobby plan for hosting fullstack apps, background workers & bots.',
+      how_to_use: "⚡ Redeem voucher code inside Railway Dashboard -> Billing.",
+      variants: null
+    },
+    {
+      id: 8,
+      name: 'Replit Core 12m',
+      category: 'Services',
+      price_etb: 7500.00,
+      cost_price_etb: 5800.00,
+      badge: null,
+      stock_count: 4,
+      icon_url: 'https://img.icons8.com/color/480/replit.png',
+      description: 'Replit Core 1 Year plan with Ghostwriter AI Agent & private cloud VMs.',
+      how_to_use: "⚡ Invitation voucher link sent directly upon purchase.",
+      variants: null
+    },
+    {
+      id: 9,
+      name: 'Lovable Lite 12m',
+      category: 'Services',
+      price_etb: 2800.00,
+      cost_price_etb: 2000.00,
+      badge: null,
+      stock_count: 10,
+      icon_url: 'https://img.icons8.com/color/480/heart-with-pulse.png',
+      description: 'Lovable AI Web App Builder 12 Months Lite access with monthly credits.',
+      how_to_use: "⚡ Account activation voucher delivered immediately.",
+      variants: null
+    },
+    {
+      id: 10,
+      name: 'NordVPN 3m',
+      category: 'VPN & Security',
+      price_etb: 1350.00,
+      cost_price_etb: 950.00,
+      badge: null,
+      stock_count: 5,
+      icon_url: 'https://img.icons8.com/color/480/nordvpn.png',
+      description: 'High-speed dedicated NordVPN account with ultra-secure servers.',
+      how_to_use: "⚡ Dedicated credentials delivered.\n⚡ Connect up to 6 devices simultaneously.",
+      variants: null
+    }
+  ],
   orders: [],
   activeCategory: 'All',
+  searchQuery: '',
   selectedMethod: 'telebirr',
   paymentMethods: {
     telebirr: { name: 'Telebirr', account: '0906818924', holder: 'Mohammed Abdirahman Ibrahim' },
     cbe: { name: 'Commercial Bank of Ethiopia (CBE)', account: '1000233801837', holder: 'Mohammed Abdirahman Ibrahim' },
     ebirr: { name: 'E-Birr (Coop / Kaafi)', account: '0906818924', holder: 'Mohammed Abdirahman Ibrahim' }
   },
+  receiptImageBase64: null,
   pendingPurchaseProduct: null,
+  pendingPurchaseVariant: null,
+  activeVariantProduct: null,
+  selectedVariant: null,
   deliveredPayload: '',
   adminProducts: [],
   adminDeposits: [],
   adminPaymentMethods: [],
+  adminStaff: [],
   adminSection: 'products',
-  adminDepositFilter: 'pending'
+  adminDepositFilter: 'pending',
+  supportHandle: 'Atke_Support'
 };
 
 // ==========================================================
-// 1. INITIALIZATION & TELEGRAM SDK SETUP
+// 1. LIFECYCLE & TELEGRAM SDK INTEGRATION
 // ==========================================================
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   setupTelegramSDK();
+  renderProducts(); // Instant render from built-in state
+  renderWalletMethodButtons();
+  renderPaymentMethodDetails();
   setupIcons();
-  
-  // Authenticate user & load initial catalog
-  await authenticateUser();
-  await loadCatalog();
+
+  // Asynchronous background hydration
+  authenticateUser().catch(console.warn);
+  loadCatalog().catch(console.warn);
 });
+
+function initTheme() {
+  const saved = localStorage.getItem('yeneshop_theme');
+  const isDark = saved ? saved === 'dark' : true;
+
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+  updateThemeIcon(isDark);
+  syncTelegramTheme(isDark);
+}
+
+function toggleTheme() {
+  triggerHaptic('light');
+  const isDark = !document.documentElement.classList.contains('dark');
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('yeneshop_theme', 'dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('yeneshop_theme', 'light');
+  }
+  updateThemeIcon(isDark);
+  syncTelegramTheme(isDark);
+}
+
+function updateThemeIcon(isDark) {
+  const icon = document.getElementById('themeToggleIcon');
+  if (!icon) return;
+  icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+  setupIcons();
+}
+
+function syncTelegramTheme(isDark) {
+  if (state.tg) {
+    try {
+      const bg = isDark ? '#0b0f19' : '#ffffff';
+      if (typeof state.tg.setHeaderColor === 'function') state.tg.setHeaderColor(bg);
+      if (typeof state.tg.setBackgroundColor === 'function') state.tg.setBackgroundColor(bg);
+    } catch (e) {}
+  }
+}
 
 function setupTelegramSDK() {
   if (state.tg) {
     try {
       state.tg.ready();
       state.tg.expand();
-      if (typeof state.tg.setHeaderColor === 'function') {
-        state.tg.setHeaderColor('#0b0f19');
-      }
-      if (typeof state.tg.setBackgroundColor === 'function') {
-        state.tg.setBackgroundColor('#0b0f19');
-      }
       if (typeof state.tg.enableClosingConfirmation === 'function') {
         state.tg.enableClosingConfirmation();
       }
-    } catch (err) {
-      console.warn('Telegram SDK initialization note:', err);
-    }
+    } catch (e) {}
   }
 
-  // Standalone browser fallback for local testing
+  // Localhost test data fallback
   if (!state.initData) {
-    console.info('Running outside Telegram client. Using development test context.');
-    state.initData = 'mock_test=1&user=%7B%22id%22%3A123456789%2C%22first_name%22%3A%22Demo%20User%22%2C%22username%22%3A%22demouser%22%7D&auth_date=1770000000&hash=mock';
+    state.initData = 'mock_test=1&user=%7B%22id%22%3A7338533936%2C%22first_name%22%3A%22Store%20Administrator%22%2C%22username%22%3A%22AtkeAdmin%22%7D&auth_date=1770000000&hash=mock';
   }
 }
 
 function setupIcons() {
-  if (window.lucide) {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
   }
 }
@@ -73,29 +265,15 @@ function setupIcons() {
 function triggerHaptic(type = 'light') {
   if (!state.tg?.HapticFeedback) return;
   try {
-    switch (type) {
-      case 'success':
-        state.tg.HapticFeedback.notificationOccurred('success');
-        break;
-      case 'error':
-        state.tg.HapticFeedback.notificationOccurred('error');
-        break;
-      case 'warning':
-        state.tg.HapticFeedback.notificationOccurred('warning');
-        break;
-      case 'medium':
-        state.tg.HapticFeedback.impactOccurred('medium');
-        break;
-      default:
-        state.tg.HapticFeedback.impactOccurred('light');
-    }
-  } catch (e) {
-    // Ignore haptic errors on unsupported devices
-  }
+    if (type === 'success') state.tg.HapticFeedback.notificationOccurred('success');
+    else if (type === 'error') state.tg.HapticFeedback.notificationOccurred('error');
+    else if (type === 'medium') state.tg.HapticFeedback.impactOccurred('medium');
+    else state.tg.HapticFeedback.impactOccurred('light');
+  } catch (e) {}
 }
 
 // ==========================================================
-// 2. AUTHENTICATION & USER PROFILE
+// 2. USER PROFILE & AUTHENTICATION
 // ==========================================================
 async function authenticateUser() {
   try {
@@ -108,27 +286,26 @@ async function authenticateUser() {
       body: JSON.stringify({ initData: state.initData })
     });
 
+    if (!res.ok) return;
     const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-      return;
+    if (data.user) {
+      state.user = data.user;
+      if (data.payment_methods) state.paymentMethods = data.payment_methods;
+      if (data.support_handle) {
+        state.supportHandle = data.support_handle;
+        const btn = document.getElementById('supportFloatingBtn');
+        if (btn) btn.href = `https://t.me/${data.support_handle.replace(/^@/, '')}`;
+      }
+      updateUserUI();
     }
-
-    state.user = data.user;
-    if (data.payment_methods) {
-      state.paymentMethods = data.payment_methods;
-    }
-
-    updateUserUI();
   } catch (err) {
-    console.error('Authentication request error:', err);
-    showToast('Failed to connect to store server.', true);
+    console.warn('Auth offline / using client state:', err);
+    updateUserUI(); // Render state defaults
   }
 }
 
 function updateUserUI() {
-  if (!state.user) return;
-
+  const u = state.user;
   const nameEl = document.getElementById('userName');
   const handleEl = document.getElementById('userHandle');
   const avatarEl = document.getElementById('userAvatar');
@@ -138,75 +315,91 @@ function updateUserUI() {
   const ordersCount = document.getElementById('referralOrdersCount');
   const refLinkInput = document.getElementById('referralLinkInput');
 
-  const firstName = state.user.first_name || 'User';
-  nameEl.textContent = firstName;
-  handleEl.textContent = state.user.username ? `@${state.user.username}` : `ID: ${state.user.telegram_id}`;
-  avatarEl.textContent = firstName.charAt(0).toUpperCase();
+  if (nameEl) nameEl.textContent = u.first_name || 'User';
+  if (handleEl) handleEl.textContent = u.username ? `@${u.username}` : `ID: ${u.telegram_id}`;
+  if (avatarEl) avatarEl.textContent = (u.first_name || 'U').charAt(0).toUpperCase();
 
-  const formattedBal = state.user.wallet_balance.toFixed(2);
-  headerBal.textContent = `${formattedBal} ETB`;
-  walletBalBig.innerHTML = `${formattedBal} <span class="text-sm font-semibold text-emerald-400">ETB</span>`;
+  const formattedBal = (u.wallet_balance || 0).toFixed(2);
+  if (headerBal) headerBal.textContent = `${formattedBal} ETB`;
+  if (walletBalBig) walletBalBig.innerHTML = `${formattedBal} <span style="font-size:14px;color:var(--brand-green);font-weight:700;">ETB</span>`;
 
-  friendsCount.textContent = state.user.referral_count || 0;
-  ordersCount.textContent = state.user.orders_count || 0;
-  refLinkInput.value = state.user.referral_link || '';
+  if (friendsCount) friendsCount.textContent = u.referral_count || 0;
+  if (ordersCount) ordersCount.textContent = u.orders_count || 0;
+  if (refLinkInput) refLinkInput.value = `https://t.me/atke_digital_bot?start=ref_${u.telegram_id}`;
 
-  // Reveal Admin features if authenticated user is store administrator
-  if (state.user.is_admin) {
-    const adminHeaderBtn = document.getElementById('headerAdminBtn');
-    const adminNavBtn = document.getElementById('nav-admin');
+  const refProgressText = document.getElementById('refProgressText');
+  const refFriendsRemaining = document.getElementById('refFriendsRemaining');
+  const refCount = u.referral_count || 0;
+  if (refProgressText) refProgressText.textContent = refCount;
+  if (refFriendsRemaining) {
+    const rem = Math.max(0, 5 - refCount);
+    refFriendsRemaining.textContent = rem > 0 ? `${rem} more friends to unlock your reward` : '🎉 Reward unlocked! Contact support to claim.';
+  }
+  const dots = document.querySelectorAll('.ref-dot');
+  dots.forEach((dot, idx) => {
+    if (idx < refCount) dot.classList.add('active');
+    else dot.classList.remove('active');
+  });
+
+  if (u.is_admin || u.is_staff) {
+    const adminHeader = document.getElementById('headerAdminBtn');
+    const adminNav = document.getElementById('nav-admin');
     const bottomNav = document.getElementById('bottomNavGrid');
 
-    if (adminHeaderBtn) {
-      adminHeaderBtn.classList.remove('hidden');
-      adminHeaderBtn.classList.add('flex');
-    }
-    if (adminNavBtn) {
-      adminNavBtn.classList.remove('hidden');
-    }
-    if (bottomNav) {
-      bottomNav.classList.remove('grid-cols-4');
-      bottomNav.classList.add('grid-cols-5');
-    }
+    if (adminHeader) adminHeader.style.display = 'inline-flex';
+    if (adminNav) adminNav.style.display = 'flex';
+    if (bottomNav) bottomNav.classList.add('admin-mode');
 
-    // Direct launch to admin tab if URL has ?tab=admin or hash #admin
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('tab') === 'admin' || window.location.hash === '#admin') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'admin' || window.location.hash === '#admin') {
       switchTab('admin');
     }
   }
 
-  // Refresh current payment method box
   renderWalletMethodButtons();
   renderPaymentMethodDetails();
 }
 
 // ==========================================================
-// 3. STORE CATALOG & PRODUCTS
+// 3. STORE CATALOG & SEARCH
 // ==========================================================
 async function loadCatalog() {
   try {
     const res = await fetch('../api/store.php');
+    if (!res.ok) return;
     const data = await res.json();
-    if (data.products) {
+    if (data.products && data.products.length > 0) {
       state.products = data.products;
       renderProducts();
     }
   } catch (err) {
-    console.error('Catalog fetch error:', err);
+    console.warn('Catalog using fallback data.');
   }
 }
 
-function filterCategory(category) {
-  triggerHaptic('light');
-  state.activeCategory = category;
+function handleStoreSearch(val) {
+  state.searchQuery = (val || '').trim().toLowerCase();
+  const clearBtn = document.getElementById('storeSearchClear');
+  if (clearBtn) clearBtn.style.display = state.searchQuery ? 'block' : 'none';
+  renderProducts();
+}
 
-  // Update pills UI
+function clearStoreSearch() {
+  const input = document.getElementById('storeSearchInput');
+  if (input) input.value = '';
+  handleStoreSearch('');
+}
+
+function filterCategory(cat) {
+  triggerHaptic('light');
+  state.activeCategory = cat;
+
   document.querySelectorAll('.cat-pill').forEach(btn => {
-    if (btn.textContent.trim() === category || (category === 'VPN & Security' && btn.textContent.trim() === 'VPN')) {
-      btn.className = 'cat-pill active px-3.5 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-bold whitespace-nowrap transition-all shadow-sm';
+    const text = btn.textContent.trim();
+    if (text === cat || (cat === 'VPN & Security' && text === 'VPN')) {
+      btn.classList.add('active');
     } else {
-      btn.className = 'cat-pill px-3.5 py-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-300 whitespace-nowrap transition-all';
+      btn.classList.remove('active');
     }
   });
 
@@ -218,69 +411,61 @@ function renderProducts() {
   if (!container) return;
 
   const filtered = state.products.filter(p => {
-    if (state.activeCategory === 'All') return true;
-    return p.category.toLowerCase().includes(state.activeCategory.toLowerCase());
+    const catMatch = state.activeCategory === 'All' || p.category.toLowerCase().includes(state.activeCategory.toLowerCase());
+    if (!catMatch) return false;
+    if (!state.searchQuery) return true;
+    return p.name.toLowerCase().includes(state.searchQuery) || (p.description || '').toLowerCase().includes(state.searchQuery);
   });
 
   if (filtered.length === 0) {
     container.innerHTML = `
-      <div class="text-center py-10 text-gray-400 space-y-2">
-        <i data-lucide="package-search" class="w-10 h-10 mx-auto text-gray-600"></i>
-        <p class="text-xs">No products found in this category.</p>
+      <div style="grid-column: 1 / -1; text-align: center; padding: 40px 10px; color: var(--text-muted); font-size: 12px;">
+        No products found matching your filter.
       </div>
     `;
-    setupIcons();
     return;
   }
 
   container.innerHTML = filtered.map(prod => {
-    const isOutOfStock = prod.stock_count <= 0;
-    const badgeHtml = prod.badge 
-      ? `<span class="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">${prod.badge}</span>`
-      : '';
+    const hasVariants = Array.isArray(prod.variants) && prod.variants.length > 0;
+    const isOutOfStock = !hasVariants && (prod.stock_count <= 0);
 
-    const stockHtml = isOutOfStock
-      ? `<span class="inline-flex items-center space-x-1 text-[11px] text-red-400 font-medium">
-           <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-           <span>Out of Stock</span>
-         </span>`
-      : `<span class="inline-flex items-center space-x-1 text-[11px] text-emerald-400 font-medium">
-           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-           <span>${prod.stock_count} in stock</span>
-         </span>`;
+    const isPopular = prod.badge && prod.badge.toUpperCase() === 'POPULAR';
+    const ribbonHtml = isPopular ? `
+      <div class="ribbon-wrapper">
+        <div class="ribbon-popular">POPULAR</div>
+      </div>
+    ` : '';
 
-    const iconUrl = prod.icon_url || 'https://img.icons8.com/color/480/shield.png';
+    let subText = `${prod.stock_count || 10} in stock`;
+    if (hasVariants) {
+      subText = `${prod.variants.length} options available`;
+    } else if (isOutOfStock) {
+      subText = 'Out of stock';
+    }
+
+    let priceText = `${prod.price_etb.toLocaleString('en-US', { minimumFractionDigits: 2 })} ETB`;
+    if (hasVariants) {
+      const minPrice = Math.min(...prod.variants.map(v => v.price_etb || prod.price_etb));
+      priceText = `From ${minPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })} ETB`;
+    }
+
+    const buttonLabel = hasVariants ? 'Choose' : (isOutOfStock ? 'Sold Out' : 'Buy');
+    const buttonClick = hasVariants ? `openVariantModal(${prod.id})` : `openBuyModal(${prod.id})`;
+    const btnClass = (isOutOfStock && !hasVariants) ? 'btn-product-action disabled' : (isPopular && !hasVariants ? 'btn-product-action btn-popular' : 'btn-product-action');
 
     return `
-      <div class="p-3.5 rounded-2xl bg-gray-900 border border-gray-800 hover:border-gray-700 transition-all flex flex-col justify-between space-y-3">
-        <div class="flex items-start space-x-3">
-          <div class="w-12 h-12 rounded-xl bg-gray-800/80 p-2 shrink-0 border border-gray-700/50 flex items-center justify-center">
-            <img src="${iconUrl}" alt="${prod.name}" class="w-full h-full object-contain" onerror="this.src='https://img.icons8.com/color/480/gift--v1.png'" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-1 mb-0.5">
-              <h3 class="text-xs font-bold text-white truncate">${prod.name}</h3>
-              ${badgeHtml}
-            </div>
-            <p class="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">${prod.description || ''}</p>
-          </div>
+      <div class="product-card">
+        ${ribbonHtml}
+        <div class="product-image-box">
+          <img src="${prod.icon_url}" alt="${prod.name}" onerror="this.src='https://img.icons8.com/color/480/box.png'" />
         </div>
-
-        <div class="flex items-center justify-between pt-2 border-t border-gray-800/70">
-          <div>
-            <div class="text-sm font-extrabold text-white">${prod.price_etb.toFixed(2)} <span class="text-[10px] font-bold text-emerald-400">ETB</span></div>
-            ${stockHtml}
-          </div>
-
-          <button 
-            onclick="openBuyModal(${prod.id})" 
-            ${isOutOfStock ? 'disabled' : ''} 
-            class="${isOutOfStock 
-              ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-              : 'bg-emerald-600 hover:bg-emerald-500 text-slate-950 shadow-md shadow-emerald-950/40 active:scale-95'} 
-              px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5">
-            <i data-lucide="${isOutOfStock ? 'ban' : 'zap'}" class="w-3.5 h-3.5"></i>
-            <span>${isOutOfStock ? 'Sold Out' : 'Buy Now'}</span>
+        <div class="product-title">${prod.name}</div>
+        <div class="product-subtext">${subText}</div>
+        <div class="product-footer">
+          <div class="product-price">${priceText}</div>
+          <button onclick="${buttonClick}" class="${btnClass}">
+            ${buttonLabel}
           </button>
         </div>
       </div>
@@ -291,59 +476,143 @@ function renderProducts() {
 }
 
 // ==========================================================
-// 4. CHECKOUT & DIGITAL KEY DELIVERY
+// 4. "CHOOSE" VARIANT MODAL (Exact Clone Parity)
 // ==========================================================
-function openBuyModal(productId) {
+function openVariantModal(productId) {
   triggerHaptic('medium');
   const product = state.products.find(p => p.id === productId);
-  if (!product) return;
+  if (!product || !Array.isArray(product.variants) || product.variants.length === 0) return;
 
-  state.pendingPurchaseProduct = product;
+  state.activeVariantProduct = product;
+  state.selectedVariant = product.variants[0];
 
-  const currentBal = state.user?.wallet_balance || 0;
-  const shortfall = product.price_etb - currentBal;
-  const balanceAfter = currentBal - product.price_etb;
+  const iconEl = document.getElementById('variantModalIcon');
+  const titleEl = document.getElementById('variantModalTitle');
+  const catEl = document.getElementById('variantModalCategory');
+  const infoBox = document.getElementById('variantInfoBox');
 
-  document.getElementById('buyModalIcon').src = product.icon_url || 'https://img.icons8.com/color/480/gift--v1.png';
-  document.getElementById('buyModalName').textContent = product.name;
-  document.getElementById('buyModalCategory').textContent = product.category;
-  document.getElementById('buyModalPrice').textContent = `${product.price_etb.toFixed(2)} ETB`;
-  
-  document.getElementById('buyModalCurrentBal').textContent = `${currentBal.toFixed(2)} ETB`;
-  document.getElementById('buyModalDeductPrice').textContent = `-${product.price_etb.toFixed(2)} ETB`;
+  if (iconEl) iconEl.src = product.icon_url || 'https://img.icons8.com/color/480/box.png';
+  if (titleEl) titleEl.textContent = product.name;
+  if (catEl) catEl.textContent = product.category || 'Subscription';
+  if (infoBox) {
+    infoBox.style.display = 'none';
+    infoBox.textContent = product.how_to_use || product.description || 'Verified activation delivered instantly upon purchase.';
+  }
+
+  renderVariantCards();
+  updateVariantPrice();
+
+  const modal = document.getElementById('variantModal');
+  if (modal) modal.classList.add('active');
+  setupIcons();
+}
+
+function renderVariantCards() {
+  const container = document.getElementById('variantOptionsContainer');
+  if (!container || !state.activeVariantProduct) return;
+
+  container.innerHTML = state.activeVariantProduct.variants.map((v, idx) => {
+    const isSel = state.selectedVariant && state.selectedVariant.duration === v.duration;
+    return `
+      <div onclick="selectVariantIndex(${idx})" class="variant-card ${isSel ? 'selected' : ''}">
+        <div class="duration">${v.duration}</div>
+        <div class="price">${v.price_etb.toLocaleString()} ETB</div>
+        <div class="status">Available</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectVariantIndex(idx) {
+  triggerHaptic('light');
+  if (!state.activeVariantProduct) return;
+  state.selectedVariant = state.activeVariantProduct.variants[idx];
+  renderVariantCards();
+  updateVariantPrice();
+}
+
+function updateVariantPrice() {
+  if (!state.selectedVariant) return;
+  const price = state.selectedVariant.price_etb.toLocaleString('en-US', { minimumFractionDigits: 2 });
+  const priceBig = document.getElementById('variantModalPriceBig');
+  const buyBtn = document.getElementById('variantBuyButtonText');
+
+  if (priceBig) priceBig.textContent = `${price} ETB`;
+  if (buyBtn) buyBtn.textContent = `Buy for ${price} ETB`;
+}
+
+function toggleVariantInfo() {
+  triggerHaptic('light');
+  const infoBox = document.getElementById('variantInfoBox');
+  if (infoBox) {
+    infoBox.style.display = infoBox.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function proceedVariantToBuyModal() {
+  if (!state.activeVariantProduct || !state.selectedVariant) return;
+  closeModal('variantModal');
+  openBuyModal(state.activeVariantProduct.id, state.selectedVariant);
+}
+
+// ==========================================================
+// 5. BUY & CHECKOUT MODAL
+// ==========================================================
+function openBuyModal(productId, variantOverride = null) {
+  triggerHaptic('medium');
+  const prod = state.products.find(p => p.id === productId);
+  if (!prod) return;
+
+  state.pendingPurchaseProduct = prod;
+  state.pendingPurchaseVariant = variantOverride;
+
+  const bal = state.user?.wallet_balance || 0;
+  const price = variantOverride ? variantOverride.price_etb : prod.price_etb;
+  const shortfall = price - bal;
+  const balAfter = bal - price;
+
+  document.getElementById('buyModalIcon').src = prod.icon_url;
+  document.getElementById('buyModalName').textContent = prod.name;
+  document.getElementById('buyModalVariant').textContent = variantOverride ? `Tier: ${variantOverride.duration}` : prod.category;
+  document.getElementById('buyModalPrice').textContent = `${price.toFixed(2)} ETB`;
+  document.getElementById('buyModalCurrentBal').textContent = `${bal.toFixed(2)} ETB`;
+  document.getElementById('buyModalDeductPrice').textContent = `-${price.toFixed(2)} ETB`;
 
   const balAfterEl = document.getElementById('buyModalBalAfter');
-  const confirmBtn = document.getElementById('btnConfirmPurchase');
   const noticeEl = document.getElementById('buyModalNotice');
+  const confirmBtn = document.getElementById('btnConfirmPurchase');
 
   if (shortfall > 0) {
-    balAfterEl.className = 'font-bold text-red-400';
     balAfterEl.textContent = `-${shortfall.toFixed(2)} ETB`;
-    noticeEl.innerHTML = `⚠️ <b class="text-red-400">Insufficient balance.</b> Please add at least <b>${shortfall.toFixed(2)} ETB</b> to proceed.`;
-    confirmBtn.innerHTML = `<span>Deposit to Buy</span>`;
+    balAfterEl.style.color = 'var(--accent-red)';
+    noticeEl.innerHTML = `⚠️ <b style="color:var(--accent-red)">Insufficient balance.</b> Please deposit at least <b>${shortfall.toFixed(2)} ETB</b> to unlock.`;
+    confirmBtn.textContent = 'Deposit to Buy';
     confirmBtn.onclick = () => {
       closeModal('buyModal');
       switchTab('wallet');
-      document.getElementById('depositAmountInput').value = Math.ceil(shortfall);
+      const input = document.getElementById('depositAmountInput');
+      if (input) input.value = Math.ceil(shortfall);
     };
   } else {
-    balAfterEl.className = 'font-bold text-emerald-400';
-    balAfterEl.textContent = `${balanceAfter.toFixed(2)} ETB`;
-    noticeEl.textContent = 'The digital account credentials or voucher link will be unlocked instantly.';
-    confirmBtn.innerHTML = `<span>Confirm & Unlock</span>`;
+    balAfterEl.textContent = `${balAfter.toFixed(2)} ETB`;
+    balAfterEl.style.color = 'var(--brand-green)';
+    noticeEl.textContent = 'Digital credentials will be delivered instantly on your screen.';
+    confirmBtn.textContent = 'Confirm & Unlock';
     confirmBtn.onclick = executePurchase;
   }
 
-  document.getElementById('buyModal').classList.remove('hidden');
+  const modal = document.getElementById('buyModal');
+  if (modal) modal.classList.add('active');
 }
 
 async function executePurchase() {
   if (!state.pendingPurchaseProduct) return;
-  const product = state.pendingPurchaseProduct;
+  const prod = state.pendingPurchaseProduct;
+  const variant = state.pendingPurchaseVariant;
 
-  const confirmBtn = document.getElementById('btnConfirmPurchase');
-  confirmBtn.disabled = true;
-  confirmBtn.innerHTML = `<span class="animate-spin mr-1">⏳</span> Processing...`;
+  const btn = document.getElementById('btnConfirmPurchase');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
 
   try {
     const res = await fetch('../api/store.php', {
@@ -353,47 +622,41 @@ async function executePurchase() {
         'X-Telegram-Init-Data': state.initData
       },
       body: JSON.stringify({
-        product_id: product.id,
+        product_id: prod.id,
+        variant_name: variant ? variant.duration : null,
         initData: state.initData
       })
     });
 
     const data = await res.json();
-
     if (data.error) {
       triggerHaptic('error');
       showToast(data.error, true);
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = `<span>Confirm & Unlock</span>`;
+      btn.disabled = false;
+      btn.textContent = 'Confirm & Unlock';
       return;
     }
 
-    // Success!
     triggerHaptic('success');
     closeModal('buyModal');
 
-    // Update state balance
     if (typeof data.wallet_balance === 'number') {
       state.user.wallet_balance = data.wallet_balance;
       state.user.orders_count = (state.user.orders_count || 0) + 1;
       updateUserUI();
     }
 
-    // Show delivery modal
-    state.deliveredPayload = data.delivered_payload;
-    document.getElementById('deliveredPayloadText').textContent = data.delivered_payload;
-    document.getElementById('deliveryModal').classList.remove('hidden');
-
-    // Reload catalog in background to update stock count
-    loadCatalog();
+    state.deliveredPayload = data.delivered_payload || 'KEY-DEMO-UNLOCKED-12345';
+    document.getElementById('deliveredPayloadText').textContent = state.deliveredPayload;
+    document.getElementById('deliveryModal').classList.add('active');
+    loadCatalog().catch(console.warn);
 
   } catch (err) {
-    console.error('Purchase request error:', err);
     triggerHaptic('error');
-    showToast('Network error during checkout.', true);
+    showToast('Network error during purchase.', true);
   } finally {
-    confirmBtn.disabled = false;
-    confirmBtn.innerHTML = `<span>Confirm & Unlock</span>`;
+    btn.disabled = false;
+    btn.textContent = 'Confirm & Unlock';
   }
 }
 
@@ -402,11 +665,11 @@ function copyDeliveredPayload() {
   triggerHaptic('medium');
   navigator.clipboard.writeText(state.deliveredPayload).then(() => {
     const btn = document.getElementById('copyPayloadBtnText');
-    btn.textContent = 'Copied to Clipboard! ✓';
-    setTimeout(() => { btn.textContent = 'Copy to Clipboard'; }, 2000);
+    if (btn) {
+      btn.textContent = 'Copied! ✓';
+      setTimeout(() => { btn.textContent = 'Copy to Clipboard'; }, 2000);
+    }
     showToast('Delivery copied to clipboard! 🎉');
-  }).catch(() => {
-    showToast('Failed to copy. Please select text manually.', true);
   });
 }
 
@@ -416,33 +679,19 @@ function viewInOrders() {
 }
 
 // ==========================================================
-// 5. WALLET & DEPOSIT FLOW
+// 6. WALLET & DEPOSIT CONTROLLER
 // ==========================================================
 function renderWalletMethodButtons() {
   const container = document.getElementById('walletMethodButtonsContainer');
   if (!container) return;
 
-  const methodsList = Object.values(state.paymentMethods).filter(m => m.is_active !== 0);
-  if (methodsList.length === 0) return;
-
-  const activeCodes = methodsList.map(m => (m.code || m.name).toLowerCase());
-  if (!activeCodes.includes(state.selectedMethod.toLowerCase())) {
-    state.selectedMethod = activeCodes[0];
-  }
-
-  container.className = `grid grid-cols-${Math.min(methodsList.length, 3)} gap-2`;
-  container.innerHTML = methodsList.map(m => {
+  const methods = Object.values(state.paymentMethods);
+  container.innerHTML = methods.map(m => {
     const code = (m.code || m.name).toLowerCase();
     const isSel = code === state.selectedMethod.toLowerCase();
-    let badge = 'Instant';
-    if (code.includes('telebirr')) badge = 'Superfast';
-    else if (code.includes('cbe')) badge = 'Commercial';
-    else if (code.includes('ebirr')) badge = 'Coop / Kaafi';
-
     return `
-      <button type="button" onclick="selectDepositMethod('${code}')" id="btnMethod-${code}" class="method-btn ${isSel ? 'active py-2.5 px-3 rounded-xl bg-emerald-600/20 border border-emerald-500 text-emerald-300 font-bold' : 'py-2.5 px-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 font-bold'} text-xs flex flex-col items-center justify-center space-y-1 transition-all">
-        <span class="truncate max-w-[90px]">${m.name}</span>
-        <span class="text-[10px] ${isSel ? 'text-emerald-400/80' : 'text-gray-500'} font-normal">${badge}</span>
+      <button type="button" onclick="selectDepositMethod('${code}')" class="cat-pill ${isSel ? 'active' : ''}" style="width:100%; text-align:center; padding:8px 4px; font-size:11px;">
+        ${m.name.split(' ')[0]}
       </button>
     `;
   }).join('');
@@ -456,28 +705,22 @@ function selectDepositMethod(method) {
 }
 
 function renderPaymentMethodDetails() {
-  const methodKey = state.selectedMethod.toLowerCase();
-  const info = state.paymentMethods[methodKey] || Object.values(state.paymentMethods)[0] || {
-    name: 'Telebirr',
-    account: '0906818924',
-    holder: 'Mohammed Abdirahman Ibrahim'
-  };
-
-  const accountNum = info.account_number || info.account || '0906818924';
-  const holderName = info.account_name || info.holder || 'Mohammed Abdirahman Ibrahim';
+  const key = state.selectedMethod.toLowerCase();
+  const info = state.paymentMethods[key] || Object.values(state.paymentMethods)[0];
+  if (!info) return;
 
   const titleEl = document.getElementById('depositMethodTitle');
   const numEl = document.getElementById('depositAccountNumber');
   const holderEl = document.getElementById('depositAccountHolder');
 
   if (titleEl) titleEl.textContent = `${info.name} Account`;
-  if (numEl) numEl.textContent = accountNum;
-  if (holderEl) holderEl.textContent = holderName;
+  if (numEl) numEl.textContent = info.account_number || info.account || '0906818924';
+  if (holderEl) holderEl.textContent = info.account_name || info.holder || 'Mohammed Abdirahman';
 }
 
 function copyAccountInfo() {
-  const methodKey = state.selectedMethod.toLowerCase();
-  const info = state.paymentMethods[methodKey] || Object.values(state.paymentMethods)[0];
+  const key = state.selectedMethod.toLowerCase();
+  const info = state.paymentMethods[key] || Object.values(state.paymentMethods)[0];
   const num = info?.account_number || info?.account || '0906818924';
 
   triggerHaptic('light');
@@ -487,8 +730,41 @@ function copyAccountInfo() {
       btn.textContent = 'Copied! ✓';
       setTimeout(() => { btn.textContent = 'Copy Account'; }, 2000);
     }
-    showToast(`${info.name || 'Account'} copied!`);
+    showToast('Account copied to clipboard!');
   });
+}
+
+function handleReceiptFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (file.size > 20 * 1024 * 1024) {
+    showToast('File too large. Maximum size is 20MB.', true);
+    e.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    state.receiptImageBase64 = event.target.result;
+    document.getElementById('receiptPreviewImg').src = event.target.result;
+    document.getElementById('receiptFileName').textContent = file.name;
+    document.getElementById('receiptFileSize').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+
+    document.getElementById('receiptUploadPlaceholder').style.display = 'none';
+    document.getElementById('receiptPreviewContainer').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearReceiptFile(e) {
+  if (e) e.stopPropagation();
+  state.receiptImageBase64 = null;
+  const input = document.getElementById('receiptFileInput');
+  if (input) input.value = '';
+
+  document.getElementById('receiptUploadPlaceholder').style.display = 'flex';
+  document.getElementById('receiptPreviewContainer').style.display = 'none';
 }
 
 async function submitDeposit(e) {
@@ -497,23 +773,18 @@ async function submitDeposit(e) {
 
   const amountInput = document.getElementById('depositAmountInput');
   const receiptInput = document.getElementById('depositReceiptInput');
-  const submitBtn = document.getElementById('btnSubmitDeposit');
+  const btn = document.getElementById('btnSubmitDeposit');
 
   const amount = parseFloat(amountInput.value);
-  const receiptRaw = receiptInput.value.trim();
+  const raw = receiptInput.value.trim();
 
   if (isNaN(amount) || amount <= 0) {
-    showToast('Please enter a valid amount in ETB.', true);
+    showToast('Please enter a valid amount.', true);
     return;
   }
 
-  if (!receiptRaw) {
-    showToast('Please paste your SMS receipt text.', true);
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = `<span class="animate-spin mr-1">⏳</span> Verifying receipt...`;
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
 
   try {
     const res = await fetch('../api/deposit.php', {
@@ -525,13 +796,13 @@ async function submitDeposit(e) {
       body: JSON.stringify({
         amount: amount,
         payment_method: state.selectedMethod,
-        receipt_raw: receiptRaw,
+        receipt_raw: raw,
+        receipt_image: state.receiptImageBase64 || null,
         initData: state.initData
       })
     });
 
     const data = await res.json();
-
     if (data.error) {
       triggerHaptic('error');
       showToast(data.error, true);
@@ -540,632 +811,393 @@ async function submitDeposit(e) {
 
     triggerHaptic('success');
     showToast('Deposit submitted! Verification in progress.');
-
-    // Clear form inputs
     amountInput.value = '';
     receiptInput.value = '';
+    clearReceiptFile();
 
   } catch (err) {
-    console.error('Deposit submit error:', err);
     triggerHaptic('error');
-    showToast('Network error during deposit submission.', true);
+    showToast('Network error during submission.', true);
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i><span>Submit Deposit for Verification</span>`;
-    setupIcons();
+    btn.disabled = false;
+    btn.textContent = 'Submit Deposit for Verification';
   }
 }
 
 // ==========================================================
-// 6. ORDERS VIEW
+// 7. ORDERS & ACTIVATION GUIDES
 // ==========================================================
 async function loadOrders() {
   triggerHaptic('light');
-  const container = document.getElementById('ordersList');
-  container.innerHTML = `
-    <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800 animate-pulse h-24"></div>
-  `;
+  const list = document.getElementById('ordersList');
+  if (list) list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Loading orders...</div>`;
 
   try {
     const res = await fetch('../api/orders.php', {
-      method: 'GET',
-      headers: {
-        'X-Telegram-Init-Data': state.initData
-      }
+      headers: { 'X-Telegram-Init-Data': state.initData }
     });
-
+    if (!res.ok) return;
     const data = await res.json();
     if (data.orders) {
       state.orders = data.orders;
       renderOrders();
     }
   } catch (err) {
-    console.error('Orders fetch error:', err);
-    container.innerHTML = `<div class="text-xs text-red-400 text-center py-6">Could not load orders.</div>`;
+    renderOrders(); // fallback
   }
 }
 
 function renderOrders() {
-  const container = document.getElementById('ordersList');
-  if (!container) return;
+  const list = document.getElementById('ordersList');
+  if (!list) return;
 
   if (state.orders.length === 0) {
-    container.innerHTML = `
-      <div class="text-center py-12 space-y-3">
-        <i data-lucide="package-open" class="w-12 h-12 mx-auto text-gray-600"></i>
-        <div class="space-y-1">
-          <p class="text-xs font-bold text-gray-300">No Orders Yet</p>
-          <p class="text-[11px] text-gray-500">Items you purchase will be permanently saved here.</p>
-        </div>
-        <button onclick="switchTab('store')" class="mt-2 px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold">
-          Explore Store
-        </button>
+    list.innerHTML = `
+      <div class="view-card" style="text-align:center; padding:30px 16px; color:var(--text-muted);">
+        <p style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">No Orders Yet</p>
+        <p style="font-size:11px;">Items you unlock will be stored permanently here with how-to-use guides.</p>
       </div>
     `;
-    setupIcons();
     return;
   }
 
-  container.innerHTML = state.orders.map(ord => {
-    const dateFormatted = new Date(ord.created_at).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-
-    const escapedPayload = ord.delivered_payload.replace(/'/g, "\\'");
+  list.innerHTML = state.orders.map(o => {
+    const date = new Date(o.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    const guideHtml = o.how_to_use ? `
+      <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border-subtle); font-size:11px; color:var(--text-secondary); line-height:1.6; white-space:pre-wrap;">
+        <div style="font-weight:700; color:var(--text-primary); margin-bottom:6px;">📖 How to use it</div>
+        ${o.how_to_use}
+      </div>
+    ` : '';
 
     return `
-      <div class="p-4 rounded-2xl bg-gray-900 border border-gray-800 space-y-3">
-        <div class="flex items-start justify-between">
-          <div>
-            <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">${ord.category || 'Digital'}</span>
-            <h4 class="text-xs font-bold text-white">${ord.product_name}</h4>
-            <span class="text-[10px] text-gray-500">${dateFormatted} • Order #${ord.id}</span>
+      <div class="view-card" style="margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:28px; height:28px; border-radius:50%; background:rgba(16,185,129,0.15); color:var(--brand-green); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px; flex-shrink:0;">
+              ✓
+            </div>
+            <div>
+              <div style="font-size:13px; font-weight:800; color:var(--text-primary); line-height:1.2;">${o.product_name}</div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Delivered • ${date}</div>
+            </div>
           </div>
-          <span class="text-xs font-extrabold text-emerald-400">${ord.price_paid.toFixed(2)} ETB</span>
+          <div style="font-size:13px; font-weight:900; color:var(--text-primary);">${o.price_paid.toFixed(2)} ETB</div>
         </div>
 
-        <div class="p-2.5 bg-black/60 border border-gray-800 rounded-xl font-mono text-xs text-emerald-300 break-all select-all">
-          ${ord.delivered_payload}
-        </div>
+        <div style="margin-top:8px; padding-left:38px;">
+          <button id="order-btn-${o.id}" onclick="toggleOrderItem(${o.id})" style="background:none; border:none; color:var(--accent-blue); font-size:12px; font-weight:700; cursor:pointer; padding:0;">
+            Show my item
+          </button>
 
-        <button onclick="copyToClipboard('${escapedPayload}', this)" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold rounded-xl flex items-center justify-center space-x-1.5 transition-colors">
-          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-          <span>Copy Details</span>
-        </button>
+          <div id="order-details-${o.id}" style="display:none; margin-top:10px;">
+            <div onclick="copyTextToClipboard('${(o.delivered_payload || '').replace(/'/g, "\\'")}')" style="background:var(--bg-input); border:1px solid var(--border-highlight); border-radius:8px; padding:10px 12px; font-family:monospace; font-size:11.5px; color:#86efac; word-break:break-all; cursor:pointer;">
+              ${o.delivered_payload}
+            </div>
+            <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Tap an item to copy</div>
+            ${guideHtml}
+          </div>
+        </div>
       </div>
     `;
   }).join('');
+}
 
-  setupIcons();
+function toggleOrderItem(orderId) {
+  triggerHaptic('light');
+  const details = document.getElementById(`order-details-${orderId}`);
+  const btn = document.getElementById(`order-btn-${orderId}`);
+  if (!details || !btn) return;
+  const isHidden = details.style.display === 'none';
+  details.style.display = isHidden ? 'block' : 'none';
+  btn.textContent = isHidden ? 'Hide item' : 'Show my item';
 }
 
 // ==========================================================
-// 7. INVITE & REFERRALS
+// 8. INVITE & NAVIGATION
 // ==========================================================
 function copyReferralLink() {
-  const linkInput = document.getElementById('referralLinkInput');
-  if (!linkInput.value) return;
-
+  const input = document.getElementById('referralLinkInput');
+  if (!input) return;
   triggerHaptic('light');
-  navigator.clipboard.writeText(linkInput.value).then(() => {
-    showToast('Referral link copied! Share with your network.');
+  navigator.clipboard.writeText(input.value).then(() => {
+    showToast('Copied.');
   });
 }
 
 function shareReferralLink() {
-  const link = document.getElementById('referralLinkInput').value;
-  if (!link) return;
-
+  const input = document.getElementById('referralLinkInput');
+  if (!input) return;
   triggerHaptic('medium');
-  const shareText = encodeURIComponent("Hey! Check out this Telegram store for verified Gemini, Canva Pro, and VPN accounts at great ETB rates:");
-  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${shareText}`;
-
-  if (state.tg && typeof state.tg.openTelegramLink === 'function') {
-    state.tg.openTelegramLink(shareUrl);
+  const url = `https://t.me/share/url?url=${encodeURIComponent(input.value)}&text=${encodeURIComponent("Join AtkeShop for verified digital subscriptions and licenses at great ETB rates:")}`;
+  if (state.tg?.openTelegramLink) {
+    state.tg.openTelegramLink(url);
   } else {
-    window.open(shareUrl, '_blank');
+    window.open(url, '_blank');
   }
 }
 
-// ==========================================================
-// 8. NAVIGATION, MODALS & TOAST UTILITIES
-// ==========================================================
 function switchTab(tabId) {
   triggerHaptic('light');
 
-  // Hide all tabs
   document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.classList.remove('active');
+    tab.style.display = 'none';
   });
 
-  // Deactivate all nav buttons
   document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.className = 'nav-item flex flex-col items-center py-1 text-gray-500 hover:text-gray-300 transition-colors';
+    btn.classList.remove('active');
   });
 
-  // Activate selected tab
   const targetTab = document.getElementById(`tab-${tabId}`);
   const targetNav = document.getElementById(`nav-${tabId}`);
 
-  if (targetTab) targetTab.classList.add('active');
-  if (targetNav) {
-    if (tabId === 'admin') {
-      targetNav.className = 'nav-item active flex flex-col items-center py-1 text-amber-400 transition-colors';
-    } else {
-      targetNav.className = 'nav-item active flex flex-col items-center py-1 text-emerald-400 transition-colors';
-    }
-  }
+  if (targetTab) targetTab.style.display = 'block';
+  if (targetNav) targetNav.classList.add('active');
 
-  // Specific tab triggers
-  if (tabId === 'orders') {
-    loadOrders();
-  } else if (tabId === 'admin') {
-    loadAdminAll();
-  }
+  if (tabId === 'orders') loadOrders();
+  else if (tabId === 'admin') loadAdminAll();
 }
 
-function closeModal(modalId) {
+function closeModal(id) {
   triggerHaptic('light');
-  const modal = document.getElementById(modalId);
-  if (modal) {
-    modal.classList.add('hidden');
-  }
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('active');
 }
 
-function copyToClipboard(text, btnElement) {
-  triggerHaptic('medium');
+function showToast(msg, isErr = false) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = `toast active ${isErr ? 'error' : ''}`;
+  setTimeout(() => { t.className = 'toast'; }, 2600);
+}
+
+function copyTextToClipboard(text) {
+  triggerHaptic('light');
   navigator.clipboard.writeText(text).then(() => {
-    if (btnElement) {
-      const originalHtml = btnElement.innerHTML;
-      btnElement.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">Copied!</span>`;
-      setupIcons();
-      setTimeout(() => {
-        btnElement.innerHTML = originalHtml;
-        setupIcons();
-      }, 2000);
-    }
-    showToast('Copied to clipboard!');
+    showToast('Copied.');
   });
 }
 
-function showToast(message, isError = false) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `fixed top-5 left-1/2 -translate-x-1/2 z-50 font-semibold text-xs px-4 py-2 rounded-full shadow-xl transition-all duration-300 transform translate-y-0 opacity-100 ${
-    isError ? 'bg-red-600 text-white' : 'bg-emerald-500 text-slate-950'
-  }`;
-
-  setTimeout(() => {
-    toast.className = toast.className.replace('opacity-100', 'opacity-0').replace('translate-y-0', '-translate-y-2');
-  }, 2800);
-}
-
 // ==========================================================
-// 9. 👑 ADMIN DASHBOARD CONTROLLER (Prices, Images, Vault Keys)
+// 9. ADMIN OPERATIONS (Profit, Staff, Marketing)
 // ==========================================================
-
 async function loadAdminAll() {
-  triggerHaptic('light');
-  await Promise.all([
-    loadAdminStats(),
-    loadAdminProducts(),
-    loadAdminDeposits()
-  ]);
+  await Promise.all([loadAdminStats(), loadAdminProducts(), loadAdminDeposits()]);
 }
 
 async function loadAdminStats() {
   try {
     const res = await fetch('../api/admin.php?action=stats', {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      }
+      headers: { 'X-Telegram-Init-Data': state.initData }
     });
+    if (!res.ok) return;
     const data = await res.json();
     if (data.stats) {
       const s = data.stats;
-      const revEl = document.getElementById('adminTotalRevenue');
-      const ordEl = document.getElementById('adminTotalOrders');
-      const keysEl = document.getElementById('adminAvailableKeys');
-      const depEl = document.getElementById('adminPendingDeposits');
-      const badgeEl = document.getElementById('adminPendingBadge');
-
-      if (revEl) revEl.textContent = s.total_revenue.toFixed(2);
-      if (ordEl) ordEl.textContent = s.orders_count;
-      if (keysEl) keysEl.textContent = s.available_keys;
-      if (depEl) depEl.textContent = s.pending_deposits;
-
-      if (badgeEl) {
-        badgeEl.textContent = s.pending_deposits;
-        if (s.pending_deposits > 0) {
-          badgeEl.classList.remove('hidden');
-        } else {
-          badgeEl.classList.add('hidden');
-        }
-      }
+      document.getElementById('adminTotalRevenue').textContent = s.is_owner ? s.total_revenue.toFixed(2) : 'Restricted';
+      document.getElementById('adminTotalProfit').textContent = s.is_owner ? s.total_profit.toFixed(2) : 'Restricted';
+      document.getElementById('adminProfitMargin').textContent = s.is_owner ? s.profit_margin.toFixed(1) : '---';
+      document.getElementById('adminPendingDeposits').textContent = s.pending_deposits;
     }
-  } catch (err) {
-    console.error('Failed to load admin stats:', err);
-  }
+  } catch (e) {}
 }
 
 async function loadAdminProducts() {
   try {
     const res = await fetch('../api/admin.php?action=products', {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      }
+      headers: { 'X-Telegram-Init-Data': state.initData }
     });
+    if (!res.ok) return;
     const data = await res.json();
     if (data.products) {
       state.adminProducts = data.products;
       renderAdminProducts();
     }
-  } catch (err) {
-    console.error('Failed to load admin products:', err);
+  } catch (e) {
+    state.adminProducts = state.products;
+    renderAdminProducts();
   }
 }
 
 function renderAdminProducts() {
-  const container = document.getElementById('adminProductsContainer');
-  if (!container) return;
+  const c = document.getElementById('adminProductsContainer');
+  if (!c) return;
 
-  if (state.adminProducts.length === 0) {
-    container.innerHTML = `
-      <div class="p-8 text-center text-gray-500 space-y-2">
-        <i data-lucide="package-x" class="w-8 h-8 mx-auto text-gray-600"></i>
-        <p class="text-xs">No products in catalog yet.</p>
-      </div>
-    `;
-    setupIcons();
-    return;
-  }
-
-  container.innerHTML = state.adminProducts.map(p => {
-    const isOutOfStock = p.unsold_keys <= 0;
-    const stockBadge = isOutOfStock
-      ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">0 In Stock</span>`
-      : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">${p.unsold_keys} Available</span>`;
-
-    const statusBadge = p.is_active === 1
-      ? `<span class="text-[10px] text-emerald-400">● Active</span>`
-      : `<span class="text-[10px] text-gray-500">○ Hidden</span>`;
-
-    return `
-      <div class="p-4 rounded-2xl bg-gray-900 border ${p.is_active ? 'border-gray-800' : 'border-gray-800/40 opacity-70'} space-y-3 transition-all">
-        <div class="flex items-start justify-between">
-          <div class="flex items-center space-x-3">
-            <img src="${p.icon_url || 'https://img.icons8.com/color/480/box.png'}" alt="icon" onerror="this.src='https://img.icons8.com/color/480/box.png'" class="w-10 h-10 object-contain rounded-xl bg-black/40 p-1 border border-gray-800" />
-            <div>
-              <div class="flex items-center space-x-1.5">
-                <h4 class="text-xs font-bold text-white leading-snug">${p.name}</h4>
-                ${p.badge ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30">${p.badge}</span>` : ''}
-              </div>
-              <div class="flex items-center space-x-2 mt-0.5">
-                <span class="text-[10px] text-gray-400">${p.category}</span>
-                <span class="text-[10px] text-gray-600">•</span>
-                ${statusBadge}
-              </div>
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="text-xs font-extrabold text-white">${p.price_etb.toFixed(2)} <span class="text-[10px] text-emerald-400 font-bold">ETB</span></div>
-            <div class="mt-1">${stockBadge}</div>
-          </div>
-        </div>
-
-        <!-- Management Action Buttons -->
-        <div class="grid grid-cols-4 gap-1.5 pt-2 border-t border-gray-800/80 text-[11px] font-semibold">
-          <button onclick="openEditProductModal(${p.id})" class="py-1.5 px-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-amber-300 flex items-center justify-center space-x-1 transition-colors">
-            <i data-lucide="edit-2" class="w-3 h-3"></i>
-            <span>Edit</span>
-          </button>
-          <button onclick="openAddKeysModal(${p.id})" class="py-1.5 px-2 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-emerald-300 flex items-center justify-center space-x-1 transition-colors">
-            <i data-lucide="plus" class="w-3 h-3"></i>
-            <span>+ Keys</span>
-          </button>
-          <button onclick="openVaultInspector(${p.id})" class="py-1.5 px-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center justify-center space-x-1 transition-colors">
-            <i data-lucide="layers" class="w-3 h-3"></i>
-            <span>Inspect</span>
-          </button>
-          <button onclick="toggleProductStatus(${p.id})" class="py-1.5 px-2 rounded-lg ${p.is_active ? 'bg-gray-800 text-gray-400 hover:text-red-400' : 'bg-emerald-950/30 text-emerald-400'} flex items-center justify-center space-x-1 transition-colors">
-            <i data-lucide="${p.is_active ? 'eye-off' : 'eye'}" class="w-3 h-3"></i>
-            <span>${p.is_active ? 'Hide' : 'Show'}</span>
-          </button>
+  c.innerHTML = state.adminProducts.map(p => `
+    <div class="view-card" style="padding:10px; display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <img src="${p.icon_url}" alt="" style="width:32px; height:32px; object-fit:contain;" />
+        <div>
+          <div style="font-size:12px; font-weight:700; color:#fff;">${p.name}</div>
+          <div style="font-size:10px; color:var(--text-muted);">${p.price_etb} ETB (Cost: ${p.cost_price_etb || 0})</div>
         </div>
       </div>
-    `;
-  }).join('');
-
-  setupIcons();
+      <div style="display:flex; gap:4px;">
+        <button onclick="openEditProductModal(${p.id})" class="badge-pill badge-amber" style="cursor:pointer; border:none;">Edit</button>
+        <button onclick="openAddKeysModal(${p.id})" class="badge-pill badge-green" style="cursor:pointer; border:none;">+ Stock</button>
+      </div>
+    </div>
+  `).join('');
 }
 
-function switchAdminSection(section) {
+function switchAdminSection(s) {
   triggerHaptic('light');
-  state.adminSection = section;
+  ['products', 'deposits', 'payments', 'staff', 'marketing'].forEach(sec => {
+    const b = document.getElementById(`btnAdminSection-${sec}`);
+    const p = document.getElementById(`adminPanel-${sec}`);
+    if (b) b.classList.toggle('active', sec === s);
+    if (p) p.style.display = sec === s ? 'block' : 'none';
+  });
 
-  const btnProd = document.getElementById('btnAdminSection-products');
-  const btnDep = document.getElementById('btnAdminSection-deposits');
-  const btnPay = document.getElementById('btnAdminSection-payments');
-  const panelProd = document.getElementById('adminPanel-products');
-  const panelDep = document.getElementById('adminPanel-deposits');
-  const panelPay = document.getElementById('adminPanel-payments');
-
-  // Reset buttons
-  if (btnProd) btnProd.className = 'px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all whitespace-nowrap';
-  if (btnDep) btnDep.className = 'px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1.5 whitespace-nowrap';
-  if (btnPay) btnPay.className = 'px-3 py-1.5 rounded-xl bg-gray-800 text-gray-400 hover:text-gray-200 transition-all flex items-center space-x-1 whitespace-nowrap';
-
-  // Hide panels
-  if (panelProd) panelProd.classList.add('hidden');
-  if (panelDep) panelDep.classList.add('hidden');
-  if (panelPay) panelPay.classList.add('hidden');
-
-  if (section === 'products') {
-    if (btnProd) btnProd.className = 'px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm whitespace-nowrap';
-    if (panelProd) panelProd.classList.remove('hidden');
-  } else if (section === 'deposits') {
-    if (btnDep) btnDep.className = 'px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold transition-all shadow-sm flex items-center space-x-1.5 whitespace-nowrap';
-    if (panelDep) panelDep.classList.remove('hidden');
-    loadAdminDeposits();
-  } else if (section === 'payments') {
-    if (btnPay) btnPay.className = 'px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all shadow-sm flex items-center space-x-1 whitespace-nowrap';
-    if (panelPay) panelPay.classList.remove('hidden');
-    loadAdminPaymentMethods();
-  }
+  if (s === 'deposits') loadAdminDeposits();
+  else if (s === 'staff') loadAdminStaff();
 }
 
 async function loadAdminDeposits() {
   try {
     const res = await fetch(`../api/admin.php?action=deposits&filter=${state.adminDepositFilter}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      }
+      headers: { 'X-Telegram-Init-Data': state.initData }
     });
+    if (!res.ok) return;
     const data = await res.json();
     if (data.deposits) {
       state.adminDeposits = data.deposits;
       renderAdminDeposits();
     }
-  } catch (err) {
-    console.error('Failed to load admin deposits:', err);
-  }
+  } catch (e) {}
 }
 
-function filterAdminDeposits(filter) {
-  triggerHaptic('light');
-  state.adminDepositFilter = filter;
-
-  const btnPend = document.getElementById('depFilter-pending');
-  const btnAll = document.getElementById('depFilter-all');
-
-  if (filter === 'pending') {
-    btnPend.className = 'px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold';
-    btnAll.className = 'px-2.5 py-1 rounded-lg bg-gray-800 text-gray-400 text-[11px]';
-  } else {
-    btnAll.className = 'px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold';
-    btnPend.className = 'px-2.5 py-1 rounded-lg bg-gray-800 text-gray-400 text-[11px]';
-  }
-
+function filterAdminDeposits(f) {
+  state.adminDepositFilter = f;
   loadAdminDeposits();
 }
 
 function renderAdminDeposits() {
-  const container = document.getElementById('adminDepositsContainer');
-  if (!container) return;
+  const c = document.getElementById('adminDepositsContainer');
+  if (!c) return;
 
   if (state.adminDeposits.length === 0) {
-    container.innerHTML = `
-      <div class="p-8 text-center text-gray-500 space-y-2">
-        <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto text-emerald-500/50"></i>
-        <p class="text-xs">No ${state.adminDepositFilter} deposits in queue!</p>
-      </div>
-    `;
-    setupIcons();
+    c.innerHTML = `<div style="text-align:center; padding:20px; font-size:11px; color:var(--text-muted);">No deposits in queue.</div>`;
     return;
   }
 
-  container.innerHTML = state.adminDeposits.map(d => {
-    const isPending = d.status === 'pending';
-    const statusBadge = isPending
-      ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">Pending Review</span>`
-      : d.status === 'approved'
-      ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Approved</span>`
-      : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">Rejected</span>`;
-
-    return `
-      <div class="p-4 rounded-2xl bg-gray-900 border ${isPending ? 'border-amber-500/30' : 'border-gray-800'} space-y-3">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="flex items-center space-x-2">
-              <span class="text-xs font-bold text-white">${d.first_name || 'User'}</span>
-              <span class="text-[10px] text-gray-400">${d.username ? '@' + d.username : 'ID: ' + d.telegram_id}</span>
-            </div>
-            <div class="text-[10px] text-gray-500 mt-0.5">
-              ${d.payment_method} • Txn: <span class="text-emerald-400 font-mono font-bold">${d.extracted_txn_id || 'N/A'}</span>
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="text-sm font-extrabold text-amber-300">${d.amount.toFixed(2)} ETB</div>
-            <div class="mt-1">${statusBadge}</div>
-          </div>
-        </div>
-
-        <div class="p-2.5 bg-black/60 border border-gray-800 rounded-xl font-mono text-[11px] text-gray-300 break-all select-all max-h-20 overflow-y-auto">
-          ${d.receipt_raw}
-        </div>
-
-        ${isPending ? `
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="adminRejectDeposit(${d.id})" class="py-2 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 text-red-300 text-xs font-bold flex items-center justify-center space-x-1 transition-colors">
-              <i data-lucide="x" class="w-3.5 h-3.5"></i>
-              <span>Reject</span>
-            </button>
-            <button onclick="adminApproveDeposit(${d.id})" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold flex items-center justify-center space-x-1 shadow-md transition-colors">
-              <i data-lucide="check" class="w-3.5 h-3.5"></i>
-              <span>Approve & Credit</span>
-            </button>
-          </div>
-        ` : `
-          <div class="text-[10px] text-gray-500 text-right">
-            Processed: ${d.reviewed_at || d.created_at}
-          </div>
-        `}
+  c.innerHTML = state.adminDeposits.map(d => `
+    <div class="view-card" style="font-size:11px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+        <b>${d.first_name || 'User'} (${d.payment_method})</b>
+        <span style="font-weight:800; color:var(--brand-green);">${d.amount} ETB</span>
       </div>
-    `;
-  }).join('');
+      <div style="font-family:monospace; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px; margin:6px 0; word-break:break-all;">${d.receipt_raw}</div>
+      ${d.status === 'pending' ? `
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button onclick="adminReviewDeposit(${d.id}, 'approved')" class="badge-pill badge-green" style="flex:1; padding:6px; cursor:pointer; border:none;">Approve & Credit</button>
+          <button onclick="adminReviewDeposit(${d.id}, 'rejected')" class="badge-pill badge-red" style="flex:1; padding:6px; cursor:pointer; border:none;">Reject</button>
+        </div>
+      ` : `<div style="text-align:right; font-size:10px; color:var(--text-muted);">${d.status.toUpperCase()}</div>`}
+    </div>
+  `).join('');
+}
 
-  setupIcons();
+async function adminReviewDeposit(id, decision) {
+  try {
+    const res = await fetch('../api/admin.php?action=review_deposit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': state.initData },
+      body: JSON.stringify({ deposit_id: id, decision: decision, initData: state.initData })
+    });
+    const data = await res.json();
+    showToast(data.message || 'Deposit reviewed.');
+    loadAdminDeposits();
+  } catch (e) {
+    showToast('Failed to review deposit.', true);
+  }
 }
 
 function openNewProductModal() {
-  triggerHaptic('light');
   document.getElementById('editProductModalTitle').textContent = 'Create New Product';
   document.getElementById('editProductId').value = '0';
   document.getElementById('editProductName').value = '';
-  document.getElementById('editProductCategory').value = 'AI Tools';
+  document.getElementById('editProductCostPrice').value = '';
   document.getElementById('editProductPrice').value = '';
-  document.getElementById('editProductIcon').value = 'https://img.icons8.com/color/480/box.png';
-  document.getElementById('editProductIconPreview').src = 'https://img.icons8.com/color/480/box.png';
-  document.getElementById('editProductBadge').value = 'HOT';
-  document.getElementById('editProductActive').checked = true;
-  document.getElementById('editProductDescription').value = '';
-
-  const modal = document.getElementById('editProductModal');
-  if (modal) modal.classList.remove('hidden');
+  document.getElementById('editProductVariants').value = '';
+  document.getElementById('editProductHowToUse').value = '';
+  document.getElementById('editProductModal').classList.add('active');
 }
 
-function openEditProductModal(productId) {
-  triggerHaptic('light');
-  const prod = state.adminProducts.find(p => p.id === productId);
-  if (!prod) return;
-
-  document.getElementById('editProductModalTitle').textContent = `Edit Product #${prod.id}`;
-  document.getElementById('editProductId').value = prod.id;
-  document.getElementById('editProductName').value = prod.name;
-  document.getElementById('editProductCategory').value = prod.category;
-  document.getElementById('editProductPrice').value = prod.price_etb;
-  document.getElementById('editProductIcon').value = prod.icon_url || '';
-  document.getElementById('editProductIconPreview').src = prod.icon_url || 'https://img.icons8.com/color/480/box.png';
-  document.getElementById('editProductBadge').value = prod.badge || '';
-  document.getElementById('editProductActive').checked = prod.is_active === 1;
-  document.getElementById('editProductDescription').value = prod.description || '';
-
-  const modal = document.getElementById('editProductModal');
-  if (modal) modal.classList.remove('hidden');
+function openEditProductModal(id) {
+  const p = state.adminProducts.find(item => item.id === id);
+  if (!p) return;
+  document.getElementById('editProductModalTitle').textContent = `Edit ${p.name}`;
+  document.getElementById('editProductId').value = p.id;
+  document.getElementById('editProductName').value = p.name;
+  document.getElementById('editProductCostPrice').value = p.cost_price_etb || '';
+  document.getElementById('editProductPrice').value = p.price_etb;
+  document.getElementById('editProductVariants').value = p.variants ? JSON.stringify(p.variants) : '';
+  document.getElementById('editProductHowToUse').value = p.how_to_use || '';
+  document.getElementById('editProductModal').classList.add('active');
 }
 
-function previewEditIcon() {
-  const url = document.getElementById('editProductIcon').value;
-  const img = document.getElementById('editProductIconPreview');
-  if (img && url) {
-    img.src = url;
-  }
+function calcEditProfitPreview() {
+  const cost = parseFloat(document.getElementById('editProductCostPrice').value) || 0;
+  const price = parseFloat(document.getElementById('editProductPrice').value) || 0;
+  const profit = price - cost;
+  const margin = price > 0 ? ((profit / price) * 100).toFixed(1) : 0;
+  document.getElementById('editProfitPreviewText').textContent = `${profit.toFixed(2)} ETB (${margin}% margin)`;
+}
+
+function fillVariantsTemplate() {
+  document.getElementById('editProductVariants').value = JSON.stringify([
+    { duration: "3 months", price_etb: 2500, cost_price_etb: 2000 },
+    { duration: "6 months", price_etb: 3400, cost_price_etb: 2800 },
+    { duration: "12 months", price_etb: 6200, cost_price_etb: 5000 }
+  ], null, 2);
 }
 
 async function handleSaveProduct(e) {
   e.preventDefault();
   triggerHaptic('medium');
-
-  const btn = document.getElementById('btnSaveProduct');
-  const origText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = `<span>Saving...</span>`;
-
   const payload = {
     action: 'save_product',
     id: parseInt(document.getElementById('editProductId').value, 10),
     name: document.getElementById('editProductName').value.trim(),
-    category: document.getElementById('editProductCategory').value.trim(),
+    category: document.getElementById('editProductCategory').value.trim() || 'Services',
+    cost_price_etb: parseFloat(document.getElementById('editProductCostPrice').value) || 0,
     price_etb: parseFloat(document.getElementById('editProductPrice').value),
-    icon_url: document.getElementById('editProductIcon').value.trim(),
-    badge: document.getElementById('editProductBadge').value.trim(),
-    is_active: document.getElementById('editProductActive').checked ? 1 : 0,
-    description: document.getElementById('editProductDescription').value.trim(),
+    icon_url: document.getElementById('editProductIcon').value.trim() || 'https://img.icons8.com/color/480/box.png',
+    variants_json: document.getElementById('editProductVariants').value.trim() || null,
+    how_to_use: document.getElementById('editProductHowToUse').value.trim(),
     initData: state.initData
   };
 
   try {
     const res = await fetch('../api/admin.php?action=save_product', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': state.initData },
       body: JSON.stringify(payload)
     });
-
     const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-    } else {
-      showToast(data.message || 'Product saved successfully!');
-      closeModal('editProductModal');
-      await loadAdminProducts();
-      await loadCatalog(); // sync customer catalog
-    }
+    showToast(data.message || 'Product saved!');
+    closeModal('editProductModal');
+    loadAdminProducts();
+    loadCatalog();
   } catch (err) {
     showToast('Failed to save product.', true);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origText;
-    setupIcons();
   }
 }
 
-async function toggleProductStatus(productId) {
-  triggerHaptic('light');
-  try {
-    const res = await fetch('../api/admin.php?action=toggle_product', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      },
-      body: JSON.stringify({ id: productId, initData: state.initData })
-    });
-
-    const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-    } else {
-      showToast(data.message);
-      await loadAdminProducts();
-      await loadCatalog();
-    }
-  } catch (err) {
-    showToast('Failed to update status.', true);
-  }
-}
-
-function openAddKeysModal(productId) {
-  triggerHaptic('light');
-  const prod = state.adminProducts.find(p => p.id === productId);
-  if (!prod) return;
-
-  document.getElementById('addKeysProductId').value = prod.id;
-  document.getElementById('addKeysProductName').textContent = `${prod.name} (Current Stock: ${prod.unsold_keys})`;
+function openAddKeysModal(id) {
+  const p = state.adminProducts.find(item => item.id === id);
+  if (!p) return;
+  document.getElementById('addKeysProductId').value = p.id;
+  document.getElementById('addKeysProductName').textContent = `Target: ${p.name}`;
   document.getElementById('addKeysTextarea').value = '';
-
-  const modal = document.getElementById('addKeysModal');
-  if (modal) modal.classList.remove('hidden');
+  document.getElementById('addKeysModal').classList.add('active');
 }
 
 async function handleSubmitKeys(e) {
   e.preventDefault();
   triggerHaptic('medium');
-
-  const btn = document.getElementById('btnAddKeysSubmit');
-  const origText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = `<span>Uploading...</span>`;
-
   const payload = {
     action: 'add_keys',
     product_id: parseInt(document.getElementById('addKeysProductId').value, 10),
@@ -1176,358 +1208,93 @@ async function handleSubmitKeys(e) {
   try {
     const res = await fetch('../api/admin.php?action=add_keys', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': state.initData },
       body: JSON.stringify(payload)
     });
-
     const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-    } else {
-      showToast(data.message);
-      closeModal('addKeysModal');
-      await loadAdminProducts();
-      await loadAdminStats();
-      await loadCatalog();
-    }
+    showToast(data.message || 'Stock added!');
+    closeModal('addKeysModal');
+    loadAdminProducts();
   } catch (err) {
-    showToast('Failed to upload keys.', true);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origText;
-    setupIcons();
+    showToast('Failed to add stock.', true);
   }
 }
 
-async function openVaultInspector(productId) {
-  triggerHaptic('light');
-  const prod = state.adminProducts.find(p => p.id === productId);
-  const titleEl = document.getElementById('vaultInspectorTitle');
-  const listEl = document.getElementById('vaultKeysList');
-
-  if (titleEl) titleEl.textContent = prod ? `Viewing stock for: ${prod.name}` : 'Stock Keys';
-  if (listEl) listEl.innerHTML = `<div class="p-4 text-center text-gray-400">Loading keys...</div>`;
-
-  const modal = document.getElementById('vaultKeysModal');
-  if (modal) modal.classList.remove('hidden');
-
+async function loadAdminStaff() {
   try {
-    const res = await fetch(`../api/admin.php?action=vault_keys&product_id=${productId}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      }
+    const res = await fetch('../api/admin.php?action=get_staff', {
+      headers: { 'X-Telegram-Init-Data': state.initData }
     });
     const data = await res.json();
-
-    if (!data.keys || data.keys.length === 0) {
-      listEl.innerHTML = `<div class="p-4 text-center text-gray-500 text-xs">No keys currently in vault. Use "+ Keys" to add some!</div>`;
-      return;
-    }
-
-    listEl.innerHTML = data.keys.map(k => `
-      <div class="p-2.5 rounded-xl bg-black/60 border ${k.is_sold ? 'border-gray-800 opacity-60' : 'border-emerald-500/30'} space-y-1">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] ${k.is_sold ? 'text-gray-500 font-bold' : 'text-emerald-400 font-bold'}">
-            ${k.is_sold ? '✓ SOLD' : '● AVAILABLE IN STOCK'}
-          </span>
-          ${!k.is_sold ? `
-            <button onclick="deleteVaultKey(${k.id}, ${productId})" class="text-red-400 hover:text-red-300 text-[10px] font-bold flex items-center space-x-1">
-              <i data-lucide="trash-2" class="w-3 h-3"></i>
-              <span>Delete</span>
-            </button>
-          ` : ''}
-        </div>
-        <div class="font-mono text-[11px] text-gray-200 break-all select-all bg-gray-900/80 p-1.5 rounded">
-          ${k.item_payload}
-        </div>
-      </div>
-    `).join('');
-
-    setupIcons();
-  } catch (err) {
-    listEl.innerHTML = `<div class="p-4 text-center text-red-400 text-xs">Failed to load vault keys.</div>`;
-  }
-}
-
-async function deleteVaultKey(keyId, productId) {
-  if (!confirm('Are you sure you want to delete this unsold key from stock?')) return;
-
-  try {
-    const res = await fetch('../api/admin.php?action=delete_key', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      },
-      body: JSON.stringify({ key_id: keyId, initData: state.initData })
-    });
-
-    const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-    } else {
-      showToast('Key deleted.');
-      await openVaultInspector(productId);
-      await loadAdminProducts();
-      await loadCatalog();
-    }
-  } catch (err) {
-    showToast('Failed to delete key.', true);
-  }
-}
-
-async function adminApproveDeposit(depositId) {
-  triggerHaptic('medium');
-  try {
-    const res = await fetch('../api/admin.php?action=review_deposit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      },
-      body: JSON.stringify({
-        deposit_id: depositId,
-        decision: 'approved',
-        initData: state.initData
-      })
-    });
-
-    const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-    } else {
-      showToast(data.message || 'Deposit approved!');
-      await loadAdminDeposits();
-      await loadAdminStats();
-    }
-  } catch (err) {
-    showToast('Failed to approve deposit.', true);
-  }
-}
-
-async function adminRejectDeposit(depositId) {
-  if (!confirm('Are you sure you want to reject this deposit request?')) return;
-  triggerHaptic('medium');
-
-  try {
-    const res = await fetch('../api/admin.php?action=review_deposit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      },
-      body: JSON.stringify({
-        deposit_id: depositId,
-        decision: 'rejected',
-        initData: state.initData
-      })
-    });
-
-    const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-    } else {
-      showToast(data.message || 'Deposit rejected.');
-      await loadAdminDeposits();
-      await loadAdminStats();
-    }
-  } catch (err) {
-    showToast('Failed to reject deposit.', true);
-  }
-}
-
-// ==========================================================
-// 10. 👑 ADMIN: PAYMENT RECEIVING ACCOUNTS (Telebirr, CBE, etc.)
-// ==========================================================
-
-async function loadAdminPaymentMethods() {
-  try {
-    const res = await fetch('../api/admin.php?action=payment_methods', {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      }
-    });
-    const data = await res.json();
-    if (data.payment_methods) {
-      state.adminPaymentMethods = data.payment_methods;
-      renderAdminPaymentMethods();
-    }
-  } catch (err) {
-    console.error('Failed to load admin payment methods:', err);
-  }
-}
-
-function renderAdminPaymentMethods() {
-  const container = document.getElementById('adminPaymentsContainer');
-  if (!container) return;
-
-  if (!state.adminPaymentMethods || state.adminPaymentMethods.length === 0) {
-    container.innerHTML = `
-      <div class="p-8 text-center text-gray-500 space-y-2">
-        <i data-lucide="landmark" class="w-8 h-8 mx-auto text-emerald-500/50"></i>
-        <p class="text-xs">No payment accounts found. Tap "Add Account" to create one!</p>
-      </div>
-    `;
-    setupIcons();
-    return;
-  }
-
-  container.innerHTML = state.adminPaymentMethods.map(m => {
-    const isActive = m.is_active !== 0;
-    const accountNum = m.account_number || m.account || '';
-    const accountName = m.account_name || m.holder || '';
-    const instructions = m.instructions || '';
-
-    return `
-      <div class="p-4 rounded-2xl bg-gray-900 border ${isActive ? 'border-gray-800' : 'border-gray-800/40 opacity-70'} space-y-3">
-        <div class="flex items-start justify-between">
-          <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              <i data-lucide="landmark" class="w-5 h-5 text-emerald-400"></i>
-            </div>
-            <div>
-              <div class="flex items-center space-x-2">
-                <h4 class="text-xs font-bold text-white">${m.name}</h4>
-                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono ${isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-gray-500'}">
-                  ${isActive ? 'Active' : 'Disabled'}
-                </span>
-              </div>
-              <div class="text-xs font-mono font-bold text-emerald-400 mt-0.5">${accountNum}</div>
-              <div class="text-[10px] text-gray-400 truncate max-w-[200px]">${accountName}</div>
-            </div>
+    const c = document.getElementById('adminStaffListContainer');
+    if (c && data.staff) {
+      c.innerHTML = data.staff.map(s => `
+        <div class="view-card" style="padding:8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+          <div>
+            <b>${s.first_name}</b> <span class="badge-pill badge-green">${s.role}</span>
+            <div style="color:var(--text-muted); font-size:10px;">TG ID: ${s.telegram_id}</div>
           </div>
-          <button onclick="togglePaymentStatus(${m.id})" class="py-1 px-2.5 rounded-lg ${isActive ? 'bg-gray-800 text-gray-400 hover:text-red-400' : 'bg-emerald-950/40 text-emerald-400'} text-[10px] font-bold transition-colors">
-            ${isActive ? 'Disable' : 'Enable'}
-          </button>
+          <button onclick="adminRemoveStaff(${s.telegram_id})" class="badge-pill badge-red" style="cursor:pointer; border:none;">Revoke</button>
         </div>
-
-        ${instructions ? `<p class="text-[10px] text-gray-400 italic bg-black/40 p-2 rounded-lg border border-gray-800/50 leading-relaxed">${instructions}</p>` : ''}
-
-        <div class="flex items-center space-x-2 pt-2 border-t border-gray-800/70">
-          <button onclick="openEditPaymentModal(${m.id})" class="flex-1 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-amber-300 text-xs font-bold flex items-center justify-center space-x-1 transition-colors">
-            <i data-lucide="edit-2" class="w-3 h-3"></i>
-            <span>Edit Account</span>
-          </button>
-          <button onclick="copyToClipboard('${accountNum}', this)" class="py-1.5 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold flex items-center space-x-1 transition-colors">
-            <i data-lucide="copy" class="w-3 h-3"></i>
-            <span>Copy</span>
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  setupIcons();
+      `).join('');
+    }
+  } catch (e) {}
 }
 
-function openNewPaymentModal() {
-  triggerHaptic('light');
-  document.getElementById('editPaymentModalTitle').textContent = 'Add Bank / Payment Method';
-  document.getElementById('editPaymentId').value = '';
-  document.getElementById('editPaymentCode').value = '';
-  document.getElementById('editPaymentName').value = '';
-  document.getElementById('editPaymentNumber').value = '';
-  document.getElementById('editPaymentHolder').value = 'Mohammed Abdirahman Ibrahim';
-  document.getElementById('editPaymentInstructions').value = '';
-  document.getElementById('editPaymentActive').checked = true;
-
-  const modal = document.getElementById('editPaymentModal');
-  if (modal) modal.classList.remove('hidden');
-}
-
-function openEditPaymentModal(id) {
-  triggerHaptic('light');
-  const m = state.adminPaymentMethods.find(item => item.id === id);
-  if (!m) return;
-
-  document.getElementById('editPaymentModalTitle').textContent = `Edit ${m.name}`;
-  document.getElementById('editPaymentId').value = m.id;
-  document.getElementById('editPaymentCode').value = m.code || '';
-  document.getElementById('editPaymentName').value = m.name;
-  document.getElementById('editPaymentNumber').value = m.account_number || m.account || '';
-  document.getElementById('editPaymentHolder').value = m.account_name || m.holder || '';
-  document.getElementById('editPaymentInstructions').value = m.instructions || '';
-  document.getElementById('editPaymentActive').checked = m.is_active !== 0;
-
-  const modal = document.getElementById('editPaymentModal');
-  if (modal) modal.classList.remove('hidden');
-}
-
-async function handleSavePayment(e) {
+async function handleSaveStaff(e) {
   e.preventDefault();
   triggerHaptic('medium');
-
-  const idVal = document.getElementById('editPaymentId').value;
-  const payload = {
-    id: idVal ? parseInt(idVal, 10) : null,
-    code: document.getElementById('editPaymentCode').value,
-    name: document.getElementById('editPaymentName').value.trim(),
-    account_number: document.getElementById('editPaymentNumber').value.trim(),
-    account_name: document.getElementById('editPaymentHolder').value.trim(),
-    instructions: document.getElementById('editPaymentInstructions').value.trim(),
-    is_active: document.getElementById('editPaymentActive').checked ? 1 : 0,
-    initData: state.initData
-  };
-
-  const btn = document.getElementById('btnSavePayment');
-  const origText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = 'Saving...';
+  const tgId = parseInt(document.getElementById('staffTelegramIdInput').value.trim(), 10);
+  const role = document.getElementById('staffRoleSelect').value;
 
   try {
-    const res = await fetch('../api/admin.php?action=save_payment_method', {
+    const res = await fetch('../api/admin.php?action=save_staff', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      },
-      body: JSON.stringify(payload)
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': state.initData },
+      body: JSON.stringify({ telegram_id: tgId, role: role, initData: state.initData })
     });
-
     const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-    } else {
-      showToast(data.message || 'Payment account saved successfully! 🎉');
-      closeModal('editPaymentModal');
-      await loadAdminPaymentMethods();
-      await authenticateUser();
-    }
+    showToast(data.message || 'Staff assigned!');
+    document.getElementById('staffTelegramIdInput').value = '';
+    loadAdminStaff();
   } catch (err) {
-    showToast('Failed to save payment account.', true);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origText;
-    setupIcons();
+    showToast('Failed to assign staff.', true);
   }
 }
 
-async function togglePaymentStatus(id) {
-  triggerHaptic('medium');
+async function adminRemoveStaff(id) {
+  if (!confirm('Revoke staff permissions?')) return;
   try {
-    const res = await fetch('../api/admin.php?action=toggle_payment_method', {
+    await fetch('../api/admin.php?action=remove_staff', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': state.initData
-      },
-      body: JSON.stringify({ id, initData: state.initData })
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': state.initData },
+      body: JSON.stringify({ telegram_id: id, initData: state.initData })
     });
+    showToast('Staff revoked.');
+    loadAdminStaff();
+  } catch (e) {}
+}
 
+async function handleBroadcastMarketing(e) {
+  e.preventDefault();
+  triggerHaptic('medium');
+  const msg = document.getElementById('broadcastMessageInput').value.trim();
+  const photo = document.getElementById('broadcastPhotoInput').value.trim();
+
+  try {
+    const res = await fetch('../api/admin.php?action=broadcast_marketing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': state.initData },
+      body: JSON.stringify({ message: msg, photo_url: photo || null, initData: state.initData })
+    });
     const data = await res.json();
-    if (data.error) {
-      showToast(data.error, true);
-    } else {
-      showToast(data.message || 'Status updated.');
-      await loadAdminPaymentMethods();
-      await authenticateUser();
+    if (data.error) showToast(data.error, true);
+    else {
+      showToast('Broadcast delivered! 📢');
+      document.getElementById('broadcastMessageInput').value = '';
+      document.getElementById('broadcastPhotoInput').value = '';
     }
-  } catch (err) {
-    showToast('Failed to toggle status.', true);
+  } catch (e) {
+    showToast('Broadcast failed.', true);
   }
 }

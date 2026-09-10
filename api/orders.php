@@ -19,7 +19,9 @@ try {
             o.created_at,
             p.name AS product_name,
             p.category,
-            p.icon_url
+            p.icon_url,
+            p.description,
+            p.how_to_use
         FROM orders o
         JOIN products p ON o.product_id = p.id
         WHERE o.telegram_id = ?
