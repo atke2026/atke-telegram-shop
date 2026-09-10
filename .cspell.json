@@ -1,5 +1,14 @@
 {
   "version": "0.2",
+  "language": "en",
+  "ignorePaths": [
+    "node_modules/**",
+    "**/uploads/**",
+    "*.mp4",
+    ".git/**",
+    "vendor/**",
+    "*.lock"
+  ],
   "words": [
     "AAGR",
     "Abdirahman",
