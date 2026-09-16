@@ -5,3 +5,4 @@ error_log
 Thumbs.db
 .idea/
 .vscode/
+api/reseller_keys.json

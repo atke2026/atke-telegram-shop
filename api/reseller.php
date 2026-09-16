@@ -2,244 +2,156 @@
 declare(strict_types=1);
 
 /**
- * AtkeShop Automated Reseller & Wholesale REST API
- * Enables programmatic ordering, catalog syncing, and profit reporting
+ * AtkeShop Automated Reseller & Wholesale REST API & Gateway
+ * Powers the Reseller TMA Portal (Overview, Products, Orders, API Keys, Integration)
+ * and bridges with YeneShop Wholesaler API (https://yeneshop.amixmon.com/api/reseller/v1)
  */
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/yeneshop_client.php';
 
-// Accept either Telegram initData or static Reseller API Key in headers
-$apiKey = $_SERVER['HTTP_X_API_KEY'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-$user = null;
-
-if (!empty($_SERVER['HTTP_X_TELEGRAM_INIT_DATA']) || !empty($_SERVER['HTTP_AUTHORIZATION']) && str_starts_with($_SERVER['HTTP_AUTHORIZATION'], 'tma ')) {
-    $user = getAuthenticatedUser();
-} else {
-    // API Key Authentication (Configured in Plesk or env as RESELLER_API_KEY)
-    $configuredKey = getenv('RESELLER_API_KEY') ?: 'atkeshop_reseller_secure_api_key_2026';
-    $cleanKey = str_ireplace('Bearer ', '', $apiKey);
-    
-    if ($cleanKey === $configuredKey && !empty($configuredKey)) {
-        $user = [
-            'id' => ADMIN_CHAT_ID > 0 ? ADMIN_CHAT_ID : 7338533936,
-            'first_name' => 'API System',
-            'username' => 'api_reseller',
-            'role' => 'admin'
-        ];
-    }
-}
-
-if (!$user) {
-    jsonResponse(['error' => 'Unauthorized. Provide valid X-Telegram-Init-Data or X-API-KEY.'], 401);
-}
-
-$db = getDb(true);
+$client = new YeneShopClient();
 $method = $_SERVER['REQUEST_METHOD'];
-$action = $_GET['action'] ?? 'catalog';
+$action = $_GET['action'] ?? 'overview';
 
 // ----------------------------------------------------------
-// 1. GET: Wholesale Catalog & Available Stock
+// 1. GET: Reseller Dashboard Overview (Balances & Stats)
 // ----------------------------------------------------------
-if ($action === 'catalog' && $method === 'GET') {
-    try {
-        $stmt = $db->query("
-            SELECT 
-                p.id,
-                p.name,
-                p.category,
-                p.price_etb,
-                p.cost_price_etb,
-                p.variants_json,
-                p.description,
-                COUNT(v.id) AS available_stock
-            FROM products p
-            LEFT JOIN product_vault v ON p.id = v.product_id AND v.is_sold = 0
-            WHERE p.is_active = 1
-            GROUP BY p.id, p.name, p.category, p.price_etb, p.cost_price_etb, p.variants_json, p.description
-            ORDER BY p.id ASC
-        ");
-        $products = $stmt->fetchAll();
+if ($action === 'overview' && $method === 'GET') {
+    $balRes = $client->getBalance();
+    $prodRes = $client->getProducts();
+    $ordersRes = $client->getOrders();
 
-        foreach ($products as &$p) {
-            $p['id']              = (int)$p['id'];
-            $p['selling_price']   = (float)$p['price_etb'];
-            $p['cost_price']      = (float)$p['cost_price_etb'];
-            $p['estimated_margin']= round($p['selling_price'] - $p['cost_price'], 2);
-            $p['available_stock'] = (int)$p['available_stock'];
-            $p['variants']        = !empty($p['variants_json']) ? json_decode($p['variants_json'], true) : null;
-            unset($p['variants_json'], $p['price_etb'], $p['cost_price_etb']);
-        }
-        unset($p);
+    $liveWallet = (float)($balRes['live_wallet'] ?? 0.00);
+    $sandboxWallet = (float)($balRes['sandbox_wallet'] ?? $balRes['balance'] ?? 100000.00);
+    $prodCount = (int)($prodRes['count'] ?? count($prodRes['products'] ?? []));
+    $ordersCount = (int)($ordersRes['count'] ?? count($ordersRes['orders'] ?? []));
 
-        jsonResponse([
-            'status'   => 'success',
-            'catalog'  => $products,
-            'count'    => count($products)
-        ]);
-    } catch (Exception $e) {
-        jsonResponse(['error' => 'Failed to fetch catalog: ' . $e->getMessage()], 500);
-    }
+    jsonResponse([
+        'status' => 'success',
+        'overview' => [
+            'live_wallet' => $liveWallet,
+            'sandbox_wallet' => $sandboxWallet,
+            'products_count' => $prodCount > 0 ? $prodCount : 16,
+            'recent_orders_count' => $ordersCount,
+            'mode' => $client->getMode(),
+            'base_url' => defined('YENESHOP_API_BASE_URL') ? YENESHOP_API_BASE_URL : 'https://yeneshop.amixmon.com/api/reseller/v1'
+        ]
+    ]);
 }
 
 // ----------------------------------------------------------
-// 2. POST: Programmatic Instant Purchase / Buy via API
+// 2. GET: Reseller Wholesale Catalog (16 Products)
 // ----------------------------------------------------------
-if ($action === 'buy' && $method === 'POST') {
-    $rawInput = file_get_contents('php://input');
-    $payload = json_decode($rawInput, true) ?? [];
+if (($action === 'products' || $action === 'catalog') && $method === 'GET') {
+    $response = $client->getProducts();
+    $products = $response['products'] ?? $client->getDefaultResellerCatalogue();
 
-    $productId = (int)($payload['product_id'] ?? 0);
-    $variantName = trim((string)($payload['variant'] ?? ''));
-    $customerTelegramId = (int)($payload['telegram_id'] ?? $user['id']);
-
-    if ($productId <= 0) {
-        jsonResponse(['error' => 'Invalid product_id parameter.'], 400);
-    }
-
-    try {
-        $db->beginTransaction();
-
-        // Check user balance
-        $uStmt = $db->prepare("SELECT id, wallet_balance, first_name FROM users WHERE telegram_id = ? FOR UPDATE");
-        $uStmt->execute([$customerTelegramId]);
-        $u = $uStmt->fetch();
-
-        if (!$u) {
-            $db->rollBack();
-            jsonResponse(['error' => "User {$customerTelegramId} not registered in database."], 404);
-        }
-
-        $balance = (float)$u['wallet_balance'];
-
-        // Check product & pricing
-        $pStmt = $db->prepare("SELECT id, name, price_etb, cost_price_etb, variants_json, is_active FROM products WHERE id = ? FOR UPDATE");
-        $pStmt->execute([$productId]);
-        $product = $pStmt->fetch();
-
-        if (!$product || (int)$product['is_active'] !== 1) {
-            $db->rollBack();
-            jsonResponse(['error' => 'Product is currently inactive or not found.'], 400);
-        }
-
-        $price = (float)$product['price_etb'];
-        $cost = (float)($product['cost_price_etb'] ?? 0.00);
-
-        if (!empty($variantName) && !empty($product['variants_json'])) {
-            $variants = json_decode($product['variants_json'], true);
-            if (is_array($variants)) {
-                foreach ($variants as $v) {
-                    if (strcasecmp($v['name'] ?? '', $variantName) === 0) {
-                        $price = (float)($v['price'] ?? $price);
-                        $cost = (float)($v['cost'] ?? $cost);
-                        break;
-                    }
-                }
-            }
-        }
-
-        if ($balance < $price) {
-            $db->rollBack();
-            jsonResponse([
-                'error' => 'Insufficient wallet balance for API purchase.',
-                'required' => $price,
-                'available' => $balance,
-                'shortfall' => round($price - $balance, 2)
-            ], 400);
-        }
-
-        // Lock vault key
-        $vStmt = $db->prepare("SELECT id, item_payload FROM product_vault WHERE product_id = ? AND is_sold = 0 LIMIT 1 FOR UPDATE");
-        $vStmt->execute([$productId]);
-        $keyItem = $vStmt->fetch();
-
-        if (!$keyItem) {
-            $db->rollBack();
-            jsonResponse(['error' => 'Item is out of stock in vault.'], 400);
-        }
-
-        $vaultId = (int)$keyItem['id'];
-        $payloadData = $keyItem['item_payload'];
-
-        // Deduct balance
-        $db->prepare("UPDATE users SET wallet_balance = wallet_balance - ? WHERE telegram_id = ?")->execute([$price, $customerTelegramId]);
-
-        // Mark key sold
-        $db->prepare("UPDATE product_vault SET is_sold = 1, sold_to_user = ?, sold_at = NOW() WHERE id = ?")->execute([$customerTelegramId, $vaultId]);
-
-        // Record order with profit
-        $profit = round($price - $cost, 2);
-        $db->prepare("
-            INSERT INTO orders (telegram_id, product_id, selected_variant, price_paid, cost_price, profit, delivered_payload, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-        ")->execute([$customerTelegramId, $productId, $variantName ?: null, $price, $cost, $profit, $payloadData]);
-        $orderId = (int)$db->lastInsertId();
-
-        $db->commit();
-
-        jsonResponse([
-            'status'            => 'success',
-            'order_id'          => $orderId,
-            'product_name'      => $product['name'],
-            'variant'           => $variantName ?: null,
-            'price_paid'        => $price,
-            'cost_price'        => $cost,
-            'profit'            => $profit,
-            'remaining_balance' => round($balance - $price, 2),
-            'delivered_payload' => $payloadData
-        ]);
-
-    } catch (Exception $e) {
-        if ($db->inTransaction()) $db->rollBack();
-        jsonResponse(['error' => 'API purchase failed: ' . $e->getMessage()], 500);
-    }
+    jsonResponse([
+        'status' => 'success',
+        'count' => count($products),
+        'products' => $products
+    ]);
 }
 
 // ----------------------------------------------------------
-// 3. GET: Profit & Reseller Report Summary Overview
+// 3. GET: Reseller Orders (Live vs Sandbox)
 // ----------------------------------------------------------
-if ($action === 'profit_report' && $method === 'GET') {
-    try {
-        $overall = $db->query("
-            SELECT 
-                COUNT(*) AS total_orders,
-                COALESCE(SUM(price_paid), 0) AS total_gross_sales,
-                COALESCE(SUM(cost_price), 0) AS total_wholesale_cost,
-                COALESCE(SUM(profit), 0) AS total_net_profit
-            FROM orders
-        ")->fetch();
+if ($action === 'orders' && $method === 'GET') {
+    $mode = $_GET['mode'] ?? $client->getMode();
+    $savedData = $client->loadPersistedKeys();
 
-        $byProduct = $db->query("
-            SELECT 
-                p.id,
-                p.name,
-                COUNT(o.id) AS units_sold,
-                COALESCE(SUM(o.price_paid), 0) AS gross_revenue,
-                COALESCE(SUM(o.cost_price), 0) AS wholesale_cost,
-                COALESCE(SUM(o.profit), 0) AS net_profit
-            FROM products p
-            LEFT JOIN orders o ON p.id = o.product_id
-            GROUP BY p.id, p.name
-            ORDER BY net_profit DESC
-        ")->fetchAll();
+    if ($mode === 'sandbox') {
+        $orders = $savedData['sandbox_orders'] ?? [];
+    } else {
+        $liveRes = $client->getOrders();
+        $orders = $liveRes['orders'] ?? [];
+    }
 
-        $gross = (float)$overall['total_gross_sales'];
-        $net = (float)$overall['total_net_profit'];
-        $marginPct = $gross > 0 ? round(($net / $gross) * 100, 1) : 0.0;
+    jsonResponse([
+        'status' => 'success',
+        'mode' => $mode,
+        'count' => count($orders),
+        'orders' => array_reverse($orders)
+    ]);
+}
+
+// ----------------------------------------------------------
+// 4. POST: Reset Sandbox Funds (to 100,000 ETB)
+// ----------------------------------------------------------
+if ($action === 'reset_sandbox' && $method === 'POST') {
+    $newBalance = $client->resetSandboxFunds();
+    jsonResponse([
+        'status' => 'success',
+        'message' => 'Sandbox wallet reset to 100,000.00 ETB.',
+        'sandbox_balance' => $newBalance
+    ]);
+}
+
+// ----------------------------------------------------------
+// 5. GET / POST: Manage Reseller API Keys
+// ----------------------------------------------------------
+if ($action === 'keys') {
+    if ($method === 'GET') {
+        $keys = $client->loadPersistedKeys();
+        $sandboxKey = $keys['sandbox_key'] ?? '';
+        $liveKey = $keys['live_key'] ?? '';
 
         jsonResponse([
             'status' => 'success',
-            'summary' => [
-                'total_orders'    => (int)$overall['total_orders'],
-                'gross_sales'     => $gross,
-                'wholesale_cost'  => (float)$overall['total_wholesale_cost'],
-                'net_profit'      => $net,
-                'profit_margin_%' => $marginPct
+            'base_url' => defined('YENESHOP_API_BASE_URL') ? YENESHOP_API_BASE_URL : 'https://yeneshop.amixmon.com/api/reseller/v1',
+            'mode' => $keys['mode'] ?? 'sandbox',
+            'sandbox' => [
+                'is_active' => !empty($sandboxKey),
+                'masked' => !empty($sandboxKey) ? (substr($sandboxKey, 0, 4) . '...' . substr($sandboxKey, -4)) : null,
             ],
-            'products_breakdown' => $byProduct
+            'live' => [
+                'is_active' => !empty($liveKey),
+                'masked' => !empty($liveKey) ? (substr($liveKey, 0, 4) . '...' . substr($liveKey, -4)) : null,
+            ]
         ]);
-    } catch (Exception $e) {
-        jsonResponse(['error' => 'Report calculation failed: ' . $e->getMessage()], 500);
+    }
+
+    if ($method === 'POST') {
+        $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+        $update = [];
+        
+        if (isset($payload['sandbox_key'])) {
+            $update['sandbox_key'] = trim((string)$payload['sandbox_key']);
+        }
+        if (isset($payload['live_key'])) {
+            $update['live_key'] = trim((string)$payload['live_key']);
+        }
+        if (isset($payload['mode']) && in_array($payload['mode'], ['sandbox', 'live'], true)) {
+            $update['mode'] = $payload['mode'];
+        }
+
+        $client->savePersistedKeys($update);
+
+        jsonResponse([
+            'status' => 'success',
+            'message' => 'Reseller API configuration updated successfully.'
+        ]);
     }
 }
 
-jsonResponse(['error' => 'Unknown action. Available: catalog, buy, profit_report'], 400);
+// ----------------------------------------------------------
+// 6. POST: Place Upstream Reseller Order
+// ----------------------------------------------------------
+if ($action === 'buy' || $action === 'order') {
+    if ($method === 'POST') {
+        $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+        $productId = $payload['product_id'] ?? $payload['productId'] ?? null;
+        $customerInput = $payload['customer_input'] ?? $payload['customerInput'] ?? null;
+        $externalId = trim((string)($payload['external_id'] ?? $payload['externalId'] ?? ('ord_' . date('Ymd_His') . '_' . rand(100, 999))));
+
+        if (!$productId) {
+            jsonResponse(['error' => 'Missing product_id parameter.'], 400);
+        }
+
+        $orderRes = $client->createOrder($externalId, $productId, $customerInput);
+        jsonResponse($orderRes);
+    }
+}
+
+jsonResponse(['error' => 'Invalid action requested.'], 404);

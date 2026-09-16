@@ -138,7 +138,7 @@
     <!-- --------------------------------------------------------
          TAB 1: STORE
          -------------------------------------------------------- -->
-    <section id="tab-store" class="tab-content active">
+    <section id="tab-store" class="tab-content">
       
       <!-- Store Search Bar -->
       <div class="search-container">
@@ -480,14 +480,371 @@
 
     </section>
 
+    <!-- --------------------------------------------------------
+         TAB 6: RESELLER (OFFICIAL YENESHOP WHOLESALE INTEGRATION)
+         -------------------------------------------------------- -->
+    <section id="tab-reseller" class="tab-content active">
+      
+      <!-- Reseller Header Row -->
+      <div class="reseller-header-row">
+        <h1 class="reseller-title">Reseller</h1>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="resellerModeBadge" class="badge-pill badge-green" style="font-size:11px; cursor:pointer;" onclick="toggleResellerMode()" title="Click to switch Live / Sandbox mode">SANDBOX</span>
+        </div>
+      </div>
+
+      <!-- Reseller Horizontal Sub-navigation Pills -->
+      <div class="reseller-subnav">
+        <button onclick="switchResellerSubTab('overview')" id="subnav-overview" class="reseller-pill active">Overview</button>
+        <button onclick="switchResellerSubTab('products')" id="subnav-products" class="reseller-pill">Products</button>
+        <button onclick="switchResellerSubTab('orders')" id="subnav-orders" class="reseller-pill">Orders</button>
+        <button onclick="switchResellerSubTab('apikeys')" id="subnav-apikeys" class="reseller-pill">API keys</button>
+        <button onclick="switchResellerSubTab('integration')" id="subnav-integration" class="reseller-pill">Integration</button>
+      </div>
+
+      <!-- SUB-VIEW 1: OVERVIEW -->
+      <div id="resellerView-overview">
+        <!-- 2x2 Metric Cards Grid -->
+        <div class="reseller-stats-grid">
+          <!-- Card 1: Live Wallet -->
+          <div class="reseller-stat-card">
+            <div class="reseller-icon-badge">
+              <i data-lucide="wallet" style="width:20px;height:20px;"></i>
+            </div>
+            <div>
+              <div id="resellerLiveWallet" class="reseller-stat-val">0.00 ETB</div>
+              <div class="reseller-stat-lbl">Live wallet</div>
+            </div>
+          </div>
+
+          <!-- Card 2: Sandbox -->
+          <div class="reseller-stat-card">
+            <div class="reseller-icon-badge">
+              <i data-lucide="flask-conical" style="width:20px;height:20px;"></i>
+            </div>
+            <div>
+              <div id="resellerSandboxWallet" class="reseller-stat-val">100,000.00 ETB</div>
+              <div class="reseller-stat-lbl">Sandbox</div>
+            </div>
+          </div>
+
+          <!-- Card 3: Products -->
+          <div class="reseller-stat-card">
+            <div class="reseller-icon-badge">
+              <i data-lucide="package" style="width:20px;height:20px;"></i>
+            </div>
+            <div>
+              <div id="resellerProductsCount" class="reseller-stat-val">16</div>
+              <div class="reseller-stat-lbl">Products</div>
+            </div>
+          </div>
+
+          <!-- Card 4: Recent Orders -->
+          <div class="reseller-stat-card">
+            <div class="reseller-icon-badge">
+              <i data-lucide="message-square" style="width:20px;height:20px;"></i>
+            </div>
+            <div>
+              <div id="resellerRecentOrdersCount" class="reseller-stat-val">0</div>
+              <div class="reseller-stat-lbl">Recent orders</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 5: Private Reseller API Info -->
+        <div class="reseller-info-card">
+          <div class="reseller-icon-badge" style="flex-shrink:0;">
+            <i data-lucide="code" style="width:20px;height:20px;"></i>
+          </div>
+          <div>
+            <h4>Private reseller API</h4>
+            <p>Use a sandbox key while integrating. Live requests charge your normal YeneShop wallet and fulfil real products.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-VIEW 2: PRODUCTS -->
+      <div id="resellerView-products" style="display:none;">
+        <div id="resellerProductsListContainer">
+          <!-- Populated dynamically with 16 wholesale products -->
+        </div>
+      </div>
+
+      <!-- SUB-VIEW 3: ORDERS -->
+      <div id="resellerView-orders" style="display:none;">
+        <!-- Live vs Sandbox Segmented Toggle -->
+        <div class="reseller-segmented-bar">
+          <button onclick="setResellerOrdersMode('live')" id="btnOrderSegLive" class="reseller-segment-btn">
+            <i data-lucide="radio" style="width:14px;height:14px;"></i>
+            <span>Live</span>
+          </button>
+          <button onclick="setResellerOrdersMode('sandbox')" id="btnOrderSegSandbox" class="reseller-segment-btn active">
+            <i data-lucide="flask-conical" style="width:14px;height:14px;"></i>
+            <span>Sandbox</span>
+          </button>
+        </div>
+
+        <!-- Sandbox Funds Reset Box (Visible in Sandbox mode) -->
+        <div id="resellerSandboxResetBox" class="reseller-sandbox-box">
+          <div>
+            <div style="font-size:13px; font-weight:700; color:var(--text-primary);">Sandbox funds</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">Reset the simulated wallet to 100,000 ETB whenever you need fresh test funds.</div>
+          </div>
+          <button onclick="handleResetSandboxFunds()" class="reseller-btn-reset">
+            <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i>
+            <span>Reset</span>
+          </button>
+        </div>
+
+        <!-- Orders Container -->
+        <div id="resellerOrdersListContainer">
+          <div class="reseller-empty-state">
+            <i data-lucide="message-square" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.4;"></i>
+            <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:4px;" id="resellerOrdersEmptyTitle">No sandbox orders</div>
+            <div style="font-size:11.5px; color:var(--text-muted);">Orders created through your API will appear here.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-VIEW 4: API KEYS -->
+      <div id="resellerView-apikeys" style="display:none;">
+        <!-- Card 1: API Base URL -->
+        <div class="reseller-key-card">
+          <div style="font-size:12px; color:var(--text-secondary); font-weight:600;">API base URL</div>
+          <div class="reseller-copy-box">
+            <span id="resellerBaseUrlText">https://yeneshop.amixmon.com/api/reseller/v1</span>
+            <button onclick="copyResellerText('https://yeneshop.amixmon.com/api/reseller/v1')" class="reseller-btn-copy" title="Copy URL">
+              <i data-lucide="copy" style="width:16px;height:16px;"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2: Sandbox Key -->
+        <div class="reseller-key-card">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="reseller-icon-badge">
+                <i data-lucide="flask-conical" style="width:18px;height:18px;"></i>
+              </div>
+              <div>
+                <div style="font-size:14px; font-weight:700; color:var(--text-primary);">Sandbox key</div>
+                <div id="resellerSandboxStatusText" style="font-size:11.5px; color:var(--text-muted);">No active key</div>
+              </div>
+            </div>
+            <span id="resellerSandboxBadge" class="badge-pill" style="background:rgba(255,255,255,0.06); color:var(--text-muted);">Inactive</span>
+          </div>
+          <button onclick="openConfigureKeyModal('sandbox')" class="btn-sheet-buy" style="padding:10px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="key" style="width:14px;height:14px;"></i>
+            <span id="resellerSandboxBtnText">Configure / Paste Key</span>
+          </button>
+        </div>
+
+        <!-- Card 3: Live Key -->
+        <div class="reseller-key-card">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="reseller-icon-badge">
+                <i data-lucide="credit-card" style="width:18px;height:18px;"></i>
+              </div>
+              <div>
+                <div style="font-size:14px; font-weight:700; color:var(--text-primary);">Live key</div>
+                <div id="resellerLiveStatusText" style="font-size:11.5px; color:var(--text-muted);">No active key</div>
+              </div>
+            </div>
+            <span id="resellerLiveBadge" class="badge-pill" style="background:rgba(255,255,255,0.06); color:var(--text-muted);">Inactive</span>
+          </div>
+          <button onclick="openConfigureKeyModal('live')" class="btn-sheet-buy" style="padding:10px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="key" style="width:14px;height:14px;"></i>
+            <span id="resellerLiveBtnText">Configure / Paste Key</span>
+          </button>
+        </div>
+
+        <!-- Card 4: Authentication Info -->
+        <div class="reseller-key-card" style="display:flex; gap:12px; align-items:flex-start;">
+          <div class="reseller-icon-badge" style="flex-shrink:0;">
+            <i data-lucide="code" style="width:18px;height:18px;"></i>
+          </div>
+          <div>
+            <div style="font-size:13px; font-weight:700; color:var(--brand-green); margin-bottom:4px;">Authentication</div>
+            <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+              Send the key as <code>Authorization: Bearer YOUR_API_KEY</code>. Start with <code>GET /products</code> and create orders with <code>POST /orders</code>.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-VIEW 5: INTEGRATION -->
+      <div id="resellerView-integration" style="display:none;">
+        <!-- Header info -->
+        <div class="reseller-info-card">
+          <div class="reseller-icon-badge" style="flex-shrink:0;">
+            <i data-lucide="book-open" style="width:20px;height:20px;"></i>
+          </div>
+          <div>
+            <h4>Reseller API integration</h4>
+            <p>Build and verify entirely with a sandbox key. Change only the key to switch your tested integration to live fulfilment.</p>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="reseller-step-card">
+          <div class="reseller-step-num">1</div>
+          <div style="flex:1;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--text-primary); margin-bottom:6px;">Create a sandbox key</div>
+            <p style="font-size:11.5px; color:var(--text-secondary); line-height:1.45; margin-bottom:8px;">
+              Open API keys, generate a sandbox key, and save it securely. The full secret is displayed once. Never put it in browser code, a mobile app, logs, or a public repository.
+            </p>
+            <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px; font-size:11px; color:var(--text-muted); line-height:1.4;">
+              Sandbox uses simulated funds and fake delivery data. Live uses your normal YeneShop wallet and fulfils real orders.
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="reseller-step-card">
+          <div class="reseller-step-num">2</div>
+          <div style="flex:1;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">Authenticate every request</div>
+            <p style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+              The base URL is <code>https://yeneshop.amixmon.com/api/reseller/v1</code>. Send your key in the Bearer authorization header on every request.
+            </p>
+            <div class="reseller-code-block">
+              <code>curl "https://yeneshop.amixmon.com/api/reseller/v1/products" -H "Authorization: Bearer YOUR_SANDBOX_KEY"</code>
+              <button onclick="copyResellerText('curl &quot;https://yeneshop.amixmon.com/api/reseller/v1/products&quot; -H &quot;Authorization: Bearer YOUR_SANDBOX_KEY&quot;')" class="reseller-btn-copy">
+                <i data-lucide="copy" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="reseller-step-card">
+          <div class="reseller-step-num">3</div>
+          <div style="flex:1;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">Load the available products</div>
+            <p style="font-size:11.5px; color:var(--text-secondary); line-height:1.45; margin-bottom:8px;">
+              Always obtain product IDs, current reseller prices, availability, stock, delivery type, and customer-input requirements from this endpoint.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:6px; font-size:11px;">
+              <div style="background:var(--bg-input); padding:8px 10px; border-radius:6px; border:1px solid var(--border-color);">
+                <b style="color:var(--brand-green);">resellerPrice:</b> The amount deducted from your wallet.
+              </div>
+              <div style="background:var(--bg-input); padding:8px 10px; border-radius:6px; border:1px solid var(--border-color);">
+                <b style="color:var(--brand-green);">suggestedRetailPrice:</b> YeneShop's customer-facing retail price.
+              </div>
+              <div style="background:var(--bg-input); padding:8px 10px; border-radius:6px; border:1px solid var(--border-color);">
+                <b style="color:var(--brand-green);">customerInput:</b> If present, collect this required value from your buyer.
+              </div>
+              <div style="background:var(--bg-input); padding:8px 10px; border-radius:6px; border:1px solid var(--border-color);">
+                <b style="color:var(--brand-green);">deliveryType:</b> Either instant delivery or manual fulfillment.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="reseller-step-card">
+          <div class="reseller-step-num">4</div>
+          <div style="flex:1;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">Create an order</div>
+            <p style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+              Generate a unique <code>externalId</code> in your system and keep it with your customer order. It may contain letters, numbers, dots, underscores, colons, and hyphens, up to 100 characters.
+            </p>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="reseller-step-card">
+          <div class="reseller-step-num">5</div>
+          <div style="flex:1;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--text-primary); margin-bottom:4px;">Save and fulfil the result</div>
+            <p style="font-size:11.5px; color:var(--text-secondary); line-height:1.45; margin-bottom:8px;">
+              Store the returned order id, status, price, and delivery data. A manual product can return <code>awaitingDelivery: true</code>; poll the order until it is completed.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:6px; font-size:11px; margin-bottom:10px;">
+              <div style="background:var(--bg-input); padding:8px 10px; border-radius:6px; border:1px solid var(--border-color);">
+                <b style="color:var(--brand-green);">deliveredItems:</b> Credentials, links, codes, or other delivered values.
+              </div>
+              <div style="background:var(--bg-input); padding:8px 10px; border-radius:6px; border:1px solid var(--border-color);">
+                <b style="color:var(--brand-green);">instructions:</b> Product redemption guidance returned after purchase.
+              </div>
+              <div style="background:var(--bg-input); padding:8px 10px; border-radius:6px; border:1px solid var(--border-color);">
+                <b style="color:var(--brand-green);">balance:</b> Your remaining environment balance after the order.
+              </div>
+            </div>
+            <div class="reseller-code-block">
+              <code>curl "https://yeneshop.amixmon.com/api/reseller/v1/orders" -X POST -H "Authorization: Bearer YOUR_SANDBOX_KEY" -H "Content-Type: application/json" -d '{"externalId":"ord_sample_01","productId":1}'</code>
+              <button onclick="copyResellerText('curl &quot;https://yeneshop.amixmon.com/api/reseller/v1/orders&quot; -X POST -H &quot;Authorization: Bearer YOUR_SANDBOX_KEY&quot; -H &quot;Content-Type: application/json&quot; -d \'{\&quot;externalId\&quot;:\&quot;ord_sample_01\&quot;,\&quot;productId\&quot;:1}\'')" class="reseller-btn-copy">
+                <i data-lucide="copy" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accordion 1: All endpoints -->
+        <div class="reseller-accordion" id="accordionEndpoints">
+          <div class="reseller-accordion-header" onclick="toggleResellerAccordion('accordionEndpoints')">
+            <span style="display:flex; align-items:center; gap:8px;">
+              <i data-lucide="terminal" style="width:16px;height:16px;color:var(--brand-green);"></i>
+              <span>All endpoints</span>
+            </span>
+            <i data-lucide="chevron-down" style="width:16px;height:16px;transition:transform 0.2s ease;"></i>
+          </div>
+          <div class="reseller-accordion-body" style="display:flex; flex-direction:column; gap:8px; padding-top:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-subtle);">
+              <code style="color:var(--brand-green); font-weight:700;">GET /balance</code>
+              <span style="color:var(--text-muted); font-size:11px;">Current live or sandbox balance</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-subtle);">
+              <code style="color:var(--brand-green); font-weight:700;">GET /products</code>
+              <span style="color:var(--text-muted); font-size:11px;">Your current reseller catalogue</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-subtle);">
+              <code style="color:var(--brand-green); font-weight:700;">POST /orders</code>
+              <span style="color:var(--text-muted); font-size:11px;">Create or safely retry an order</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-subtle);">
+              <code style="color:var(--brand-green); font-weight:700;">GET /orders</code>
+              <span style="color:var(--text-muted); font-size:11px;">List the latest 50 orders</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0;">
+              <code style="color:var(--brand-green); font-weight:700;">GET /orders/:externalId</code>
+              <span style="color:var(--text-muted); font-size:11px;">Look up one order from your reference</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accordion 2: Errors and safe retrying -->
+        <div class="reseller-accordion" id="accordionErrors">
+          <div class="reseller-accordion-header" onclick="toggleResellerAccordion('accordionErrors')">
+            <span style="display:flex; align-items:center; gap:8px;">
+              <i data-lucide="alert-circle" style="width:16px;height:16px;color:var(--accent-amber);"></i>
+              <span>Errors and safe retrying</span>
+            </span>
+            <i data-lucide="chevron-down" style="width:16px;height:16px;transition:transform 0.2s ease;"></i>
+          </div>
+          <div class="reseller-accordion-body" style="display:flex; flex-direction:column; gap:8px; padding-top:12px;">
+            <div style="padding:6px 0; border-bottom:1px solid var(--border-subtle);"><b style="color:var(--accent-amber);">400</b> — invalid fields or required customer input is missing</div>
+            <div style="padding:6px 0; border-bottom:1px solid var(--border-subtle);"><b style="color:var(--accent-amber);">401</b> — the API key is missing, invalid, rotated, or revoked</div>
+            <div style="padding:6px 0; border-bottom:1px solid var(--border-subtle);"><b style="color:var(--accent-amber);">403</b> — reseller access is suspended or the account is blocked</div>
+            <div style="padding:6px 0; border-bottom:1px solid var(--border-subtle);"><b style="color:var(--accent-amber);">404</b> — an order or product was not found</div>
+            <div style="padding:6px 0; border-bottom:1px solid var(--border-subtle);"><b style="color:var(--accent-amber);">409</b> — the external ID was already used with different order data</div>
+            <div style="padding:6px 0; border-bottom:1px solid var(--border-subtle);"><b style="color:var(--accent-amber);">422</b> — insufficient balance or the product is out of stock</div>
+            <div style="padding:6px 0;"><b style="color:var(--accent-amber);">5xx / timeout</b> — retry with the exact same external ID and body.</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
   </main>
 
   <!-- ==========================================================
-       BOTTOM TAB NAVIGATION (4 CUSTOMER TABS + 1 ADMIN TAB)
+       BOTTOM TAB NAVIGATION (STORE, WALLET, ORDERS, INVITE, RESELLER)
        ========================================================== -->
   <nav class="bottom-nav">
     <div id="bottomNavGrid" class="bottom-nav-grid">
-      <button onclick="switchTab('store')" id="nav-store" class="nav-item active">
+      <button onclick="switchTab('store')" id="nav-store" class="nav-item">
         <i data-lucide="store" style="width:18px;height:18px;"></i>
         <span>Store</span>
       </button>
@@ -502,6 +859,10 @@
       <button onclick="switchTab('invite')" id="nav-invite" class="nav-item">
         <i data-lucide="gift" style="width:18px;height:18px;"></i>
         <span>Invite</span>
+      </button>
+      <button onclick="switchTab('reseller')" id="nav-reseller" class="nav-item active">
+        <i data-lucide="badge-percent" style="width:18px;height:18px;"></i>
+        <span>Reseller</span>
       </button>
       <button onclick="switchTab('admin')" id="nav-admin" class="nav-item admin" style="display:none;">
         <i data-lucide="shield-check" style="width:18px;height:18px;"></i>
@@ -733,11 +1094,50 @@
     </div>
   </div>
 
-  <!-- Receipt Image Preview Modal -->
-  <div id="receiptImageModal" class="modal-overlay" onclick="closeModal('receiptImageModal')">
-    <div style="max-width:360px; width:100%; background:var(--bg-card); border-radius:var(--radius-lg); padding:16px; text-align:center;">
-      <img id="adminReceiptFullImg" src="" alt="Receipt" style="max-width:100%; max-height:70vh; object-fit:contain; border-radius:8px; margin-bottom:12px;" />
-      <button onclick="closeModal('receiptImageModal')" class="btn-sheet-info" style="width:100%;">Close</button>
+  <!-- Reseller Configure Key Modal -->
+  <div id="configureKeyModal" class="modal-overlay" onclick="if(event.target===this)closeModal('configureKeyModal')">
+    <div class="bottom-sheet" style="max-width:400px; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:14px; font-weight:800; color:#fff;" id="configureKeyModalTitle">Configure API Key</h3>
+        <button onclick="closeModal('configureKeyModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+      </div>
+      <p style="font-size:11px; color:var(--text-secondary); margin-bottom:12px;">
+        Paste the secret key generated from your YeneShop Telegram Mini App (Reseller &gt; API keys &gt; Generate key).
+      </p>
+      <form onsubmit="handleSaveResellerKey(event)" style="display:flex; flex-direction:column; gap:10px;">
+        <input type="hidden" id="configureKeyType" value="sandbox" />
+        <textarea id="configureKeyInput" rows="3" required placeholder="Paste Bearer key here (e.g. sk_sandbox_...)" style="width:100%; padding:10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#86efac; font-family:monospace; font-size:11px; outline:none;"></textarea>
+        <button type="submit" class="btn-sheet-buy" style="padding:10px;">Save & Activate Key</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Reseller Quick Order Modal -->
+  <div id="resellerOrderModal" class="modal-overlay" onclick="if(event.target===this)closeModal('resellerOrderModal')">
+    <div class="bottom-sheet" style="max-width:400px; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:14px; font-weight:800; color:#fff;">Order from YeneShop Wholesaler</h3>
+        <button onclick="closeModal('resellerOrderModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px; margin-bottom:12px;">
+        <img id="resellerOrderModalIcon" src="" alt="Icon" style="width:36px; height:36px; object-fit:contain;" />
+        <div>
+          <div id="resellerOrderModalName" style="font-size:13px; font-weight:700; color:#fff;">Product Name</div>
+          <div id="resellerOrderModalPrice" style="font-size:12px; font-weight:800; color:var(--brand-green);">0.00 ETB</div>
+        </div>
+      </div>
+      <form onsubmit="handleExecuteResellerOrder(event)" style="display:flex; flex-direction:column; gap:10px;">
+        <input type="hidden" id="resellerOrderModalProductId" value="0" />
+        <div id="resellerOrderCustomerInputContainer" style="display:none;">
+          <label style="font-size:11px; font-weight:700; color:var(--text-secondary); margin-bottom:4px; display:block;">Customer Information *</label>
+          <input type="text" id="resellerOrderCustomerInput" placeholder="Enter recipient phone / email / handle" style="width:100%; height:36px; padding:0 10px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); color:#fff; font-size:11.5px; outline:none;" />
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
+          <span>Deducted from:</span>
+          <span id="resellerOrderWalletSource" style="font-weight:700; color:var(--brand-green);">Sandbox Wallet</span>
+        </div>
+        <button type="submit" id="btnResellerOrderSubmit" class="btn-sheet-buy" style="padding:10px;">Confirm & Fulfill Order</button>
+      </form>
     </div>
   </div>
 

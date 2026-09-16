@@ -19,6 +19,19 @@ const state = {
     referral_count: 0,
     orders_count: 0
   },
+  reseller: {
+    mode: 'sandbox',
+    liveWallet: 0.00,
+    sandboxWallet: 100000.00,
+    products: [],
+    orders: [],
+    keys: {
+      baseUrl: 'https://yeneshop.amixmon.com/api/reseller/v1',
+      sandbox: { isActive: false, masked: null },
+      live: { isActive: false, masked: null }
+    },
+    ordersMode: 'sandbox'
+  },
   products: [
     {
       id: 1,
@@ -188,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderProducts(); // Instant render from built-in state
   renderWalletMethodButtons();
   renderPaymentMethodDetails();
+  initReseller();
   setupIcons();
 
   // Asynchronous background hydration
@@ -956,6 +970,7 @@ function switchTab(tabId) {
 
   if (tabId === 'orders') loadOrders();
   else if (tabId === 'admin') loadAdminAll();
+  else if (tabId === 'reseller') loadResellerAll();
 }
 
 function closeModal(id) {
@@ -1296,5 +1311,414 @@ async function handleBroadcastMarketing(e) {
     }
   } catch (e) {
     showToast('Broadcast failed.', true);
+  }
+}
+
+// ==========================================================
+// 12. YENESHOP RESELLER TMA CONTROLLER (MATCHING Reseller.mp4)
+// ==========================================================
+
+const defaultResellerProducts = [
+  { id: 1, name: 'n8n Starter 12m', resellerPrice: 5900.00, suggestedRetailPrice: 6250.00, stock: 2, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png' },
+  { id: 2, name: 'Wispr Flow Pro 12m', resellerPrice: 5200.00, suggestedRetailPrice: 5400.00, stock: 3, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://img.icons8.com/color/480/speech-bubble.png' },
+  { id: 3, name: 'Warp Build 12m', resellerPrice: 5800.00, suggestedRetailPrice: 6000.00, stock: 3, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://img.icons8.com/fluency/480/console.png' },
+  { id: 4, name: 'Replit Core 12m', resellerPrice: 7300.00, suggestedRetailPrice: 7500.00, stock: 3, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/replit.png' },
+  { id: 5, name: 'QuillBot Premium 1m', resellerPrice: 700.00, suggestedRetailPrice: 750.00, stock: 65, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://img.icons8.com/color/480/quill-with-ink.png' },
+  { id: 6, name: 'Nord VPN 3m', resellerPrice: 650.00, suggestedRetailPrice: 1350.00, stock: 21, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/nordvpn.png' },
+  { id: 7, name: 'Monthly IAT Unlimited Data | 300 Birr ...', resellerPrice: 1750.00, suggestedRetailPrice: 1820.00, stock: -1, deliveryType: 'manual', requiresCustomerDetails: true, icon: 'https://img.icons8.com/color/480/sim-card-chip.png' },
+  { id: 8, name: 'Gemini AI Pro 18m', resellerPrice: 400.00, suggestedRetailPrice: 385.00, stock: 300, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/google-gemini.png' },
+  { id: 9, name: 'ElevenLabs Creator 12m', resellerPrice: 9000.00, suggestedRetailPrice: 10500.00, stock: 1, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://img.icons8.com/fluency/480/sound-waves.png' },
+  { id: 10, name: 'Lovable Lite 12m', resellerPrice: 2520.00, suggestedRetailPrice: 2800.00, stock: 0, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://img.icons8.com/color/480/like--v3.png' },
+  { id: 11, name: 'Weekly Unlimited IAT Data | 90 Birr ...', resellerPrice: 540.00, suggestedRetailPrice: 600.00, stock: -1, deliveryType: 'manual', requiresCustomerDetails: true, icon: 'https://img.icons8.com/color/480/signal.png' },
+  { id: 12, name: 'SoundCloud Artist Pro 1 Month', resellerPrice: 360.00, suggestedRetailPrice: 400.00, stock: -1, deliveryType: 'manual', requiresCustomerDetails: false, icon: 'https://img.icons8.com/color/480/soundcloud.png' },
+  { id: 13, name: 'Gamma Pro 12m', resellerPrice: 5850.00, suggestedRetailPrice: 8100.00, stock: 3, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://img.icons8.com/fluency/480/presentation.png' },
+  { id: 14, name: 'Factory Pro 12m', resellerPrice: 3150.00, suggestedRetailPrice: 3500.00, stock: 5, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://img.icons8.com/fluency/480/factory.png' },
+  { id: 15, name: 'Github Developer Pack (2 Years)', resellerPrice: 3150.00, suggestedRetailPrice: 3500.00, stock: 7, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/github.png' },
+  { id: 16, name: 'Railway Hobby 12m', resellerPrice: 2700.00, suggestedRetailPrice: 3000.00, stock: 4, deliveryType: 'instant', requiresCustomerDetails: false, icon: 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/railway.png' }
+];
+
+function initReseller() {
+  state.reseller.products = defaultResellerProducts;
+  renderResellerProductsList(defaultResellerProducts);
+  loadResellerOverview();
+  loadResellerKeys();
+}
+
+function loadResellerAll() {
+  loadResellerOverview();
+  loadResellerProducts();
+  loadResellerKeys();
+}
+
+function switchResellerSubTab(subTabId) {
+  triggerHaptic('light');
+
+  ['overview', 'products', 'orders', 'apikeys', 'integration'].forEach(t => {
+    const el = document.getElementById(`resellerView-${t}`);
+    const pill = document.getElementById(`subnav-${t}`);
+    if (el) el.style.display = 'none';
+    if (pill) pill.classList.remove('active');
+  });
+
+  const targetView = document.getElementById(`resellerView-${subTabId}`);
+  const targetPill = document.getElementById(`subnav-${subTabId}`);
+  if (targetView) targetView.style.display = 'block';
+  if (targetPill) targetPill.classList.add('active');
+
+  if (subTabId === 'orders') loadResellerOrders();
+  else if (subTabId === 'products') loadResellerProducts();
+  else if (subTabId === 'apikeys') loadResellerKeys();
+  else if (subTabId === 'overview') loadResellerOverview();
+
+  setupIcons();
+}
+
+async function loadResellerOverview() {
+  try {
+    const res = await fetch('../api/reseller.php?action=overview');
+    const data = await res.json();
+    if (data.status === 'success' && data.overview) {
+      const o = data.overview;
+      state.reseller.liveWallet = o.live_wallet;
+      state.reseller.sandboxWallet = o.sandbox_wallet;
+      state.reseller.mode = o.mode || 'sandbox';
+
+      const elLive = document.getElementById('resellerLiveWallet');
+      const elSand = document.getElementById('resellerSandboxWallet');
+      const elProd = document.getElementById('resellerProductsCount');
+      const elOrd = document.getElementById('resellerRecentOrdersCount');
+      const elBadge = document.getElementById('resellerModeBadge');
+
+      if (elLive) elLive.textContent = `${formatCurrency(o.live_wallet)} ETB`;
+      if (elSand) elSand.textContent = `${formatCurrency(o.sandbox_wallet)} ETB`;
+      if (elProd) elProd.textContent = o.products_count || 16;
+      if (elOrd) elOrd.textContent = o.recent_orders_count || 0;
+
+      if (elBadge) {
+        elBadge.textContent = (o.mode || 'sandbox').toUpperCase();
+        elBadge.className = o.mode === 'live' ? 'badge-pill badge-green' : 'badge-pill badge-amber';
+      }
+    }
+  } catch (e) {
+    console.warn('Reseller overview load error:', e);
+  }
+}
+
+async function loadResellerProducts() {
+  try {
+    const res = await fetch('../api/reseller.php?action=products');
+    const data = await res.json();
+    if (data.status === 'success' && Array.isArray(data.products) && data.products.length > 0) {
+      state.reseller.products = data.products;
+      renderResellerProductsList(data.products);
+    } else {
+      renderResellerProductsList(defaultResellerProducts);
+    }
+  } catch (e) {
+    renderResellerProductsList(defaultResellerProducts);
+  }
+}
+
+function renderResellerProductsList(products) {
+  const c = document.getElementById('resellerProductsListContainer');
+  if (!c) return;
+
+  c.innerHTML = products.map(p => {
+    const isInstant = (p.deliveryType || 'instant') === 'instant';
+    const stockText = p.stock === -1 ? 'Unlimited stock' : `${p.stock} in stock`;
+    const deliveryLabel = isInstant ? `Instant delivery · ${stockText}` : `Manual delivery · ${stockText}`;
+    const badgeHtml = p.requiresCustomerDetails
+      ? `<span class="reseller-tag-amber">Requires customer details</span>`
+      : '';
+
+    return `
+      <div class="reseller-product-item" onclick="openResellerOrderModal(${p.id})">
+        <div class="reseller-product-left">
+          <div class="reseller-product-icon">
+            <img src="${escapeHtml(p.icon || 'https://img.icons8.com/color/480/package.png')}" alt="${escapeHtml(p.name)}" />
+          </div>
+          <div class="reseller-product-info">
+            <div class="reseller-product-name">${escapeHtml(p.name)}</div>
+            <div class="reseller-product-sub">
+              <span>${escapeHtml(deliveryLabel)}</span>
+              ${badgeHtml}
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="reseller-price-wholesale">${formatCurrency(p.resellerPrice)} ETB</div>
+          <div class="reseller-price-retail">${formatCurrency(p.suggestedRetailPrice)} ETB retail</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  setupIcons();
+}
+
+function setResellerOrdersMode(mode) {
+  triggerHaptic('light');
+  state.reseller.ordersMode = mode;
+
+  const btnLive = document.getElementById('btnOrderSegLive');
+  const btnSand = document.getElementById('btnOrderSegSandbox');
+  const resetBox = document.getElementById('resellerSandboxResetBox');
+  const emptyTitle = document.getElementById('resellerOrdersEmptyTitle');
+
+  if (mode === 'live') {
+    btnLive?.classList.add('active');
+    btnSand?.classList.remove('active');
+    if (resetBox) resetBox.style.display = 'none';
+    if (emptyTitle) emptyTitle.textContent = 'No live orders';
+  } else {
+    btnSand?.classList.add('active');
+    btnLive?.classList.remove('active');
+    if (resetBox) resetBox.style.display = 'flex';
+    if (emptyTitle) emptyTitle.textContent = 'No sandbox orders';
+  }
+
+  loadResellerOrders();
+}
+
+async function loadResellerOrders() {
+  const c = document.getElementById('resellerOrdersListContainer');
+  if (!c) return;
+
+  try {
+    const res = await fetch(`../api/reseller.php?action=orders&mode=${state.reseller.ordersMode}`);
+    const data = await res.json();
+    const orders = data.orders || [];
+
+    if (orders.length === 0) {
+      c.innerHTML = `
+        <div class="reseller-empty-state">
+          <i data-lucide="message-square" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.4;"></i>
+          <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:4px;" id="resellerOrdersEmptyTitle">
+            No ${state.reseller.ordersMode} orders
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted);">Orders created through your API will appear here.</div>
+        </div>
+      `;
+    } else {
+      c.innerHTML = orders.map(o => `
+        <div class="view-card" style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-weight:700; font-size:13px; color:#fff;">${escapeHtml(o.product_name || 'Product')}</div>
+            <span class="badge-pill badge-green">${escapeHtml(o.status || 'completed')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-secondary); margin-bottom:6px;">
+            <span>Ref: <code>${escapeHtml(o.externalId || o.id || 'N/A')}</code></span>
+            <span style="font-weight:800; color:var(--brand-green);">${formatCurrency(o.resellerPrice || 0)} ETB</span>
+          </div>
+          ${o.deliveredItems ? `
+            <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:8px; padding:8px; font-family:monospace; font-size:11px; color:#86efac; margin-top:6px; word-break:break-all;">
+              ${escapeHtml(typeof o.deliveredItems === 'object' ? JSON.stringify(o.deliveredItems, null, 2) : o.deliveredItems)}
+            </div>
+          ` : ''}
+          <div style="font-size:10px; color:var(--text-muted); margin-top:6px;">${escapeHtml(o.created_at || '')}</div>
+        </div>
+      `).join('');
+    }
+    setupIcons();
+  } catch (e) {
+    console.warn('Error loading reseller orders:', e);
+  }
+}
+
+async function handleResetSandboxFunds() {
+  triggerHaptic('medium');
+  try {
+    const res = await fetch('../api/reseller.php?action=reset_sandbox', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showToast('Sandbox wallet reset to 100,000.00 ETB.');
+      const elSand = document.getElementById('resellerSandboxWallet');
+      if (elSand) elSand.textContent = '100,000.00 ETB';
+      loadResellerOverview();
+      loadResellerOrders();
+    }
+  } catch (e) {
+    showToast('Failed to reset sandbox funds.', true);
+  }
+}
+
+async function loadResellerKeys() {
+  try {
+    const res = await fetch('../api/reseller.php?action=keys');
+    const data = await res.json();
+    if (data.status === 'success') {
+      const bText = document.getElementById('resellerBaseUrlText');
+      if (bText && data.base_url) bText.textContent = data.base_url;
+
+      // Sandbox key
+      const sbBadge = document.getElementById('resellerSandboxBadge');
+      const sbStatus = document.getElementById('resellerSandboxStatusText');
+      const sbBtn = document.getElementById('resellerSandboxBtnText');
+      if (data.sandbox?.is_active) {
+        if (sbBadge) { sbBadge.textContent = 'Active'; sbBadge.className = 'badge-pill badge-green'; }
+        if (sbStatus) sbStatus.textContent = data.sandbox.masked || 'Active key configured';
+        if (sbBtn) sbBtn.textContent = 'Update Sandbox Key';
+      } else {
+        if (sbBadge) { sbBadge.textContent = 'Inactive'; sbBadge.className = 'badge-pill'; sbBadge.style.background = 'rgba(255,255,255,0.06)'; sbBadge.style.color = 'var(--text-muted)'; }
+        if (sbStatus) sbStatus.textContent = 'No active key';
+        if (sbBtn) sbBtn.textContent = 'Configure / Paste Key';
+      }
+
+      // Live key
+      const lvBadge = document.getElementById('resellerLiveBadge');
+      const lvStatus = document.getElementById('resellerLiveStatusText');
+      const lvBtn = document.getElementById('resellerLiveBtnText');
+      if (data.live?.is_active) {
+        if (lvBadge) { lvBadge.textContent = 'Active'; lvBadge.className = 'badge-pill badge-green'; }
+        if (lvStatus) lvStatus.textContent = data.live.masked || 'Active key configured';
+        if (lvBtn) lvBtn.textContent = 'Update Live Key';
+      } else {
+        if (lvBadge) { lvBadge.textContent = 'Inactive'; lvBadge.className = 'badge-pill'; lvBadge.style.background = 'rgba(255,255,255,0.06)'; lvBadge.style.color = 'var(--text-muted)'; }
+        if (lvStatus) lvStatus.textContent = 'No active key';
+        if (lvBtn) lvBtn.textContent = 'Configure / Paste Key';
+      }
+    }
+  } catch (e) {
+    console.warn('Error loading reseller keys:', e);
+  }
+}
+
+function copyResellerText(text) {
+  copyTextToClipboard(text);
+}
+
+function openConfigureKeyModal(type) {
+  triggerHaptic('light');
+  const typeInput = document.getElementById('configureKeyType');
+  const title = document.getElementById('configureKeyModalTitle');
+  const input = document.getElementById('configureKeyInput');
+
+  if (typeInput) typeInput.value = type;
+  if (title) title.textContent = type === 'sandbox' ? 'Configure Sandbox Key' : 'Configure Live Key';
+  if (input) input.value = '';
+
+  const modal = document.getElementById('configureKeyModal');
+  if (modal) modal.classList.add('active');
+}
+
+async function handleSaveResellerKey(e) {
+  e.preventDefault();
+  triggerHaptic('medium');
+  const type = document.getElementById('configureKeyType').value;
+  const key = document.getElementById('configureKeyInput').value.trim();
+
+  const payload = {};
+  if (type === 'sandbox') payload.sandbox_key = key;
+  else payload.live_key = key;
+
+  try {
+    const res = await fetch('../api/reseller.php?action=keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showToast('Key saved successfully! 🔑');
+      closeModal('configureKeyModal');
+      loadResellerKeys();
+    } else {
+      showToast(data.error || 'Failed to save key.', true);
+    }
+  } catch (err) {
+    showToast('Network error saving key.', true);
+  }
+}
+
+async function toggleResellerMode() {
+  triggerHaptic('medium');
+  const newMode = state.reseller.mode === 'sandbox' ? 'live' : 'sandbox';
+  try {
+    const res = await fetch('../api/reseller.php?action=keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: newMode })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      state.reseller.mode = newMode;
+      showToast(`Switched to ${newMode.toUpperCase()} mode.`);
+      loadResellerOverview();
+      loadResellerOrders();
+    }
+  } catch (e) {}
+}
+
+function toggleResellerAccordion(id) {
+  triggerHaptic('light');
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('open');
+  setupIcons();
+}
+
+function openResellerOrderModal(productId) {
+  triggerHaptic('light');
+  const product = (state.reseller.products || defaultResellerProducts).find(p => p.id == productId);
+  if (!product) return;
+
+  const idInput = document.getElementById('resellerOrderModalProductId');
+  const nameEl = document.getElementById('resellerOrderModalName');
+  const priceEl = document.getElementById('resellerOrderModalPrice');
+  const iconEl = document.getElementById('resellerOrderModalIcon');
+  const custInputContainer = document.getElementById('resellerOrderCustomerInputContainer');
+  const custInput = document.getElementById('resellerOrderCustomerInput');
+  const sourceEl = document.getElementById('resellerOrderWalletSource');
+
+  if (idInput) idInput.value = product.id;
+  if (nameEl) nameEl.textContent = product.name;
+  if (priceEl) priceEl.textContent = `${formatCurrency(product.resellerPrice)} ETB`;
+  if (iconEl) iconEl.src = product.icon || 'https://img.icons8.com/color/480/package.png';
+  if (sourceEl) sourceEl.textContent = state.reseller.mode === 'live' ? 'Live Wallet' : 'Sandbox Wallet (100,000 ETB)';
+
+  if (product.requiresCustomerDetails) {
+    if (custInputContainer) custInputContainer.style.display = 'block';
+    if (custInput) { custInput.required = true; custInput.value = ''; }
+  } else {
+    if (custInputContainer) custInputContainer.style.display = 'none';
+    if (custInput) { custInput.required = false; custInput.value = ''; }
+  }
+
+  const modal = document.getElementById('resellerOrderModal');
+  if (modal) modal.classList.add('active');
+}
+
+async function handleExecuteResellerOrder(e) {
+  e.preventDefault();
+  triggerHaptic('medium');
+
+  const prodId = document.getElementById('resellerOrderModalProductId').value;
+  const custInput = document.getElementById('resellerOrderCustomerInput').value.trim();
+  const btn = document.getElementById('btnResellerOrderSubmit');
+  if (btn) btn.textContent = 'Fulfilling...';
+
+  try {
+    const res = await fetch('../api/reseller.php?action=buy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id: prodId,
+        customer_input: custInput || null,
+        external_id: 'ord_' + Date.now() + '_' + Math.floor(Math.random() * 1000)
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showToast('Order fulfilled successfully! 🎉');
+      closeModal('resellerOrderModal');
+      loadResellerOverview();
+      loadResellerOrders();
+    } else {
+      showToast(data.error || 'Order fulfillment failed.', true);
+    }
+  } catch (err) {
+    showToast('Network error fulfilling order.', true);
+  } finally {
+    if (btn) btn.textContent = 'Confirm & Fulfill Order';
   }
 }

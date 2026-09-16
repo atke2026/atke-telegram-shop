@@ -45,6 +45,14 @@ define('PAYMENT_EBIRR_NAME', 'Mohammed Abdirahman Ibrahim');
 
 define('REFERRAL_BONUS_ETB', 20.00);
 
+// ==========================================================
+// 5. YENESHOP WHOLESALE & RESELLER API INTEGRATION
+// ==========================================================
+define('YENESHOP_API_BASE_URL', getenv('YENESHOP_API_BASE_URL') ?: 'https://yeneshop.amixmon.com/api/reseller/v1');
+define('YENESHOP_API_MODE', getenv('YENESHOP_API_MODE') ?: 'sandbox'); // 'sandbox' or 'live'
+define('YENESHOP_SANDBOX_KEY', getenv('YENESHOP_SANDBOX_KEY') ?: '');
+define('YENESHOP_LIVE_KEY', getenv('YENESHOP_LIVE_KEY') ?: '');
+
 /**
  * Returns dynamic payment methods from database if available,
  * falling back gracefully to configured defaults.
