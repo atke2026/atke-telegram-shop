@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <base href="/public/" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="color-scheme" content="dark light" />
   <meta name="format-detection" content="telephone=no" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -126,7 +126,7 @@
   <!-- ==========================================================
        FLOATING SUPPORT HEADPHONE BUTTON (Bottom-Right)
        ========================================================== -->
-  <a id="supportFloatingBtn" href="https://t.me/Atke_Support" target="_blank" class="floating-support-btn" title="Contact Telegram Support">
+  <a id="supportFloatingBtn" href="https://t.me/Atke_Support" target="_blank" rel="noopener noreferrer" class="floating-support-btn" title="Contact Telegram Support" aria-label="Contact Telegram Support">
     <i data-lucide="headphones" style="width:22px;height:22px;"></i>
   </a>
 
@@ -150,7 +150,7 @@
           placeholder="Search products and services" 
           class="search-input" 
         />
-        <button id="storeSearchClear" onclick="clearStoreSearch()" class="search-clear">
+        <button id="storeSearchClear" onclick="clearStoreSearch()" class="search-clear" title="Clear search" aria-label="Clear search">
           <i data-lucide="x" style="width:16px;height:16px;"></i>
         </button>
       </div>
@@ -886,7 +886,7 @@
             <span id="variantModalCategory" style="font-size:11px; color:var(--text-secondary);">Subscription</span>
           </div>
         </div>
-        <button onclick="closeModal('variantModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px;">
+        <button onclick="closeModal('variantModal')" title="Close" aria-label="Close" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px;">
           <i data-lucide="x" style="width:20px;height:20px;"></i>
         </button>
       </div>
@@ -931,7 +931,7 @@
           <i data-lucide="shopping-cart" style="width:16px;height:16px;color:var(--brand-green);"></i>
           <span>Confirm Digital Purchase</span>
         </h3>
-        <button onclick="closeModal('buyModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+        <button onclick="closeModal('buyModal')" title="Close" aria-label="Close" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
           <i data-lucide="x" style="width:18px;height:18px;"></i>
         </button>
       </div>
@@ -1012,7 +1012,7 @@
     <div class="bottom-sheet" style="max-height:90vh; padding:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <h3 id="editProductModalTitle" style="font-size:14px; font-weight:800; color:#fff;">Edit Product</h3>
-        <button onclick="closeModal('editProductModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+        <button onclick="closeModal('editProductModal')" title="Close" aria-label="Close" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
           <i data-lucide="x" style="width:18px;height:18px;"></i>
         </button>
       </div>
@@ -1083,7 +1083,7 @@
     <div class="bottom-sheet" style="max-width:400px; padding:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <h3 style="font-size:14px; font-weight:800; color:#fff;">Add Digital Keys to Vault</h3>
-        <button onclick="closeModal('addKeysModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+        <button onclick="closeModal('addKeysModal')" title="Close" aria-label="Close" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
       </div>
       <div id="addKeysProductName" style="font-size:11px; font-weight:700; color:var(--brand-green); margin-bottom:10px;">Product</div>
       <form id="addKeysForm" onsubmit="handleSubmitKeys(event)" style="display:flex; flex-direction:column; gap:10px;">
@@ -1099,7 +1099,7 @@
     <div class="bottom-sheet" style="max-width:400px; padding:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <h3 style="font-size:14px; font-weight:800; color:#fff;" id="configureKeyModalTitle">Configure API Key</h3>
-        <button onclick="closeModal('configureKeyModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+        <button onclick="closeModal('configureKeyModal')" title="Close" aria-label="Close" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
       </div>
       <p style="font-size:11px; color:var(--text-secondary); margin-bottom:12px;">
         Paste the secret key generated from your YeneShop Telegram Mini App (Reseller &gt; API keys &gt; Generate key).
@@ -1117,7 +1117,7 @@
     <div class="bottom-sheet" style="max-width:400px; padding:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <h3 style="font-size:14px; font-weight:800; color:#fff;">Order from YeneShop Wholesaler</h3>
-        <button onclick="closeModal('resellerOrderModal')" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+        <button onclick="closeModal('resellerOrderModal')" title="Close" aria-label="Close" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
       </div>
       <div style="display:flex; align-items:center; gap:12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px; margin-bottom:12px;">
         <img id="resellerOrderModalIcon" src="" alt="Icon" style="width:36px; height:36px; object-fit:contain;" />

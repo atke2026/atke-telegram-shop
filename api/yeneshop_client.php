@@ -202,7 +202,7 @@ class YeneShopClient {
     /**
      * POST /orders
      */
-    public function createOrder(string $externalId, $productId, ?string $customerInput = null): array {
+    public function createOrder(string $externalId, string|int $productId, ?string $customerInput = null): array {
         $body = [
             'externalId' => substr($externalId, 0, 100),
             'productId' => $productId,

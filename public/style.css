@@ -89,8 +89,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease, color 0.2s ease;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Tabular numbers for financial figures */
@@ -111,8 +111,8 @@ body {
   top: 0;
   z-index: 30;
   background: rgba(11, 15, 25, 0.88);
-  backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-color);
   padding: 10px 16px;
 }
@@ -498,8 +498,8 @@ html:not(.dark) .product-image-box {
   right: 0;
   z-index: 40;
   background: rgba(11, 15, 25, 0.94);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-color);
   padding: 6px 16px 12px;
 }
@@ -557,8 +557,8 @@ html:not(.dark) .bottom-nav {
   inset: 0;
   z-index: 50;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   display: none;
   align-items: flex-end;
   justify-content: center;
