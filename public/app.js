@@ -1432,7 +1432,7 @@ function renderResellerProductsList(products) {
       : '';
 
     return `
-      <div class="reseller-product-item" onclick="openResellerOrderModal(${p.id})">
+      <div class="reseller-product-item" onclick="openResellerOrderModal('${escapeHtml(String(p.id))}')">
         <div class="reseller-product-left">
           <div class="reseller-product-icon">
             <img src="${escapeHtml(p.icon || 'https://img.icons8.com/color/480/package.png')}" alt="${escapeHtml(p.name)}" />
@@ -1659,7 +1659,7 @@ function toggleResellerAccordion(id) {
 
 function openResellerOrderModal(productId) {
   triggerHaptic('light');
-  const product = (state.reseller.products || defaultResellerProducts).find(p => p.id == productId);
+  const product = (state.reseller.products || defaultResellerProducts).find(p => String(p.id) === String(productId));
   if (!product) return;
 
   const idInput = document.getElementById('resellerOrderModalProductId');

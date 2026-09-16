@@ -1,0 +1,47 @@
+{
+  "storeName": "Atke Shop",
+  "tagline": "Premium Digital Accounts & Subscriptions in Ethiopia",
+  "currency": "ETB",
+  "resellerApi": {
+    "baseUrl": "https://yeneshop.amixmon.com/api/reseller/v1",
+    "mode": "sandbox",
+    "sandboxApiKey": "YOUR_SANDBOX_KEY",
+    "liveApiKey": "YOUR_LIVE_KEY",
+    "timeoutMs": 15000
+  },
+  "pricing": {
+    "defaultMarginType": "percentage",
+    "defaultMarginValue": 20,
+    "minimumProfitEtb": 100,
+    "customPrices": {
+      "nordvpn-3m": 1350,
+      "elevenlabs-creator-12m": 10500,
+      "gemini-ai-pro-18m": 600,
+      "quillbot-premium-1m": 850,
+      "replit-core-12m": 7800,
+      "n8n-starter-12m": 6500,
+      "wispr-flow-pro-12m": 5600,
+      "warp-build-12m": 6200,
+      "gamma-pro-12m": 8000,
+      "github-dev-pack-2y": 3500,
+      "railway-hobby-12m": 3200,
+      "factory-pro-12m": 3500,
+      "lovable-lite-12m": 2900,
+      "soundcloud-artist-pro-1m": 450
+    }
+  },
+  "paymentDetails": {
+    "telebirr": {
+      "accountNumber": "09XXXXXXXX",
+      "accountName": "Atke Digital"
+    },
+    "cbe": {
+      "accountNumber": "1000XXXXXXXXX",
+      "accountName": "Atke Digital"
+    }
+  },
+  "contact": {
+    "telegramSupport": "@AtkeSupport",
+    "channel": "https://t.me/AtkeShop"
+  }
+}

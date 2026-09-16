@@ -6,3 +6,4 @@ Thumbs.db
 .idea/
 .vscode/
 api/reseller_keys.json
+reseller_cli/config.json
