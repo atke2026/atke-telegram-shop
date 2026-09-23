@@ -1,63 +1,137 @@
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.picker {
+  position: relative;
+  display: grid;
+  gap: 10px;
 }
 
-.row {
+.label,
+.sendLabel {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.trigger {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: 12px;
+  width: 100%;
+  min-height: 66px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px !important;
+  background: var(--bg-secondary);
+  text-align: left;
 }
 
 .logo {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-  flex-shrink: 0;
-  /* These marks are deliberately white-backed, so they get a rounded chip and
-     a hairline to read as intentional against a dark theme. */
-  background: #ffffff;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
   border: var(--hairline);
-  border-radius: 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  object-fit: contain;
 }
 
-.details {
+.triggerText {
+  display: grid;
   flex: 1;
   min-width: 0;
 }
 
-.name {
-  font-size: 13px;
-  font-weight: 600;
+.triggerText strong {
+  font-size: 15px;
+}
+
+.triggerText small {
   color: var(--text-muted);
+  font-size: 12px;
+}
+
+.caret,
+.caretOpen {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  transition: transform 160ms ease;
+}
+
+.caretOpen {
+  transform: rotate(180deg);
+}
+
+.options {
+  position: absolute;
+  top: 86px;
+  right: 0;
+  left: 0;
+  z-index: 6;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.option,
+.optionSelected {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 56px;
+  padding: 7px 10px;
+  border-radius: 14px !important;
+  text-align: left;
+}
+
+.option span,
+.optionSelected span {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.optionSelected {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-secondary));
+}
+
+.accountCard {
+  display: grid;
+  gap: 3px;
+  padding: 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 17%, var(--surface));
 }
 
 .account {
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  /* Digits line up between the two accounts. */
+  margin-top: 3px;
+  color: var(--text);
+  font-size: clamp(19px, 6vw, 24px);
   font-variant-numeric: tabular-nums;
-  -webkit-user-select: text;
+  letter-spacing: 0.015em;
   user-select: text;
 }
 
 .holder {
-  font-size: 12px;
   color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 13px;
 }
 
-.action {
+.copyButton {
+  justify-self: start;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 6px;
+  min-height: 38px;
+  margin-top: 10px;
+  padding: 0 14px;
+  background: var(--text);
+  color: var(--surface);
   font-size: 12px;
-  font-weight: 600;
-  color: var(--link);
+  font-weight: 750;
 }

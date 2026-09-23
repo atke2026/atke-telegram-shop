@@ -1,69 +1,108 @@
-import { Copy, Check } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { CaretDown, Check, Copy } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
 
 import type { PaymentMethodDto } from '@entities/deposit';
 import { haptics } from '@shared/lib/telegram';
-import { Card } from '@shared/ui/Card';
 import styles from './PaymentMethods.module.css';
 
-/**
- * Where to send money. Account numbers are the one thing a customer must get
- * exactly right, so each is tap-to-copy rather than something to retype.
- */
+/** One compact payment-method picker followed by the selected account. */
 export function PaymentMethods({ methods }: { methods: PaymentMethodDto[] }) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState(methods[0]?.id ?? '');
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const copy = async (method: PaymentMethodDto) => {
+  useEffect(() => {
+    if (!methods.some((method) => method.id === selectedId)) {
+      setSelectedId(methods[0]?.id ?? '');
+    }
+  }, [methods, selectedId]);
+
+  const selected = methods.find((method) => method.id === selectedId) ?? methods[0];
+  if (!selected) return null;
+
+  const copy = async () => {
     try {
-      await navigator.clipboard.writeText(method.accountNumber);
+      await navigator.clipboard.writeText(selected.accountNumber);
       haptics.notify('success');
-      setCopiedId(method.id);
-      window.setTimeout(() => setCopiedId((current) => (current === method.id ? null : current)), 1800);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
     } catch {
       haptics.notify('error');
     }
   };
 
-  if (methods.length === 0) return null;
-
   return (
-    <div className={styles.list}>
-      {methods.map((method) => (
-        <Card key={method.id} onClick={() => void copy(method)}>
-          <div className={styles.row}>
-            <img
-              className={styles.logo}
-              src={method.logoUrl}
-              alt=""
-              width={40}
-              height={40}
-              loading="lazy"
-              // A missing logo must not leave a broken-image icon in the card.
-              onError={(event) => {
-                event.currentTarget.style.display = 'none';
-              }}
-            />
+    <div className={styles.picker}>
+      <p className={styles.label}>Pay with</p>
+      <button
+        type="button"
+        className={styles.trigger}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => {
+          haptics.tap();
+          setOpen((current) => !current);
+        }}
+      >
+        <MethodLogo method={selected} />
+        <span className={styles.triggerText}>
+          <strong>{selected.name}</strong>
+          <small>Choose payment method</small>
+        </span>
+        <CaretDown className={open ? styles.caretOpen : styles.caret} size={18} weight="bold" />
+      </button>
 
-            <div className={styles.details}>
-              <p className={styles.name}>{method.name}</p>
-              <p className={styles.account}>{method.accountNumber}</p>
-              <p className={styles.holder}>{method.accountName}</p>
-            </div>
+      {open ? (
+        <div className={styles.options} role="listbox" aria-label="Payment method">
+          {methods.map((method) => {
+            const active = method.id === selected.id;
+            return (
+              <button
+                key={method.id}
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={active ? styles.optionSelected : styles.option}
+                onClick={() => {
+                  setSelectedId(method.id);
+                  setOpen(false);
+                  setCopied(false);
+                  haptics.select();
+                }}
+              >
+                <MethodLogo method={method} />
+                <span>{method.name}</span>
+                {active ? <Check size={17} weight="bold" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
-            <span className={styles.action}>
-              {copiedId === method.id ? (
-                <>
-                  <Check size={15} weight="bold" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy size={15} /> Copy
-                </>
-              )}
-            </span>
-          </div>
-        </Card>
-      ))}
+      <div className={styles.accountCard}>
+        <span className={styles.sendLabel}>Send to</span>
+        <strong className={styles.account}>{selected.accountNumber}</strong>
+        <span className={styles.holder}>{selected.accountName}</span>
+        <button type="button" className={styles.copyButton} onClick={() => void copy()}>
+          {copied ? <Check size={16} weight="bold" /> : <Copy size={16} />}
+          {copied ? 'Copied' : 'Copy account'}
+        </button>
+      </div>
     </div>
+  );
+}
+
+function MethodLogo({ method }: { method: PaymentMethodDto }) {
+  return (
+    <img
+      className={styles.logo}
+      src={method.logoUrl}
+      alt=""
+      width={42}
+      height={42}
+      onError={(event) => {
+        event.currentTarget.style.visibility = 'hidden';
+      }}
+    />
   );
 }

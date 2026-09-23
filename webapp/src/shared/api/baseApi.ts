@@ -20,13 +20,20 @@ export const baseApi = createApi({
     'Deposit',
     'Admin',
     'AdminSummary',
+    'AdminAnalytics',
     'AdminDeposit',
     'AdminProduct',
     'AdminUser',
     'Discount',
+    'Maintenance',
+    'Feedback',
+    'AdminFeedback',
+    'Backup',
   ],
   baseQuery: fetchBaseQuery({
-    baseUrl: '/api',
+    // Vite resolves this to `/api` in development and `/suq/api` in the
+    // shared-domain production build.
+    baseUrl: `${import.meta.env.BASE_URL}api`,
     prepareHeaders: (headers) => {
       // Re-read on every request: Telegram can refresh initData mid-session.
       const initData = getInitData();

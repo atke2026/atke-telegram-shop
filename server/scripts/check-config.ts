@@ -17,10 +17,9 @@ try {
 
   console.log('✅ config valid');
   console.log('  admins:', config.ADMIN_TELEGRAM_IDS.map(String).join(', '));
-  console.log('  hubx:  ', config.HUBX_API_URL);
-  console.log('  key:   ', `${config.HUBX_API_KEY.slice(0, 8)}…(${config.HUBX_API_KEY.length} chars)`);
+  console.log('  YeneShop:', config.YENESHOP_API_URL);
+  console.log('  key:   ', `${config.YENESHOP_API_KEY.slice(0, 13)}…(${config.YENESHOP_API_KEY.length} chars)`);
   console.log('  token: ', `${config.BOT_TOKEN.split(':')[0]}:…(${config.BOT_TOKEN.length} chars)`);
-  console.log('  rate:  ', config.DEFAULT_USDT_ETB_RATE, 'ETB/USDT');
   console.log('  sync:  ', config.PRODUCT_SYNC_CRON);
 } catch (error) {
   console.error('❌', (error as Error).message);

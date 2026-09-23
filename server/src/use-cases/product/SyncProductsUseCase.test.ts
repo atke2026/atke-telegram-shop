@@ -2,36 +2,48 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Money } from '../../core/entities/Money.js';
 import type { Product } from '../../core/entities/Product.js';
-import type { ConfigRepository, ProductRepository } from '../../core/ports/repositories.js';
-import type { CachePort, HubxGateway, HubxProduct } from '../../core/ports/services.js';
+import type { ProductRepository } from '../../core/ports/repositories.js';
+import type { CachePort, YeneShopGateway, YeneShopProduct } from '../../core/ports/services.js';
 import type { Logger } from '../../shared/logger.js';
 import { SyncProductsUseCase } from './SyncProductsUseCase.js';
 
-const silentLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as Logger;
-
-const UPSTREAM: HubxProduct = {
+const logger = { info: vi.fn() } as unknown as Logger;
+const upstream: YeneShopProduct = {
   id: 'p1',
   slug: 'google-ai-pro',
-  name: 'Google AI Pro (18m)',
-  description: null,
+  name: 'Google AI Pro',
+  description: 'Details from YeneShop',
+  imageUrl: 'https://yeneshop.test/logos/google-ai-pro.webp?v=2',
   stock: 4,
   isActive: true,
-  priceUSDT: '1',
+  resellerPriceETB: '250.00',
+  suggestedRetailPriceETB: '340.00',
+  deliveryType: 'MANUAL',
+  input: { type: 'TEXT', placeholder: 'Customer email' },
 };
 
-function existingProduct(overrides: Partial<Product> = {}): Product {
+function existing(overrides: Partial<Product> = {}): Product {
   return {
-    id: 'p1',
-    slug: 'google-ai-pro',
-    name: 'Google AI Pro (18m)',
+    id: upstream.id,
+    slug: upstream.slug,
+    name: upstream.name,
     description: null,
-    stock: 4,
+    descriptionOverride: null,
+    source: 'YENESHOP',
+    imageUrl: upstream.imageUrl,
+    deliveryType: 'INSTANT',
+    deliveryMessage: null,
+    input: null,
+    stock: 1,
     isActive: true,
-    costPriceUSDT: '1',
+    operatorAvailable: true,
+    costPriceETB: '200.00',
+    suggestedRetailPrice: Money.fromDecimal('300'),
     markup: Money.ZERO,
     priceOverride: null,
-    descriptionOverride: null,
-    sellingPrice: Money.fromDecimal('160'),
+    sellingPrice: Money.fromDecimal('300'),
+    sortOrder: null,
+    logoVersion: 0,
     updatedAt: new Date(),
     ...overrides,
   };
@@ -39,83 +51,63 @@ function existingProduct(overrides: Partial<Product> = {}): Product {
 
 describe('SyncProductsUseCase', () => {
   let products: ProductRepository;
-  let config: ConfigRepository;
   let cache: CachePort;
-  let hubx: HubxGateway;
-  let upserted: Product[];
+  let yeneshop: YeneShopGateway;
+  let saved: Product[];
 
   beforeEach(() => {
-    upserted = [];
-
+    saved = [];
     products = {
-      findById: vi.fn(),
-      findBySlugOrId: vi.fn(),
-      listActive: vi.fn().mockResolvedValue([]),
-      setPriceOverride: vi.fn(),
-      setDescription: vi.fn(),
-      upsertMany: vi.fn().mockImplementation(async (rows: Product[]) => {
-        upserted = rows;
-        return rows.length;
-      }),
+      findById: vi.fn(), findBySlugOrId: vi.fn(), listActive: vi.fn(),
+      findByIds: vi.fn().mockResolvedValue([]),
+      setPriceOverride: vi.fn(), setOperatorAvailable: vi.fn(), bumpLogoVersion: vi.fn(),
+      setDescription: vi.fn(), setSortOrder: vi.fn(), clearSortOrder: vi.fn(),
+      upsertMany: vi.fn().mockImplementation(async (rows: Product[]) => { saved = rows; return rows.length; }),
       deactivateMissing: vi.fn().mockResolvedValue(0),
     };
-
-    config = { get: vi.fn().mockResolvedValue(null), set: vi.fn() };
     cache = { get: vi.fn(), set: vi.fn(), del: vi.fn() };
-    hubx = {
-      getProducts: vi.fn().mockResolvedValue([UPSTREAM]),
-      getProduct: vi.fn(),
-      getOrder: vi.fn(),
-      getResellerBalanceUSDT: vi.fn(),
-      placeOrder: vi.fn(),
+    yeneshop = {
+      getProducts: vi.fn().mockResolvedValue([upstream]),
+      getResellerBalanceETB: vi.fn(), placeOrder: vi.fn(), getOrder: vi.fn(),
     };
   });
 
-  const run = () =>
-    new SyncProductsUseCase({ hubx, products, config, cache, defaultRate: '160', logger: silentLogger }).execute();
+  const run = () => new SyncProductsUseCase({ yeneshop, products, cache, logger }).execute();
 
-  it('prices new products at cost * rate', async () => {
+  it('uses YeneShop reseller and suggested retail prices without currency conversion', async () => {
     await run();
-
-    expect(upserted[0]?.sellingPrice.toDecimalString()).toBe('160.00');
+    expect(saved[0]?.costPriceETB).toBe('250.00');
+    expect(saved[0]?.sellingPrice.toDecimalString()).toBe('340.00');
   });
 
-  it('preserves the operator markup across a sync', async () => {
-    products.listActive = vi.fn().mockResolvedValue([existingProduct({ markup: Money.fromDecimal('40') })]);
-
+  it('copies image, delivery mode, and customer-input metadata', async () => {
     await run();
-
-    expect(upserted[0]?.sellingPrice.toDecimalString()).toBe('200.00');
+    expect(saved[0]).toMatchObject({
+      imageUrl: upstream.imageUrl,
+      deliveryType: 'MANUAL',
+      input: upstream.input,
+    });
   });
 
-  it('keeps a fixed price instead of recomputing it', async () => {
-    products.listActive = vi
-      .fn()
-      .mockResolvedValue([existingProduct({ priceOverride: Money.fromDecimal('2500') })]);
-
+  it('preserves Suq-owned fixed price, description, order, and availability', async () => {
+    products.findByIds = vi.fn().mockResolvedValue([
+      existing({
+        priceOverride: Money.fromDecimal('399'),
+        descriptionOverride: 'Suq copy',
+        operatorAvailable: false,
+        sortOrder: 2,
+      }),
+    ]);
     await run();
-
-    expect(upserted[0]?.sellingPrice.toDecimalString()).toBe('2500.00');
-    expect(upserted[0]?.priceOverride?.toDecimalString()).toBe('2500.00');
+    expect(saved[0]?.sellingPrice.toDecimalString()).toBe('399.00');
+    expect(saved[0]).toMatchObject({
+      descriptionOverride: 'Suq copy', operatorAvailable: false, sortOrder: 2,
+    });
   });
 
-  it('leaves a fixed price untouched when the exchange rate changes', async () => {
-    config.get = vi.fn().mockResolvedValue('250');
-    products.listActive = vi
-      .fn()
-      .mockResolvedValue([existingProduct({ priceOverride: Money.fromDecimal('2500') })]);
-
+  it('deactivates products omitted by YeneShop and refreshes the cache', async () => {
     await run();
-
-    // Auto pricing would have moved to 250.00; the fixed price must not.
-    expect(upserted[0]?.sellingPrice.toDecimalString()).toBe('2500.00');
-  });
-
-  it('follows the exchange rate when no price is fixed', async () => {
-    config.get = vi.fn().mockResolvedValue('250');
-
-    await run();
-
-    expect(upserted[0]?.sellingPrice.toDecimalString()).toBe('250.00');
+    expect(products.deactivateMissing).toHaveBeenCalledWith(['p1']);
+    expect(cache.set).toHaveBeenCalled();
   });
 });

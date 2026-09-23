@@ -141,3 +141,68 @@
   font-size: 13px;
   color: var(--destructive);
 }
+
+/* An order row is a card wrapping the summary plus, optionally, what was
+   delivered — so the inner row keeps its padding but drops its own margin. */
+.orderRow {
+  margin-bottom: var(--space-2);
+}
+
+.orderRow .listRow {
+  margin-bottom: 0;
+}
+
+.orderRow > button {
+  margin: 0 var(--space-4) var(--space-3);
+}
+
+.deliveryBad {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--destructive);
+}
+
+.delivery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.deliveryItem {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  /* License keys are long and unbreakable; wrap rather than overflow. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
+.deliveryItemRow {
+  position: relative;
+}
+
+.deliveryItemRow .deliveryItem {
+  padding-right: 76px;
+}
+
+.copyButton {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-height: 30px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: var(--hairline);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+}

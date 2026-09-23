@@ -1,0 +1,14 @@
+.stars {
+  display: inline-flex;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.lit {
+  color: #f5a623;
+}
+
+.dim {
+  color: var(--text-muted);
+  opacity: 0.35;
+}

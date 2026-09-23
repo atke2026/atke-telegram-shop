@@ -54,6 +54,12 @@ export interface ProductDto {
   listPrice: MoneyDto | null;
   discountLabel: string | null;
   logoUrl: string;
+  /**
+   * Something the buyer must supply before they can pay. Null on almost every
+   * product; when present the client has to render the field and send the
+   * answer back, or the purchase is refused.
+   */
+  input: { type: 'TEXT' | 'NUMBER'; placeholder: string | null } | null;
 }
 
 /**
@@ -74,8 +80,10 @@ export function toProductDto(product: Product, priced?: PricedProduct): ProductD
     price: money(priced?.finalPrice ?? product.sellingPrice),
     listPrice: discounted && priced ? money(priced.listPrice) : null,
     discountLabel: discounted && priced ? describe(priced) : null,
-    // Logos are named by slug, so no lookup table is needed on the client.
-    logoUrl: `/logos/${product.slug}.webp`,
+    input: product.input,
+    // YeneShop owns reseller product artwork. The fallback exists only for
+    // historical rows retained to render old orders.
+    logoUrl: product.imageUrl ?? `/logos/${product.slug}.webp?v=${product.logoVersion}`,
   };
 }
 
@@ -97,10 +105,12 @@ export interface OrderDto {
   status: Order['status'];
   /** Only ever returned to the order's owner. */
   deliveredItems: unknown[] | null;
+  /** The product's redemption steps, so the buyer is not left with a bare link. */
+  instructions: string | null;
   createdAt: string;
 }
 
-export function toOrderDto(order: Order): OrderDto {
+export function toOrderDto(order: Order, instructions: string | null = null): OrderDto {
   return {
     id: order.id,
     productId: order.productId,
@@ -109,6 +119,7 @@ export function toOrderDto(order: Order): OrderDto {
     pricePaid: money(order.pricePaid),
     status: order.status,
     deliveredItems: order.deliveredItems,
+    instructions,
     createdAt: order.createdAt.toISOString(),
   };
 }

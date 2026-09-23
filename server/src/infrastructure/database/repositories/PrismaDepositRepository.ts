@@ -56,7 +56,9 @@ export class PrismaDepositRepository implements DepositRepository {
   async listByStatus(status: DepositStatus, limit: number): Promise<Deposit[]> {
     const rows = await this.prisma.deposit.findMany({
       where: { status },
-      orderBy: { createdAt: 'asc' },
+      // Newest first, so the most recent deposits sit at the top of every
+      // admin tab (pending, approved, rejected) with older ones below.
+      orderBy: { createdAt: 'desc' },
       take: limit,
     });
 
@@ -90,10 +92,23 @@ export class PrismaDepositRepository implements DepositRepository {
       }
 
       const deposit = await tx.deposit.findUniqueOrThrow({ where: { id: depositId } });
-      const user = await tx.user.update({
-        where: { id: deposit.userId },
-        data: { balanceETB: { increment: deposit.amountETB } },
-      });
+      const [user] = await Promise.all([
+        tx.user.update({
+          where: { id: deposit.userId },
+          data: { balanceETB: { increment: deposit.amountETB } },
+        }),
+        tx.moneyEvent.create({
+          data: {
+            kind: 'DEPOSIT_APPROVED',
+            dedupeKey: `deposit-approved:${deposit.id}`,
+            userId: deposit.userId,
+            depositId: deposit.id,
+            walletDeltaETB: deposit.amountETB,
+            actorTelegramId: reviewerTelegramId,
+            occurredAt: deposit.reviewedAt ?? new Date(),
+          },
+        }),
+      ]);
 
       return { deposit: toDeposit(deposit), user: toUser(user) };
     });

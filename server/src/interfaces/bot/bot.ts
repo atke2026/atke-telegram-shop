@@ -3,7 +3,7 @@ import { session, Telegraf } from 'telegraf';
 import type { Container } from '../../shared/container.js';
 import { registerAdminCommands } from './commands/admin.js';
 import { registerBasicCommands } from './commands/basic.js';
-import { registerDepositFlow } from './commands/deposit.js';
+import { registerMaintenance } from './commands/maintenance.js';
 import type { BotContext, SessionData } from './context.js';
 import { toUserMessage } from '../../shared/errorMessages.js';
 
@@ -12,6 +12,13 @@ export function createBot(container: Container): Telegraf<BotContext> {
   const { logger, repositories, useCases } = container;
 
   bot.use(session({ defaultSession: (): SessionData => ({}) }));
+
+  // Restore disconnects Prisma while it atomically replaces the database.
+  // Stop every bot update before identity lookup during that short window.
+  bot.use(async (ctx, next) => {
+    if (!container.services.backups.isRestoring) return next();
+    await ctx.reply('🛠 A full backup is being restored. Please try again shortly.');
+  });
 
   // Identity middleware: attaches the caller's User row and admin flag.
   bot.use(async (ctx, next) => {
@@ -43,7 +50,9 @@ export function createBot(container: Container): Telegraf<BotContext> {
   });
 
   registerBasicCommands(bot, container);
-  registerDepositFlow(bot, container);
+  // Before the admin commands so its photo/text steps win over the broadcast
+  // handler while the "set notice" flow is active.
+  registerMaintenance(bot, container);
   registerAdminCommands(bot, container);
 
   bot.catch((error, ctx) => {

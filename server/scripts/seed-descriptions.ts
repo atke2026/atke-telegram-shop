@@ -13,11 +13,19 @@ import { createPrismaClient } from '../src/infrastructure/database/prisma.js';
 import { PrismaProductRepository } from '../src/infrastructure/database/repositories/PrismaProductRepository.js';
 import { createLogger } from '../src/shared/logger.js';
 
-for (const line of fs.readFileSync('.env', 'utf8').split('\n')) {
-  const match = /^([A-Z_]+)=(.*)$/.exec(line.trim());
-  if (match?.[1] && !process.env[match[1]]) {
-    process.env[match[1]] = (match[2] ?? '').replace(/^["']|["']$/g, '');
+// In development .env sits beside package.json; on the server it lives one
+// level up, outside the directory a deploy replaces. Either is fine, and so is
+// neither when the variables are already exported.
+for (const candidate of ['.env', '../.env']) {
+  if (!fs.existsSync(candidate)) continue;
+
+  for (const line of fs.readFileSync(candidate, 'utf8').split('\n')) {
+    const match = /^([A-Z_]+)=(.*)$/.exec(line.trim());
+    if (match?.[1] && !process.env[match[1]]) {
+      process.env[match[1]] = (match[2] ?? '').replace(/^["']|["']$/g, '');
+    }
   }
+  break;
 }
 
 const DESCRIPTIONS: Record<string, string> = {
@@ -140,6 +148,293 @@ Delivery is automatic after payment confirmation.`,
 
   'notion-business-12m': `➡️ Instant coupon delivery
 ➡️ Coupon redeem warranty only
+
+Delivery is automatic after payment confirmation.`,
+  'canva-admin-panel': `✨ What you get
+• Canva Pro Education verified admin panel
+• All Canva Pro premium features
+• Supplied account, delivered ready to use
+
+🗓 Duration: 3 years
+👤 Account: supplied by us, with mail access
+🛡 Warranty: 2 months, full
+
+📌 What arrives
+CANVA & Outlook email:password | 2FA email:password | 2FA website
+
+Delivery is automatic after payment confirmation.`,
+
+  'coursera-premium-12m': `✨ What you get
+• Organization Plus (Org+) premium access
+• Every course and certificate
+• Certificates issued in your own name
+• Supplied account with mail access
+
+🗓 Duration: 12 months
+👤 Account: supplied by us, with mail access
+🛡 Warranty: 1 month
+
+📌 How to activate
+1. Log in to Coursera with the details you receive.
+2. Change your name and password after the first login.
+3. Add a recovery email.
+4. Connect your Google or Facebook account (recommended).
+
+⚠️ Important
+• You can change the password at any time.
+• The email address cannot be changed until the subscription expires.
+
+✅ Happy learning!
+
+Delivery is automatic after payment confirmation.`,
+
+  'elevenlabs-creator-12m': `✨ What you get
+• ElevenLabs Creator plan, applied to your own account
+• Official coupon code
+
+🗓 Duration: 12 months
+👤 Account: your own
+🛡 Warranty: none once the coupon has been activated
+
+⚠️ Important
+Redeem the code within 7 days of purchase. After that it may expire, and an
+expired code cannot be replaced.
+
+📌 How to activate
+1. Create a free account at elevenlabs.io
+2. Complete the onboarding steps.
+3. Upgrade to the "Creator" plan with Monthly billing.
+4. At checkout, click "Add promotion code" and enter your code.
+5. Check the discount has applied before completing checkout.
+
+Delivery is automatic after payment confirmation.`,
+
+  'factory-pro-1-year': `✨ What you get
+• Factory Pro, applied to your own account
+• Official coupon code
+
+🗓 Duration: 12 months
+👤 Account: your own
+🛡 Warranty: none once the code has been activated
+
+📌 How to activate
+1. Create an account at app.factory.ai
+2. Complete all onboarding steps.
+3. Go to app.factory.ai/voucher
+   (You may need to paste this address in yourself — it is not always in the menu.)
+4. Enter your code in the "Voucher Code" field.
+5. Click "Redeem Voucher".
+
+Delivery is automatic after payment confirmation.`,
+
+  'gamma-pro-1-year': `✨ What you get
+• Gamma Pro yearly plan, applied to your own account
+• Official coupon code
+
+🗓 Duration: 12 months
+👤 Account: your own
+🛡 Warranty: none once the coupon has been activated
+
+⚠️ Important
+Redeem the code within 7 days of purchase. After that it may expire, and an
+expired code cannot be replaced.
+
+📌 How to activate
+1. Log in to your Gamma account.
+2. Select the Gamma Pro Yearly plan.
+3. Enter the coupon code.
+4. Complete checkout with your card or any virtual card.
+
+Delivery is automatic after payment confirmation.`,
+
+  'linkedin-business-2m-new-user': `✨ What you get
+• LinkedIn Business premium, activated on your own account
+• Redeem link
+
+🗓 Duration: 2 months
+👤 Account: your own
+
+⚠️ Before you buy
+• Works only on accounts that have not used any LinkedIn premium subscription
+  in the last 12 months.
+• The link must be activated within 24 hours of receiving it.
+
+📌 How to activate
+1. Log in to LinkedIn in your browser.
+2. Open the redeem link in a new tab.
+3. Click Activate.
+4. A valid card may be requested for verification at checkout.
+5. Premium access starts immediately.
+
+Delivery is automatic after payment confirmation.`,
+
+  'linkedin-career-2m-new-user': `✨ What you get
+• LinkedIn Career premium, activated on your own account
+• Redeem link
+
+🗓 Duration: 2 months
+👤 Account: your own
+
+⚠️ Before you buy
+• Works only on accounts that have not used any LinkedIn premium subscription
+  in the last 12 months.
+• The link must be activated within 24 hours of receiving it.
+• Not available in every region — the offer may not appear on some accounts.
+
+📌 How to activate
+1. Log in to LinkedIn in your browser.
+2. Open the redeem link in a new tab.
+3. Click Activate.
+4. A valid card may be requested for verification at checkout.
+5. Premium access starts immediately.
+
+Delivery is automatic after payment confirmation.`,
+
+  'lovable-lite-12m': `✨ What you get
+• Full Lovable Lite access
+• 5 daily credits, up to 150 per month
+• A one-time 300 credits (not monthly)
+• Custom domains
+• The Lovable badge removed
+
+🗓 Duration: 12 months
+👤 Account: your own, activated with a redeem link
+🛡 Warranty: 1 month
+
+⚠️ Important
+Use the redeem link within 72 hours of receiving your order, or it may expire.
+
+Delivery is automatic after payment confirmation.`,
+
+  'microsoft-365-family': `✨ What you get
+• Microsoft 365 Family, direct yearly billed plan
+• Supplied account with mail access
+• You can change the password
+
+🗓 Duration: 12 months
+👤 Account: supplied by us, with mail access
+🛡 Warranty: none
+
+Delivery is automatic after payment confirmation.`,
+
+  'n8n-starter-12m': `✨ What you get
+• n8n Starter plan, applied to your own account
+• Official coupon code
+
+🗓 Duration: 12 months
+👤 Account: your own
+🛡 Warranty: none once the coupon has been activated
+
+⚠️ Important
+Redeem the code within 7 days of purchase. After that it may expire, and an
+expired code cannot be replaced.
+
+Delivery is automatic after payment confirmation.`,
+
+  'notion-business-3m': `✨ What you get
+• Full Notion AI — agent, meeting notes and search
+• Private teamspaces, SAML SSO, granular permissions
+
+🗓 Duration: 3 months
+👤 Account: your own, activated with a coupon
+🛡 Warranty: covers redeeming the coupon only
+
+Delivery is automatic after payment confirmation.`,
+
+  'railway-hobby-12m': `✨ What you get
+• Railway Hobby plan, applied to your own account
+• $20 in monthly credits for 12 months — this covers the $5/month Hobby plan
+  and leaves roughly $15 a month for usage
+• Official coupon code
+
+🗓 Duration: 12 months
+👤 Account: your own
+🛡 Warranty: none once the coupon has been activated
+
+⚠️ Before you buy
+• Valid on new Railway accounts only.
+• Redeem the code within 7 days of purchase, or it may expire.
+
+📌 How to activate
+1. Open the link provided and create a new Railway account.
+2. Go to Profile (top right) → Workspace Settings → Plans.
+3. If your account qualifies, the promotion name appears in the middle of the page.
+4. Upgrade to the "Hobby" plan.
+5. Enter your billing details to activate the subscription.
+
+Delivery is automatic after payment confirmation.`,
+
+  'warp-build-12m': `✨ What you get
+• Warp Build plan, applied to your own account
+• A $20 discount on each of 12 monthly payments
+• Official coupon code
+
+🗓 Duration: 12 months
+👤 Account: your own
+🛡 Warranty: none once the coupon has been activated
+
+⚠️ Important
+• Redeem the code within 7 days of purchase, or it may expire.
+• The code only works with Monthly billing.
+• Check your card and billing details before confirming. If they are wrong the
+  code can still be marked as used, and it cannot be redeemed again.
+
+📌 How to activate
+1. Download Warp from warp.dev
+2. Install and open the app.
+3. Click "Sign Up" and create a free account with your email.
+4. Upgrade at app.warp.dev/upgrade, or in the app under
+   Settings → Billing & Usage → Upgrade.
+5. Select the "Build" plan.
+6. Change the billing option from Annual to Monthly.
+7. At checkout, click "Add promotion code" and enter your code.
+
+ℹ️ Notes
+• The discount applies to 1 seat. Extra team members are charged normally.
+• An existing team can receive at most $240 in total ($20 × 12 months).
+
+Delivery is automatic after payment confirmation.`,
+
+  'replit-core-12m': `✨ What you get
+• Replit Core, applied to your own account
+• Official coupon code
+
+🗓 Duration: 12 months
+👤 Account: your own
+🛡 Warranty: none once the coupon has been activated
+
+⚠️ Important
+Redeem the code within 7 days of purchase. After that it may expire, and an
+expired code cannot be replaced.
+
+📌 How to activate
+1. Create your account on Replit.
+2. Start the upgrade either from the onboarding flow, or with the
+   "Upgrade to Replit Core" button at the bottom left of the Home page.
+3. Select the "Replit Core" plan with Annual billing.
+4. At checkout, click "Add promotion code" and enter your code.
+
+Delivery is automatic after payment confirmation.`,
+
+  'wispr-flow-pro-1-year': `✨ What you get
+• Wispr Flow Pro, applied to your own account
+• Official coupon code
+
+🗓 Duration: 12 months
+👤 Account: your own
+🛡 Warranty: none once the coupon has been activated
+
+⚠️ Important
+Redeem the code within 7 days of purchase. After that it may expire, and an
+expired code cannot be replaced.
+
+📌 How to activate
+1. Download the Wispr Flow desktop app (Mac or Windows) from
+   wisprflow.ai/downloads
+2. Sign up for a free account and finish the setup on your device.
+3. Upgrade to Pro with Annual billing:
+   Settings → Plans & Billing → Upgrade to Pro
+4. At checkout, click "Add promotion code" and enter your code.
 
 Delivery is automatic after payment confirmation.`,
 };

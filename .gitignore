@@ -6,3 +6,7 @@ dist/
 coverage/
 .DS_Store
 data/
+.claude/
+
+# Database dumps and worktree snapshots: real customer data, never committed.
+backups/

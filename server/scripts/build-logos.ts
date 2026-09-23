@@ -1,10 +1,14 @@
 /**
  * Normalises the raw brand logos in product_logos/ into web-ready assets:
- * one square, white-backed, 512x512 WebP per product, named by product slug.
+ * one square 512x512 WebP per product, named by product slug.
  *
- * Every mark sits on white. Transparency was tried and reverted: several of
- * these logos are dark ink on white (Autodesk, NordVPN), and they disappear
- * against a dark Telegram theme with nothing behind them.
+ * Transparency was once tried here and reverted wholesale, because several of
+ * these marks are dark ink on white (Autodesk, NordVPN) and disappeared
+ * against a dark Telegram theme with nothing behind them. It is back, but
+ * decided per logo rather than for all of them: prepareLogo keeps the alpha
+ * only when enough of the mark stays legible on a dark background, and plates
+ * the rest on white exactly as before. The uploader in the panel shares that
+ * function, so a built logo and an uploaded one still behave identically.
  *
  * Sources are left untouched. Run: npx tsx scripts/build-logos.ts
  */
@@ -13,6 +17,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
+
+import { prepareLogo } from '../src/infrastructure/storage/LogoStorage.js';
 
 // Logos live at the repo root, not inside server/, because the web app will
 // consume them too. Resolved from this file so the cwd does not matter.
@@ -178,17 +184,18 @@ for (const { slug, file } of jobs) {
   const meta = await sharp(source).metadata();
 
   // removeBackdrop still runs first: it strips whatever backdrop a source
-  // shipped with (Lovable's is cream), so flattening puts every mark on the
-  // *same* white rather than each keeping its own.
-  await sharp(await removeBackdrop(source))
+  // shipped with (Lovable's is cream), so a mark that ends up plated goes onto
+  // the *same* white as every other rather than keeping its own.
+  const cut = await sharp(await removeBackdrop(source))
     // With the backdrop gone, trimming evens out the margins so every mark
     // ends up at the same optical size.
     .trim({ threshold: 8 })
-    .resize(inner, inner, { fit: 'contain', background: WHITE })
-    .extend({ top: PADDING, bottom: PADDING, left: PADDING, right: PADDING, background: WHITE })
-    .flatten({ background: '#ffffff' })
-    .webp({ quality: 90, effort: 6 })
-    .toFile(target);
+    .png()
+    .toBuffer();
+
+  // Shared with the panel uploader, so both decide the backdrop the same way.
+  const { webp, transparent } = await prepareLogo(cut);
+  fs.writeFileSync(target, webp);
 
   const inSize = fs.statSync(source).size;
   const outSize = fs.statSync(target).size;
@@ -198,7 +205,8 @@ for (const { slug, file } of jobs) {
   console.log(
     `✅ ${slug}.webp`.padEnd(46) +
       `${meta.width}x${meta.height} ${meta.format} ${(inSize / 1024).toFixed(0)}KB` +
-      ` → ${SIZE}x${SIZE} webp ${(outSize / 1024).toFixed(0)}KB`,
+      ` → ${SIZE}x${SIZE} webp ${(outSize / 1024).toFixed(0)}KB` +
+      ` ${transparent ? 'transparent' : 'on white'}`,
   );
 }
 

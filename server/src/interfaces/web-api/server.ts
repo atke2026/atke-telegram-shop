@@ -8,11 +8,17 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import type { User } from '../../core/entities/User.js';
 import { DomainError } from '../../core/errors/DomainError.js';
 import { priceWithDiscounts } from '../../core/entities/Discount.js';
+import { DEFAULT_MAINTENANCE_MESSAGE, getMaintenance, maintenanceImageUrl } from '../../core/maintenance.js';
 import { PAYMENT_METHODS } from '../../core/paymentMethods.js';
-import { UnsupportedImageError } from '../../infrastructure/storage/ReceiptStorage.js';
+import { productDetails } from '../../core/entities/Product.js';
+import { isStoredReceipt, UnsupportedImageError } from '../../infrastructure/storage/ReceiptStorage.js';
 import { toUserMessage } from '../../shared/errorMessages.js';
 import { registerAdminRoutes } from './adminRoutes.js';
 import { InitDataError, verifyInitData } from '../../infrastructure/telegram/verifyInitData.js';
+import {
+  BackupBusyError,
+  InvalidBackupError,
+} from '../../infrastructure/backup/BackupManager.js';
 import type { Container } from '../../shared/container.js';
 import {
   toDepositDto,
@@ -37,18 +43,39 @@ function statusForDomainError(error: DomainError): number {
     case 'INSUFFICIENT_BALANCE':
     case 'INVALID_AMOUNT':
     case 'OUT_OF_STOCK':
+    case 'PRODUCT_IMAGE_NOT_FOUND':
+    case 'NO_FINITE_STOCK':
+    case 'NOT_A_YENESHOP_PRODUCT':
     // Refusing to remove the last admin is a state conflict, not bad input.
     case 'LAST_ADMIN':
       return 409;
     case 'PRODUCT_NOT_FOUND':
     case 'USER_NOT_FOUND':
     case 'DEPOSIT_NOT_FOUND':
+    case 'ORDER_NOT_FOUND':
       return 404;
+    // Already delivered: the state moved on, which is not bad input.
+    case 'ORDER_NOT_AWAITING_DELIVERY':
+      return 409;
     case 'USER_BANNED':
     case 'NOT_AN_ADMIN':
+    case 'NOT_A_RESELLER':
+    case 'RESELLER_SUSPENDED':
       return 403;
+    case 'INVALID_RESELLER_API_KEY':
+      return 401;
+    case 'RESELLER_PRODUCT_UNAVAILABLE':
+      return 404;
+    case 'INVALID_RESELLER_PRICE':
+    case 'RESELLER_EXTERNAL_ID_CONFLICT':
+    case 'RESELLER_EXTERNAL_ORDER_EXISTS':
+      return 409;
+    case 'INVALID_RATING':
+    case 'INVALID_RESELLER_EXTERNAL_ID':
+      return 400;
     case 'SYSTEM_OFFLINE':
     case 'INVALID_API_KEY':
+    case 'CHANNEL_PUBLISH_FAILED':
       return 503;
     default:
       return 400;
@@ -56,8 +83,16 @@ function statusForDomainError(error: DomainError): number {
 }
 
 export function createWebApi(container: Container): FastifyInstance {
-  const { config, logger, repositories, useCases } = container;
+  const { bot, config, logger, repositories, useCases } = container;
   const app = Fastify({ logger: false, bodyLimit: MAX_BODY_BYTES });
+
+  // Backup imports are streamed to a protected temporary file by the route;
+  // returning the payload stream here avoids holding a potentially large
+  // archive in Node's heap.
+  app.addContentTypeParser(
+    'application/vnd.suq.backup',
+    (_request, payload, done) => done(null, payload),
+  );
 
   void app.register(cors, {
     origin: config.WEB_APP_ORIGINS.length > 0 ? config.WEB_APP_ORIGINS : true,
@@ -81,8 +116,25 @@ export function createWebApi(container: Container): FastifyInstance {
    * so a leaked string expires on its own.
    */
   app.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
-    // Health and logos are public; everything else needs valid initData.
-    if (request.url.startsWith('/api/health') || request.url.startsWith('/logos/')) return;
+    // Health, logos and the maintenance notice are public; the notice has to
+    // load even for someone the maintenance gate is about to turn away.
+    if (
+      request.url.startsWith('/api/health') ||
+      request.url.startsWith('/logos/') ||
+      request.url.startsWith('/api/maintenance')
+    ) {
+      return;
+    }
+
+    // The restore request that raised this flag is already inside its handler.
+    // Everything arriving afterwards waits outside the database while its
+    // schema and upload directories are replaced.
+    if (container.services.backups.isRestoring) {
+      return reply.code(503).send({
+        error: 'RESTORING_BACKUP',
+        message: 'A full backup is being restored. Please try again shortly.',
+      });
+    }
 
     const header = request.headers.authorization ?? '';
     const initData = header.startsWith('tma ')
@@ -108,9 +160,59 @@ export function createWebApi(container: Container): FastifyInstance {
       }
       throw error;
     }
+
+    // Global subscription gate. Authentication above gives us the Telegram id;
+    // the same service and same announcement channel protect the bot as well.
+    const gatedUser = request.currentUser;
+    if (gatedUser && config.CHANNEL_MEMBERSHIP_REQUIRED) {
+      let joined: boolean;
+      try {
+        joined = await container.services.channelMembership.hasJoined(gatedUser.telegramId);
+      } catch (error) {
+        logger.error(
+          {
+            err: error,
+            telegramId: gatedUser.telegramId.toString(),
+            channel: container.services.channelMembership.channel,
+          },
+          'Could not verify web app channel membership',
+        );
+        return reply.code(503).send({
+          error: 'CHANNEL_MEMBERSHIP_UNAVAILABLE',
+          message: 'Could not verify channel membership right now. Please try again.',
+        });
+      }
+
+      if (!joined) {
+        return reply.code(403).send({
+          error: 'JOIN_CHANNEL_REQUIRED',
+          message: `Join ${container.services.channelMembership.channel} to continue.`,
+          channel: container.services.channelMembership.channel,
+          joinUrl: container.services.channelMembership.joinUrl,
+        });
+      }
+    }
+
+    // Maintenance gate: while on, non-admins cannot act. /api/me stays open so
+    // the app can still learn it is talking to an admin and let them through.
+    if (gatedUser && !request.url.startsWith('/api/me')) {
+      const state = await getMaintenance(repositories.config);
+      if (state.enabled && !(await useCases.manageAdmins.isAdmin(gatedUser.telegramId))) {
+        return reply
+          .code(503)
+          .send({ error: 'MAINTENANCE', message: state.message ?? DEFAULT_MAINTENANCE_MESSAGE });
+      }
+    }
   });
 
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof InvalidBackupError || error instanceof RangeError) {
+      return reply.code(400).send({ error: 'INVALID_BACKUP', message: error.message });
+    }
+    if (error instanceof BackupBusyError) {
+      return reply.code(409).send({ error: 'BACKUP_BUSY', message: error.message });
+    }
+
     if (error instanceof DomainError) {
       // The client shows `message` directly, so it must be customer-facing
       // copy. Domain messages are written for operators — SystemOfflineError
@@ -134,12 +236,71 @@ export function createWebApi(container: Container): FastifyInstance {
 
   app.get('/api/health', async () => ({ ok: true }));
 
+  // Public: the web app polls this on load to decide whether to show the
+  // maintenance screen. The image is streamed separately so the payload here
+  // stays a small JSON the app can read even while it is being turned away.
+  app.get('/api/maintenance', async () => {
+    if (container.services.backups.isRestoring) {
+      return {
+        enabled: true,
+        message: 'A full backup is being restored. The shop will return shortly.',
+        imageUrl: null,
+      };
+    }
+    const state = await getMaintenance(repositories.config);
+    return {
+      enabled: state.enabled,
+      message: state.message ?? (state.enabled ? DEFAULT_MAINTENANCE_MESSAGE : null),
+      imageUrl: maintenanceImageUrl(state),
+    };
+  });
+
+  app.get('/api/maintenance/image', async (_request, reply) => {
+    if (container.services.backups.isRestoring) {
+      return reply.code(503).send({ error: 'RESTORING_BACKUP' });
+    }
+    const state = await getMaintenance(repositories.config);
+    if (!state.imageFileId) return reply.code(404).send({ error: 'NO_IMAGE' });
+
+    // A panel upload is stored on disk; a bot upload is a Telegram file_id.
+    if (isStoredReceipt(state.imageFileId)) {
+      const stored = await container.services.receipts.read(state.imageFileId);
+      if (!stored) return reply.code(404).send({ error: 'IMAGE_NOT_FOUND' });
+
+      return reply
+        .header('Content-Type', stored.contentType)
+        .header('Cache-Control', 'public, max-age=300')
+        .send(stored.buffer);
+    }
+
+    try {
+      // Resolve the Telegram file_id with the bot token, exactly as receipts do.
+      const link = await bot.telegram.getFileLink(state.imageFileId);
+      const response = await fetch(link.toString());
+      if (!response.ok) return reply.code(502).send({ error: 'IMAGE_FETCH_FAILED' });
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      return reply
+        .header('Content-Type', response.headers.get('content-type') ?? 'image/jpeg')
+        .header('Cache-Control', 'public, max-age=300')
+        .send(buffer);
+    } catch (error) {
+      logger.error({ err: error }, 'Could not load maintenance image');
+      return reply.code(502).send({ error: 'IMAGE_FETCH_FAILED' });
+    }
+  });
+
   app.get('/api/me', async (request) => {
     const user = requireUser(request);
     // Drives the Panel tab's visibility only; every admin route re-checks.
     const isAdmin = await useCases.manageAdmins.isAdmin(user.telegramId);
 
-    return { user: { ...toUserDto(user), isAdmin } };
+    return {
+      user: {
+        ...toUserDto(user),
+        isAdmin,
+      },
+    };
   });
 
   app.get('/api/products', async () => {
@@ -151,7 +312,9 @@ export function createWebApi(container: Container): FastifyInstance {
     const { slug } = request.params as { slug: string };
     const product = await repositories.products.findBySlugOrId(slug);
 
-    if (!product || !product.isActive) return reply.code(404).send({ error: 'PRODUCT_NOT_FOUND' });
+    if (!product || product.source !== 'YENESHOP' || !product.isActive) {
+      return reply.code(404).send({ error: 'PRODUCT_NOT_FOUND' });
+    }
 
     const priced = priceWithDiscounts(
       product.sellingPrice,
@@ -164,16 +327,32 @@ export function createWebApi(container: Container): FastifyInstance {
 
   app.get('/api/orders', async (request) => {
     const orders = await repositories.orders.listByUser(requireUser(request).id, 50);
-    return { orders: orders.map(toOrderDto) };
+
+    // Redemption steps come from the product, not a copy frozen on the order,
+    // so correcting a set of instructions fixes it for past buyers too.
+    const products = await repositories.products.findByIds([
+      ...new Set(orders.map((order) => order.productId)),
+    ]);
+    const detailsById = new Map(products.map((product) => [product.id, productDetails(product)]));
+
+    return {
+      orders: orders.map((order) => toOrderDto(order, detailsById.get(order.productId) ?? null)),
+    };
   });
 
   app.post('/api/orders', async (request, reply) => {
-    const body = request.body as { productId?: unknown } | undefined;
+    const body = request.body as { productId?: unknown; customerInput?: unknown } | undefined;
     const productId = typeof body?.productId === 'string' ? body.productId : null;
     if (!productId) return reply.code(400).send({ error: 'productId is required' });
 
     const user = requireUser(request);
-    const result = await useCases.placeOrder.execute({ userId: user.id, productId });
+    const result = await useCases.placeOrder.execute({
+      userId: user.id,
+      productId,
+      // Validated against the product in the use case, not here — the rule
+      // belongs with the product that set it.
+      customerInput: typeof body?.customerInput === 'string' ? body.customerInput : null,
+    });
 
     return {
       order: {
@@ -186,12 +365,48 @@ export function createWebApi(container: Container): FastifyInstance {
           label: result.discountAmount.format(),
         },
         deliveredItems: result.deliveredItems,
+        // Paid for, but prepared by hand: the app shows "on its way" rather
+        // than an empty delivery, and the order stays pending until it lands.
+        awaitingDelivery: result.awaitingDelivery,
+        instructions: result.instructions,
       },
       balance: {
         amount: result.newBalance.toDecimalString(),
         label: result.newBalance.format(),
       } satisfies MoneyDto,
     };
+  });
+
+  /**
+   * Drives the satisfaction prompt, which the app decides on once per load.
+   *
+   * Both gates are answered here rather than on the device: the server knows
+   * whether they have already rated, so reinstalling or opening the Mini App
+   * on another phone cannot restart the asking, and it knows whether they have
+   * ever bought anything, which is what makes the question worth asking at all.
+   */
+  app.get('/api/feedback', async (request) => {
+    const user = requireUser(request);
+
+    const [submitted, hasPurchased] = await Promise.all([
+      useCases.submitFeedback.hasSubmitted(user.id),
+      repositories.orders.hasAnyOrder(user.id),
+    ]);
+
+    return { submitted, hasPurchased };
+  });
+
+  app.post('/api/feedback', async (request, reply) => {
+    const body = request.body as { rating?: unknown } | undefined;
+
+    const feedback = await useCases.submitFeedback.execute({
+      userId: requireUser(request).id,
+      // Passed through unvalidated on purpose: the use case owns the rule, and
+      // a string "5" from a hand-rolled client should be rejected, not coerced.
+      rating: body?.rating,
+    });
+
+    return reply.code(201).send({ feedback: { rating: feedback.rating } });
   });
 
   app.get('/api/deposits', async (request) => {

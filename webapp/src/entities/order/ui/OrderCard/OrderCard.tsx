@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card } from '@shared/ui/Card';
 import { haptics } from '@shared/lib/telegram';
 import type { OrderDto, OrderStatus } from '../../api/orderApi';
+import { itemToText } from '../../lib/itemToText';
 import styles from './OrderCard.module.css';
 
 const STATUS_ICON = {
@@ -19,19 +20,11 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   REFUNDED: 'Refunded',
   FAILED: 'Failed',
   PENDING: 'Processing',
-  PAID: 'Processing',
+  // Paid for, nothing handed over yet. On most products this lasts an instant,
+  // but a product the shop prepares by hand sits here until someone sends it —
+  // so it says Pending rather than pretending to be busy.
+  PAID: 'Pending',
 };
-
-/** Renders a delivered item without assuming HubX's payload shape. */
-function itemToText(item: unknown): string {
-  if (typeof item === 'string') return item;
-  if (item && typeof item === 'object') {
-    return Object.entries(item as Record<string, unknown>)
-      .map(([key, value]) => `${key}: ${String(value)}`)
-      .join('\n');
-  }
-  return String(item);
-}
 
 export function OrderCard({ order }: { order: OrderDto }) {
   const [revealed, setRevealed] = useState(false);
@@ -61,6 +54,14 @@ export function OrderCard({ order }: { order: OrderDto }) {
         <p className={styles.price}>{order.pricePaid.label}</p>
       </div>
 
+      {/* Waiting on a person, not a machine. Saying so stops the customer
+          reading a paid order with nothing in it as a failed one. */}
+      {order.status === 'PAID' && !hasItems ? (
+        <p className={styles.awaiting}>
+          ⏳ Being prepared for you — it will arrive here and in your chat shortly.
+        </p>
+      ) : null}
+
       {hasItems ? (
         <div className={styles.delivery}>
           {/* Credentials stay hidden until asked for: the app may be on screen in public. */}
@@ -75,6 +76,15 @@ export function OrderCard({ order }: { order: OrderDto }) {
                 );
               })}
               <p className={styles.hint}>Tap an item to copy</p>
+
+              {/* A redeem link on its own is not enough — most products need
+                  steps, and some expire within a day of delivery. */}
+              {order.instructions ? (
+                <div className={styles.instructions}>
+                  <p className={styles.instructionsTitle}>📖 How to use it</p>
+                  <p className={styles.instructionsBody}>{order.instructions}</p>
+                </div>
+              ) : null}
             </>
           ) : (
             <button

@@ -2,11 +2,18 @@ import type { Context, Scenes } from 'telegraf';
 
 import type { User } from '../../core/entities/User.js';
 
-/** Per-chat conversation state. Only the deposit flow needs it so far. */
+/** Per-chat conversation state. */
 export interface SessionData {
-  awaitingDepositAmount?: boolean;
-  pendingDepositAmount?: string;
-  awaitingReceipt?: boolean;
+  // Admin "set maintenance image & message" flow.
+  awaitingMaintenanceImage?: boolean;
+  awaitingMaintenanceMessage?: boolean;
+  /**
+   * Carries the image decision between the two edit steps:
+   *   absent  → keep the current image
+   *   ''      → remove the image
+   *   file_id → set this new image
+   */
+  pendingMaintenanceImage?: string;
 }
 
 export interface BotContext extends Context {

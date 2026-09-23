@@ -25,12 +25,56 @@ enum DiscountType {
   FIXED
 }
 
+/// Where a product came from, which decides how an order for it is fulfilled.
+enum ProductSource {
+  /// Pulled from YeneShop's reseller catalogue and fulfilled through its API.
+  YENESHOP
+  /// Legacy operator-added product retained for existing installations.
+  MANUAL
+}
+
+enum ProductDeliveryType {
+  INSTANT
+  MANUAL
+}
+
+/// What kind of answer a product asks its buyer for.
+enum ProductInputType {
+  TEXT
+  NUMBER
+}
+
 enum OrderStatus {
   PENDING
   PAID
   COMPLETED
   FAILED
   REFUNDED
+}
+
+enum OrderChannel {
+  RETAIL
+  RESELLER
+}
+
+enum ResellerStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ResellerEnvironment {
+  LIVE
+  SANDBOX
+}
+
+enum MoneyEventKind {
+  DEPOSIT_APPROVED
+  ORDER_PAID
+  ORDER_COMPLETED
+  ORDER_REFUNDED
+  ORDER_CANCELLED_NO_REFUND
+  ADMIN_BALANCE_ADJUSTMENT
+  OPENING_BALANCE
 }
 
 model User {
@@ -47,26 +91,30 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  deposits Deposit[]
-  orders   Order[]
+  deposits    Deposit[]
+  orders      Order[]
+  moneyEvents MoneyEvent[]
+  feedback    Feedback?
+  reseller    Reseller?
 
   @@map("users")
 }
 
 model Deposit {
-  id             String        @id @default(uuid())
-  userId         String
-  amountETB      Decimal       @db.Decimal(18, 2)
+  id            String        @id @default(uuid())
+  userId        String
+  amountETB     Decimal       @db.Decimal(18, 2)
   // Telegram file_id of the receipt screenshot.
-  screenshotUrl  String
-  status         DepositStatus @default(PENDING)
-  reviewedBy     BigInt?
-  reviewedAt     DateTime?
-  rejectionNote  String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  screenshotUrl String
+  status        DepositStatus @default(PENDING)
+  reviewedBy    BigInt?
+  reviewedAt    DateTime?
+  rejectionNote String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moneyEvents MoneyEvent[]
 
   @@index([status, createdAt])
   @@index([userId])
@@ -74,55 +122,206 @@ model Deposit {
 }
 
 model Order {
-  id             String      @id @default(uuid())
-  userId         String
-  productId      String
-  productName    String
-  quantity       Int         @default(1)
+  id                 String       @id @default(uuid())
+  userId             String
+  productId          String
+  productName        String
+  quantity           Int          @default(1)
   // What the customer paid, and what it cost us upstream.
-  pricePaidETB   Decimal     @db.Decimal(18, 2)
+  pricePaidETB       Decimal      @db.Decimal(18, 2)
   /// What the product would have cost without a discount.
-  listPriceETB   Decimal?    @db.Decimal(18, 2)
-  discountETB    Decimal     @default(0) @db.Decimal(18, 2)
-  discountId     String?
-  costUSDT       Decimal     @db.Decimal(18, 6)
-  status         OrderStatus @default(PENDING)
-  hubxOrderId    String?
-  deliveredItems Json?
-  failureReason  String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  listPriceETB       Decimal?     @db.Decimal(18, 2)
+  discountETB        Decimal      @default(0) @db.Decimal(18, 2)
+  discountId         String?
+  costETB            Decimal      @db.Decimal(18, 2)
+  /// What the buyer typed when the product asked them for something.
+  customerInput      String?
+  /// Retail purchases have no reseller metadata. API purchases use these two
+  /// columns as their idempotency boundary.
+  channel            OrderChannel @default(RETAIL)
+  resellerId         String?
+  resellerExternalId String?
+  status             OrderStatus  @default(PENDING)
+  yeneshopOrderId    String?
+  deliveredItems     Json?
+  failureReason      String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product      @relation(fields: [productId], references: [id])
+  reseller    Reseller?    @relation(fields: [resellerId], references: [id], onDelete: SetNull)
+  moneyEvents MoneyEvent[]
 
+  @@unique([resellerId, resellerExternalId])
   @@index([userId, createdAt])
+  @@index([resellerId, createdAt])
   @@index([status])
   @@map("orders")
 }
 
+/// Immutable financial facts used by the admin analytics page.
+///
+/// Wallet movement and earned sales deliberately use separate columns:
+/// charging an order reduces what the shop owes the customer immediately,
+/// while the sale is only settled when the product is delivered.
+model MoneyEvent {
+  id              String         @id @default(uuid())
+  kind            MoneyEventKind
+  /// Stable business key. Repository retries can never record the same event twice.
+  dedupeKey       String         @unique
+  userId          String?
+  orderId         String?
+  depositId       String?
+  /// Signed change to the customer's wallet liability.
+  walletDeltaETB  Decimal        @default(0) @db.Decimal(18, 2)
+  /// Revenue recognised when an order is delivered.
+  salesETB        Decimal        @default(0) @db.Decimal(18, 2)
+  /// YeneShop reseller cost fixed on the order at purchase time.
+  costETB         Decimal        @default(0) @db.Decimal(18, 2)
+  actorTelegramId BigInt?
+  /// True for facts reconstructed from records that predate this ledger.
+  estimated       Boolean        @default(false)
+  occurredAt      DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  deposit Deposit? @relation(fields: [depositId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt, kind])
+  @@index([userId, occurredAt])
+  @@index([orderId])
+  @@index([depositId])
+  @@map("money_events")
+}
+
 model Product {
-  id              String   @id
-  slug            String   @unique
-  name            String
-  description     String?
+  id                  String            @id
+  slug                String            @unique
+  name                String
+  description         String?
   // Operator-written product page. Survives syncs; wins over `description`.
-  descriptionOverride String? @db.Text
-  stock           Int      @default(0)
-  isActive        Boolean  @default(true)
-  costPriceUSDT   Decimal  @db.Decimal(18, 6)
-  // Markup applied on top of the converted ETB cost.
-  markupETB       Decimal  @default(0) @db.Decimal(18, 2)
+  descriptionOverride String?           @db.Text
+  source              ProductSource     @default(YENESHOP)
+  imageUrl            String?
+  deliveryType        ProductDeliveryType @default(INSTANT)
+  // Some products cannot be fulfilled without something from the buyer — the
+  // phone number to top up, the email to invite. Null means the product asks
+  // for nothing, which is the case for everything synced from HubX.
+  inputType           ProductInputType?
+  /// Shown in the empty field, e.g. "Your phone number".
+  inputPlaceholder    String?
+  // What a MANUAL product hands the buyer — the licence key, link or note the
+  // operator typed. Null on HubX products, which are delivered upstream.
+  deliveryMessage     String?           @db.Text
+  stock               Int               @default(0)
+  isActive            Boolean           @default(true)
+  // Operator switch for YeneShop products. Syncs never overwrite it; false keeps
+  // the product visible as sold out while blocking purchases everywhere.
+  operatorAvailable   Boolean           @default(true)
+  costPriceETB        Decimal           @db.Decimal(18, 2)
+  suggestedRetailPriceETB Decimal       @db.Decimal(18, 2)
+  // Legacy/operator markup metadata; YeneShop's suggested price is the default.
+  markupETB           Decimal           @default(0) @db.Decimal(18, 2)
   // Operator-set retail price. When present it wins over cost*rate+markup and
   // stays put as the exchange rate moves.
-  priceOverrideETB Decimal? @db.Decimal(18, 2)
-  sellingPriceETB Decimal  @db.Decimal(18, 2)
-  updatedAt       DateTime @updatedAt
+  priceOverrideETB    Decimal?          @db.Decimal(18, 2)
+  sellingPriceETB     Decimal           @db.Decimal(18, 2)
+  // Operator-chosen position in the catalogue. Null means "not placed by hand",
+  // which is the default and lets the automatic ranking decide. Set by dragging
+  // in the admin panel; survives syncs, like the markup and the fixed price.
+  sortOrder           Int?
+  // Bumped whenever the logo file is replaced. It rides on the image URL as a
+  // query string, which is what lets /logos/ keep a 7-day cache: the URL only
+  // changes when the picture does, so a new upload is never served stale.
+  logoVersion         Int               @default(0)
+  updatedAt           DateTime          @updatedAt
 
-  orders    Order[]
-  discounts Discount[]
+  orders                Order[]
+  discounts             Discount[]
+  resellerOffer         ResellerProductOffer?
+  resellerSandboxOrders ResellerSandboxOrder[]
 
+  @@index([sortOrder])
   @@map("products")
+}
+
+/// Private permission granted to an existing bot user by an administrator.
+/// Live API purchases use the user's normal wallet; only sandbox funds live
+/// here because they must never touch real money.
+model Reseller {
+  id                String         @id @default(uuid())
+  userId            String         @unique
+  status            ResellerStatus @default(ACTIVE)
+  sandboxBalanceETB Decimal        @default(100000) @db.Decimal(18, 2)
+  addedByTelegramId BigInt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKeys       ResellerApiKey[]
+  liveOrders    Order[]
+  sandboxOrders ResellerSandboxOrder[]
+
+  @@index([status, createdAt])
+  @@map("resellers")
+}
+
+model ResellerApiKey {
+  id          String              @id @default(uuid())
+  resellerId  String
+  environment ResellerEnvironment
+  /// SHA-256 of the random secret. The full key is shown once and never stored.
+  keyHash     String              @unique
+  /// Safe identifier shown in the panel, e.g. ysk_live_ab12cd34.
+  keyPrefix   String
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime            @default(now())
+
+  reseller Reseller @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  @@index([resellerId, environment, revokedAt])
+  @@map("reseller_api_keys")
+}
+
+/// One shared, default-deny reseller catalogue. A row enables a product and
+/// gives it an explicit ETB reseller price independent of retail discounts.
+model ResellerProductOffer {
+  productId           String   @id
+  priceETB            Decimal  @db.Decimal(18, 2)
+  isActive            Boolean  @default(true)
+  updatedByTelegramId BigInt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@map("reseller_product_offers")
+}
+
+/// Completely simulated orders. They use a fake balance and never enter the
+/// real orders table, consume inventory, call HubX or affect store reporting.
+model ResellerSandboxOrder {
+  id             String      @id @default(uuid())
+  resellerId     String
+  productId      String
+  externalId     String
+  productName    String
+  pricePaidETB   Decimal     @db.Decimal(18, 2)
+  customerInput  String?
+  status         OrderStatus @default(COMPLETED)
+  deliveredItems Json
+  createdAt      DateTime    @default(now())
+
+  reseller Reseller @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@unique([resellerId, externalId])
+  @@index([resellerId, createdAt])
+  @@map("reseller_sandbox_orders")
 }
 
 /// A price reduction, either across the catalogue or on a single product.
@@ -173,4 +372,22 @@ model Config {
   updatedAt DateTime @updatedAt
 
   @@map("config")
+}
+
+/// How satisfied a customer said they were, 1 (bad) to 5 (very satisfied).
+///
+/// One row per user, not one per submission: the prompt appears at most once
+/// for anyone who has already answered, so a second row would only ever be a
+/// correction. Answering again overwrites the rating and moves updatedAt.
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  rating    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("feedback")
 }

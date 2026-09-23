@@ -74,6 +74,15 @@ export class PrismaUserRepository implements UserRepository {
     return toUser(row);
   }
 
+  async listBroadcastRecipients(): Promise<bigint[]> {
+    const rows = await this.prisma.user.findMany({
+      where: { isBanned: false },
+      select: { telegramId: true },
+    });
+
+    return rows.map((row) => row.telegramId);
+  }
+
   async search(input: { query?: string; limit: number; offset: number }): Promise<{
     entries: UserListEntry[];
     total: number;
@@ -127,24 +136,46 @@ export class PrismaUserRepository implements UserRepository {
    * Guarded atomic update: the conditional `updateMany` means two concurrent
    * purchases can never both pass the balance check and overdraw the wallet.
    */
-  async adjustBalance(userId: string, delta: Money): Promise<User> {
+  async adjustBalance(
+    userId: string,
+    delta: Money,
+    audit?: { actorTelegramId: bigint; adjustmentId: string },
+  ): Promise<User> {
     const amount = new Prisma.Decimal(delta.toDecimalString());
 
-    const updated = await this.prisma.user.updateMany({
-      where: delta.isNegative()
-        ? { id: userId, balanceETB: { gte: amount.negated() } }
-        : { id: userId },
-      data: { balanceETB: { increment: amount } },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.updateMany({
+        where: delta.isNegative()
+          ? { id: userId, balanceETB: { gte: amount.negated() } }
+          : { id: userId },
+        data: { balanceETB: { increment: amount } },
+      });
+
+      if (updated.count === 0) {
+        const existing = await tx.user.findUnique({ where: { id: userId } });
+        if (!existing) throw new UserNotFoundError(userId);
+
+        throw new InsufficientBalanceError(
+          amount.negated().toString(),
+          existing.balanceETB.toString(),
+        );
+      }
+
+      const row = await tx.user.findUniqueOrThrow({ where: { id: userId } });
+
+      if (audit) {
+        await tx.moneyEvent.create({
+          data: {
+            kind: 'ADMIN_BALANCE_ADJUSTMENT',
+            dedupeKey: `admin-balance-adjustment:${audit.adjustmentId}`,
+            userId,
+            walletDeltaETB: amount,
+            actorTelegramId: audit.actorTelegramId,
+          },
+        });
+      }
+
+      return toUser(row);
     });
-
-    if (updated.count === 0) {
-      const existing = await this.prisma.user.findUnique({ where: { id: userId } });
-      if (!existing) throw new UserNotFoundError(userId);
-
-      throw new InsufficientBalanceError(amount.negated().toString(), existing.balanceETB.toString());
-    }
-
-    const row = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    return toUser(row);
   }
 }

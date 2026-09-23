@@ -1,33 +1,16 @@
 import { Markup } from 'telegraf';
 
-import type { ProductListItem } from '../../../use-cases/product/ListProductsUseCase.js';
-
-export const mainMenu = Markup.keyboard([
-  ['🛒 Products', '💰 Balance'],
-  ['➕ Deposit', '📦 My Orders'],
-  ['ℹ️ Help'],
-]).resize();
-
-export function productListKeyboard(products: ProductListItem[]) {
-  const rows = products.map((product) => [
-    Markup.button.callback(
-      // The struck-out price cannot be rendered on a button, so the saving is
-      // named instead.
-      product.originalPriceLabel
-        ? `${product.name} — ${product.priceLabel} (${product.discountLabel})`
-        : `${product.name} — ${product.priceLabel}`,
-      // Out-of-stock rows stay tappable but answer with a notice instead.
-      product.inStock ? `product:${product.id}` : 'noop',
-    ),
-  ]);
-
-  return Markup.inlineKeyboard(rows);
+/** Web App action attached directly to the bot's welcome message. */
+export function openMiniAppKeyboard(url: string) {
+  return Markup.inlineKeyboard([[Markup.button.webApp('Open Atke Digital Shop', url)]]);
 }
 
-export function confirmPurchaseKeyboard(productId: string) {
+export function broadcastConfirmKeyboard(messageId: number) {
   return Markup.inlineKeyboard([
-    [Markup.button.callback('✅ Confirm purchase', `buy:${productId}`)],
-    [Markup.button.callback('↩️ Cancel', 'cancel')],
+    [
+      Markup.button.callback('📢 Send to all', `broadcast:${messageId}`),
+      Markup.button.callback('↩️ Cancel', 'cancel'),
+    ],
   ]);
 }
 

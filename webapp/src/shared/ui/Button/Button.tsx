@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { haptics } from '@shared/lib/telegram';
 import styles from './Button.module.css';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost';
 
 interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'ref'> {
   variant?: Variant;

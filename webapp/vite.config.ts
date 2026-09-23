@@ -6,6 +6,9 @@ import { defineConfig } from 'vite';
 const API_TARGET = process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8080';
 
 export default defineConfig({
+  // Production mounts Suq below YeneShop's existing site. Development keeps
+  // `/` unless VITE_BASE_PATH is explicitly supplied.
+  base: process.env.VITE_BASE_PATH ?? '/',
   plugins: [react()],
   resolve: {
     // FSD layers are imported by name, never by a chain of ../../..

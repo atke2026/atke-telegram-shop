@@ -1,25 +1,205 @@
+.profileHero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 2px 20px;
+}
+
+.identity {
+  min-width: 0;
+}
+
+.identity h1 {
+  overflow: hidden;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity p {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
 .balanceCard {
-  padding: var(--space-5) var(--space-4);
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 18px;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 8px 24px rgba(255, 198, 41, 0.22);
 }
 
 .balanceLabel {
   font-size: 13px;
-  color: var(--text-muted);
+  color: rgba(17, 17, 17, 0.66);
   margin-bottom: var(--space-1);
 }
 
 .balance {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
   letter-spacing: -0.02em;
 }
 
+.addFunds {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 0 13px;
+  border-radius: var(--radius-pill);
+  background: #111111;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.quickAction {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px !important;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+
+.quickAction:active {
+  transform: scale(0.98);
+}
+
+.quickArrow {
+  position: absolute;
+  top: 18px;
+  right: 17px;
+  color: var(--text-muted);
+}
+
+.quickIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 28%, var(--surface));
+  color: var(--text);
+}
+
+.quickCopy {
+  display: grid;
+  gap: 2px;
+}
+
+.quickCopy strong {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.quickCopy small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.fundingCard {
+  margin-top: 24px;
+  scroll-margin-top: calc(var(--topbar-height) + 12px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.fundingToggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 78px;
+  padding: 13px 16px;
+  border-radius: 0 !important;
+  text-align: left;
+}
+
+.fundingIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.fundingHeading {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.fundingHeading strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.fundingHeading small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fundingCaret,
+.fundingCaretOpen {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  transition: transform 160ms ease;
+}
+
+.fundingCaretOpen {
+  transform: rotate(180deg);
+}
+
+.fundingContent {
+  display: grid;
+  gap: 22px;
+  padding: 0 16px 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+
 .section {
-  margin-top: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.quickActions + .section {
+  margin-top: 24px;
 }
 
 .sectionTitle {
@@ -51,10 +231,4 @@
 .pendingDate {
   font-size: 12px;
   color: var(--text-muted);
-}
-
-.note {
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 0 var(--space-1);
 }

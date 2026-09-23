@@ -1,5 +1,5 @@
-import { MagnifyingGlass, Package } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { Package } from '@phosphor-icons/react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useGetProductsQuery, type ProductDto } from '@entities/product';
 import { ProductSheet } from '@features/buy-product';
@@ -9,28 +9,74 @@ import { Spinner } from '@shared/ui/Spinner';
 import { ProductGrid } from '@widgets/ProductGrid';
 import styles from './StorePage.module.css';
 
+const CATEGORIES = ['All', 'AI', 'Design', 'Learning', 'Security', 'Software'] as const;
+type Category = (typeof CATEGORIES)[number];
+
+function categoryFor(name: string): Exclude<Category, 'All'> {
+  const value = name.toLowerCase();
+  if (/canva|figma|lovable|gamma|design/.test(value)) return 'Design';
+  if (/coursera|udemy|course|learning/.test(value)) return 'Learning';
+  if (/vpn|security|nord|quillbot/.test(value)) return 'Security';
+  if (/ai|gpt|gemini|factory|elevenlabs|notion/.test(value)) return 'AI';
+  return 'Software';
+}
+
 export function StorePage() {
   const { data: products, isLoading, isError, refetch } = useGetProductsQuery();
-  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<Category>('All');
+  const [favorites, setFavorites] = useState<Set<string>>(() => new Set());
   const [selected, setSelected] = useState<ProductDto | null>(null);
+  // Set when the customer came in through a card's Buy button rather than the
+  // card itself: the sheet then opens on its confirmation step.
+  const [buyNow, setBuyNow] = useState(false);
 
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return products ?? [];
+    if (category === 'All') return products ?? [];
+    return (products ?? []).filter((product) => categoryFor(product.name) === category);
+  }, [products, category]);
 
-    return (products ?? []).filter((product) => product.name.toLowerCase().includes(needle));
-  }, [products, query]);
+  // Stable identities, so the memoised cards do not all re-render whenever
+  // this page does.
+  const openProduct = useCallback((product: ProductDto) => {
+    setBuyNow(false);
+    setSelected(product);
+  }, []);
+
+  const openConfirmation = useCallback((product: ProductDto) => {
+    setBuyNow(true);
+    setSelected(product);
+  }, []);
+
+  const closeSheet = useCallback(() => {
+    setSelected(null);
+    // Stock changes after a purchase, so the grid is refreshed on close.
+    void refetch();
+  }, [refetch]);
+
+  const toggleFavorite = useCallback((product: ProductDto) => {
+    setFavorites((current) => {
+      const next = new Set(current);
+      if (next.has(product.id)) next.delete(product.id);
+      else next.add(product.id);
+      return next;
+    });
+  }, []);
 
   return (
-    <Screen title="Shop Deals">
-      <div className={styles.search}>
-        <MagnifyingGlass size={18} className={styles.searchIcon} />
-        <input
-          className={styles.searchInput}
-          placeholder="Search products"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+    <Screen title="Shop" hideHeader>
+      <div className={styles.categories} role="tablist" aria-label="Product categories">
+        {CATEGORIES.map((entry) => (
+          <button
+            key={entry}
+            type="button"
+            role="tab"
+            aria-selected={category === entry}
+            className={category === entry ? styles.categoryActive : styles.category}
+            onClick={() => setCategory(entry)}
+          >
+            {entry}
+          </button>
+        ))}
       </div>
 
       {isLoading ? <Spinner label="Loading products" /> : null}
@@ -46,21 +92,22 @@ export function StorePage() {
       {!isLoading && !isError && visible.length === 0 ? (
         <EmptyState
           icon={Package}
-          title={query ? 'No matches' : 'No products yet'}
-          description={query ? 'Try a different search.' : 'Please check back soon.'}
+          title={category === 'All' ? 'No products yet' : `No ${category} products`}
+          description={category === 'All' ? 'Please check back soon.' : 'Try another category.'}
         />
       ) : null}
 
-      {visible.length > 0 ? <ProductGrid products={visible} onSelect={setSelected} /> : null}
+      {visible.length > 0 ? (
+        <ProductGrid
+          products={visible}
+          favorites={favorites}
+          onFavorite={toggleFavorite}
+          onSelect={openProduct}
+          onBuy={openConfirmation}
+        />
+      ) : null}
 
-      <ProductSheet
-        product={selected}
-        onClose={() => {
-          setSelected(null);
-          // Stock changes after a purchase, so the grid is refreshed on close.
-          void refetch();
-        }}
-      />
+      <ProductSheet product={selected} startConfirming={buyNow} onClose={closeSheet} />
     </Screen>
   );
 }

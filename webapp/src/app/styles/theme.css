@@ -1,8 +1,8 @@
 /*
  * Every colour resolves to a Telegram theme variable, with a fallback for when
  * the app is opened outside Telegram (a browser tab during development).
- * Nothing below hardcodes a brand colour for surfaces or text — that is what
- * lets the app follow the user's Dark/Light/custom theme automatically.
+ * Surfaces follow Telegram. Suq's yellow primary remains consistent so every
+ * payment and purchase action has the same visual meaning in every theme.
  */
 :root {
   --bg: var(--tg-theme-bg-color, #ffffff);
@@ -11,9 +11,11 @@
   --text: var(--tg-theme-text-color, #000000);
   --text-muted: var(--tg-theme-hint-color, #8e8e93);
   --link: var(--tg-theme-link-color, #2481cc);
-  --accent: var(--tg-theme-button-color, #2481cc);
-  --accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --accent: #ffc629;
+  --accent-hover: #f2b900;
+  --accent-text: #111111;
   --destructive: var(--tg-theme-destructive-text-color, #e53935);
+  --border: rgba(17, 17, 17, 0.11);
 
   /* Section 3 of the plan: microscopic borders, tight non-diffused shadows. */
   --hairline: 0.5px solid rgba(0, 0, 0, 0.1);
@@ -21,7 +23,7 @@
   --shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.12);
 
   --radius-card: 14px;
-  --radius-button: 12px;
+  --radius-button: 999px;
   --radius-pill: 999px;
 
   --space-1: 4px;
@@ -31,7 +33,7 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --nav-height: 60px;
+  --topbar-height: 62px;
   /* Telegram reports the real viewport; falls back to the CSS unit elsewhere. */
   --app-height: var(--tg-viewport-stable-height, 100dvh);
 }
@@ -41,6 +43,7 @@
  * vanishes on a dark surface, so both the border and shadow invert.
  */
 :root[data-theme='dark'] {
+  --border: rgba(255, 255, 255, 0.13);
   --hairline: 0.5px solid rgba(255, 255, 255, 0.12);
   --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.4);
   --shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.6);
@@ -55,15 +58,17 @@
  * used, since they describe the client's theme, not the chosen one.
  */
 :root[data-theme-mode='light'] {
-  --bg: #ffffff;
-  --bg-secondary: #f2f2f7;
+  --bg: #fbfaf7;
+  --bg-secondary: #f4f2ed;
   --surface: #ffffff;
   --text: #000000;
   --text-muted: #8e8e93;
   --link: #2481cc;
-  --accent: #2481cc;
-  --accent-text: #ffffff;
+  --accent: #ffc629;
+  --accent-hover: #f2b900;
+  --accent-text: #111111;
   --destructive: #e53935;
+  --border: rgba(17, 17, 17, 0.11);
 }
 
 :root[data-theme-mode='dark'] {
@@ -73,7 +78,9 @@
   --text: #ffffff;
   --text-muted: #708499;
   --link: #6ab3f3;
-  --accent: #5288c1;
-  --accent-text: #ffffff;
+  --accent: #ffc629;
+  --accent-hover: #ffd75e;
+  --accent-text: #111111;
   --destructive: #ec3942;
+  --border: rgba(255, 255, 255, 0.13);
 }

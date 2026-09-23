@@ -9,8 +9,19 @@
 type HapticStyle = 'light' | 'medium' | 'heavy' | 'rigid' | 'soft';
 type NotificationType = 'error' | 'success' | 'warning';
 
+interface TelegramUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+}
+
 interface TelegramWebApp {
   initData: string;
+  initDataUnsafe?: {
+    user?: TelegramUser;
+  };
   colorScheme: 'light' | 'dark';
   themeParams: Record<string, string>;
   isExpanded: boolean;
@@ -18,6 +29,7 @@ interface TelegramWebApp {
   ready(): void;
   expand(): void;
   close(): void;
+  openTelegramLink?(url: string): void;
   onEvent(event: string, handler: () => void): void;
   offEvent(event: string, handler: () => void): void;
   setHeaderColor?(color: string): void;
@@ -54,12 +66,31 @@ export function isInsideTelegram(): boolean {
 }
 
 /**
+ * Telegram normally exposes initData through its SDK. Some desktop clients
+ * paint the page before that object is hydrated, while the same signed value
+ * is already present in the launch URL as tgWebAppData. Reading both paths
+ * avoids trapping a real Telegram user on a disabled sign-in sheet.
+ */
+function getLaunchInitData(): string {
+  const sources = [window.location.hash.replace(/^#/, ''), window.location.search.replace(/^\?/, '')];
+  for (const source of sources) {
+    if (!source) continue;
+    const value = new URLSearchParams(source).get('tgWebAppData');
+    if (value) return value;
+  }
+  return '';
+}
+
+/**
  * The credential for every API call. Sent raw; the server re-verifies its HMAC
  * on each request, so there is no token to store or refresh.
  */
 export function getInitData(): string {
   const fromTelegram = getWebApp()?.initData;
   if (fromTelegram) return fromTelegram;
+
+  const fromLaunchUrl = getLaunchInitData();
+  if (fromLaunchUrl) return fromLaunchUrl;
 
   // Development only: lets the UI be opened in a plain browser tab by pasting
   // a signed string into localStorage (see server/scripts/dev-init-data.ts).
@@ -68,6 +99,57 @@ export function getInitData(): string {
   if (import.meta.env.DEV) return localStorage.getItem('dev:initData') ?? '';
 
   return '';
+}
+
+/** Safe display-only Telegram profile data; authentication still uses initData. */
+export function getTelegramUser() {
+  const fromSdk = getWebApp()?.initDataUnsafe?.user;
+  if (fromSdk) return fromSdk;
+
+  // Display-only fallback. The raw value is still sent to the server and its
+  // signature is verified before this identity is trusted for authentication.
+  const rawUser = new URLSearchParams(getInitData()).get('user');
+  if (!rawUser) return undefined;
+  try {
+    const parsed = JSON.parse(rawUser) as TelegramUser;
+    return typeof parsed?.id === 'number' && typeof parsed.first_name === 'string'
+      ? parsed
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function openSuqBot(): void {
+  // The start payload makes the bot immediately return its authenticated Web
+  // App keyboard instead of leaving a first-time visitor on an idle bot page.
+  const url = 'https://t.me/atkedigitalbot?start=webapp';
+  const webApp = getWebApp();
+  if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
+  else window.location.assign(url);
+}
+
+const CONFIRMATION_KEY_PREFIX = 'suq:telegram-confirmed:';
+
+/** Cosmetic consent memory only; every API request still verifies initData. */
+export function hasConfirmedTelegram(): boolean {
+  const user = getTelegramUser();
+  if (!getInitData() || !user) return false;
+  try {
+    return localStorage.getItem(`${CONFIRMATION_KEY_PREFIX}${user.id}`) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function rememberTelegramConfirmation(): void {
+  const user = getTelegramUser();
+  if (!getInitData() || !user) return;
+  try {
+    localStorage.setItem(`${CONFIRMATION_KEY_PREFIX}${user.id}`, '1');
+  } catch {
+    // Storage can be disabled; authentication still works for this launch.
+  }
 }
 
 export function initTelegram(): void {
@@ -81,17 +163,10 @@ export function initTelegram(): void {
   webApp.ready();
   webApp.expand();
 
-  // Only meaningful while the user is on the default; refreshThemeMode keeps
-  // an explicit Day/Night choice pinned.
+  // Only changes the palette for people who explicitly chose Telegram;
+  // refreshThemeMode keeps Day/Night pinned.
   const onThemeChanged = () => refreshThemeMode();
   webApp.onEvent('themeChanged', onThemeChanged);
-
-  // Match the header and background to the app's own surface colour.
-  const background = webApp.themeParams.secondary_bg_color ?? webApp.themeParams.bg_color;
-  if (background) {
-    webApp.setHeaderColor?.(background);
-    webApp.setBackgroundColor?.(background);
-  }
 }
 
 export const haptics = {

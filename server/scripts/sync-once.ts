@@ -1,5 +1,5 @@
 /**
- * Runs one product sync (HubX → Postgres → Redis) without starting the bot.
+ * Runs one product sync (YeneShop reseller API → Postgres → Redis).
  * Run: npx tsx scripts/sync-once.ts
  */
 import fs from 'node:fs';
@@ -7,9 +7,8 @@ import fs from 'node:fs';
 import { CACHE_KEYS } from '../src/core/constants.js';
 import { RedisCache } from '../src/infrastructure/cache/RedisCache.js';
 import { createPrismaClient } from '../src/infrastructure/database/prisma.js';
-import { PrismaConfigRepository } from '../src/infrastructure/database/repositories/PrismaConfigRepository.js';
 import { PrismaProductRepository } from '../src/infrastructure/database/repositories/PrismaProductRepository.js';
-import { HubxClient } from '../src/infrastructure/hubx/HubxClient.js';
+import { YeneShopClient } from '../src/infrastructure/yeneshop/YeneShopClient.js';
 import { SyncProductsUseCase } from '../src/use-cases/product/SyncProductsUseCase.js';
 import { createLogger } from '../src/shared/logger.js';
 
@@ -25,15 +24,13 @@ const prisma = createPrismaClient(process.env.DATABASE_URL ?? '');
 const cache = RedisCache.connect(process.env.REDIS_URL ?? '', logger);
 
 const useCase = new SyncProductsUseCase({
-  hubx: new HubxClient({
-    baseUrl: process.env.HUBX_API_URL ?? '',
-    apiKey: process.env.HUBX_API_KEY ?? '',
+  yeneshop: new YeneShopClient({
+    baseUrl: process.env.YENESHOP_API_URL ?? '',
+    apiKey: process.env.YENESHOP_API_KEY ?? '',
     logger,
   }),
   products: new PrismaProductRepository(prisma),
-  config: new PrismaConfigRepository(prisma),
   cache,
-  defaultRate: process.env.DEFAULT_USDT_ETB_RATE ?? '160',
   logger,
 });
 
@@ -45,7 +42,7 @@ console.log(`\npersisted ${rows.length} products:\n`);
 for (const row of rows) {
   console.log(
     `  ${row.stock > 0 ? '🟢' : '🔴'} ${row.name.padEnd(46)} ` +
-      `${row.costPriceUSDT.toString().padStart(5)} USDT → ${row.sellingPriceETB.toString().padStart(9)} ETB  stock ${row.stock}`,
+      `${row.costPriceETB.toString().padStart(9)} ETB cost → ${row.sellingPriceETB.toString().padStart(9)} ETB retail  stock ${row.stock}`,
   );
 }
 

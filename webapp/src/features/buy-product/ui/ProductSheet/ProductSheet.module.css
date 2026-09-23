@@ -53,7 +53,10 @@
   width: 72px;
   height: 72px;
   object-fit: contain;
-  background: #ffffff;
+  /* Not white: a logo that kept its transparency shows the tile through it,
+     and a hardcoded white square would be the one thing on the card that
+     ignores the theme. Marks that need white carry their own. */
+  background: var(--bg-secondary);
   border: var(--hairline);
   border-radius: var(--radius-card);
   margin-bottom: var(--space-3);
@@ -134,4 +137,175 @@
 
 .infoLabel {
   font-size: 14px;
+}
+
+.agreement {
+  padding-bottom: var(--space-2);
+}
+
+.agreementEyebrow {
+  margin-bottom: var(--space-1);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.agreementName {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.agreementPrice {
+  margin-top: var(--space-1);
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.agreementDetailsCard {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: var(--hairline);
+  border-radius: var(--radius-card);
+  background: var(--bg-secondary);
+}
+
+.agreementDetailsTitle {
+  margin-bottom: var(--space-3);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.agreementDetails {
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.agreementCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: var(--hairline);
+  border-radius: var(--radius-card);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.agreementCheck input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Post-purchase receipt: the delivered item and how to redeem it, shown in
+   place of the product body so the customer never has to hunt for it. */
+.receipt {
+  text-align: left;
+}
+
+.receiptTitle {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: var(--space-1);
+}
+
+.receiptName {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: var(--space-4);
+}
+
+.receiptItem {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-3);
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.receiptHint,
+.receiptPending {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.receiptSteps {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: var(--hairline);
+}
+
+.receiptStepsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.receiptStepsBody {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.inputField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: var(--hairline);
+  border-radius: var(--radius-card);
+  background: var(--bg-secondary);
+}
+
+.inputLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: var(--hairline);
+  border-radius: var(--radius-button);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px; /* below 16px iOS zooms the whole sheet on focus */
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+.inputHint {
+  font-size: 12px;
+  color: var(--text-muted);
 }

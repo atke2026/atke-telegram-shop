@@ -2,12 +2,16 @@ import type { Telegraf } from 'telegraf';
 
 import { CONFIG_KEYS } from '../../../core/constants.js';
 import { Money } from '../../../core/entities/Money.js';
+import { hasUnlimitedStock } from '../../../core/entities/Product.js';
 import type { Container } from '../../../shared/container.js';
 import type { BotContext } from '../context.js';
 import { toUserMessage } from '../../../shared/errorMessages.js';
+import { broadcastConfirmKeyboard } from '../keyboards/menus.js';
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function registerAdminCommands(bot: Telegraf<BotContext>, container: Container): void {
-  const { useCases, repositories, config, logger } = container;
+  const { useCases, repositories, logger } = container;
 
   /** Every admin handler starts with this — no exceptions. */
   const requireAdmin = async (ctx: BotContext): Promise<boolean> => {
@@ -95,38 +99,21 @@ export function registerAdminCommands(bot: Telegraf<BotContext>, container: Cont
     });
   });
 
-  bot.command('setrate', async (ctx) => {
-    if (!(await requireAdmin(ctx))) return;
-
-    const value = ctx.message.text.split(/\s+/)[1];
-    if (!value || !/^\d+(\.\d{1,2})?$/.test(value)) {
-      const current = (await repositories.config.get(CONFIG_KEYS.usdtEtbRate)) ?? String(config.DEFAULT_USDT_ETB_RATE);
-      return ctx.reply(`Current rate: *${current}* ETB per USDT.\n\nUsage: \`/setrate 165.50\``, {
-        parse_mode: 'Markdown',
-      });
-    }
-
-    await repositories.config.set(CONFIG_KEYS.usdtEtbRate, value);
-    // Prices are only recomputed on sync, so run one now to avoid a stale catalogue.
-    const result = await useCases.syncProducts.execute();
-
-    await ctx.reply(`✅ Rate set to *${value}* ETB/USDT. Repriced ${result.synced} product(s).`, {
-      parse_mode: 'Markdown',
-    });
-  });
-
   bot.command('prices', async (ctx) => {
     if (!(await requireAdmin(ctx))) return;
 
     const products = await repositories.products.listActive();
     if (products.length === 0) return ctx.reply('📭 No products. Run /sync first.');
 
-    const lines = products.map(
-      (product) =>
+    const lines = products.map((product) => {
+      const supply = hasUnlimitedStock(product) ? 'stock ∞' : `stock ${product.stock}`;
+
+      return (
         `${product.priceOverride ? '📌' : '🔄'} \`${product.slug}\`\n` +
         `   ${product.name}\n` +
-        `   ${product.costPriceUSDT} USDT → *${product.sellingPrice.format()}*  stock ${product.stock}`,
-    );
+        `   ${product.costPriceETB} ETB cost → *${product.sellingPrice.format()}*  ${supply}`
+      );
+    });
 
     await ctx.reply(
       `💵 *Prices* (📌 fixed · 🔄 auto)\n\n${lines.join('\n')}\n\n` +
@@ -155,8 +142,9 @@ export function registerAdminCommands(bot: Telegraf<BotContext>, container: Cont
       await ctx.reply(
         `✅ *${result.product.name}*\n\n` +
           `Price: ${result.previousPrice.format()} → *${result.product.sellingPrice.format()}*\n` +
-          `Cost: ${result.product.costPriceUSDT} USDT (auto price would be ${result.computedPrice.format()})\n\n` +
-          `📌 Fixed — it will not move when the USDT rate changes.\n` +
+          `YeneShop cost: ${Money.fromDecimal(result.product.costPriceETB).format()} ` +
+          `(suggested retail ${result.computedPrice.format()})\n\n` +
+          `📌 Fixed — YeneShop catalogue refreshes will not overwrite it.\n` +
           `Revert with \`/autoprice ${result.product.slug}\`.`,
         { parse_mode: 'Markdown' },
       );
@@ -203,11 +191,11 @@ export function registerAdminCommands(bot: Telegraf<BotContext>, container: Cont
   bot.command('sync', async (ctx) => {
     if (!(await requireAdmin(ctx))) return;
 
-    await ctx.reply('🔄 Syncing products from HubX…');
+    await ctx.reply('🔄 Syncing products from YeneShop…');
     try {
       const result = await useCases.syncProducts.execute();
       await ctx.reply(
-        `✅ Synced ${result.synced} product(s), deactivated ${result.deactivated}. Rate: ${result.rate} ETB/USDT.`,
+        `✅ Synced ${result.synced} product(s), deactivated ${result.deactivated}.`,
       );
     } catch (error) {
       logger.error({ err: error }, 'Manual sync failed');
@@ -227,7 +215,10 @@ export function registerAdminCommands(bot: Telegraf<BotContext>, container: Cont
       const user = await repositories.users.findByTelegramId(BigInt(telegramId));
       if (!user) return ctx.reply('❓ No such user.');
 
-      const updated = await repositories.users.adjustBalance(user.id, Money.fromDecimal(amount));
+      const updated = await repositories.users.adjustBalance(user.id, Money.fromDecimal(amount), {
+        actorTelegramId: BigInt(ctx.from.id),
+        adjustmentId: `${ctx.chat.id}:${ctx.message.message_id}`,
+      });
       await ctx.reply(`✅ Adjusted. New balance: ${updated.balance.format()}`);
 
       await bot.telegram.sendMessage(
@@ -241,6 +232,70 @@ export function registerAdminCommands(bot: Telegraf<BotContext>, container: Cont
     }
   });
 
+  /**
+   * Broadcast: an admin sending a photo (outside the deposit flow, which claims
+   * receipts first) is offered a one-tap fan-out of that image to every user.
+   * A confirmation stands between a stray screenshot and the whole user base.
+   */
+  bot.on('photo', async (ctx, next) => {
+    // Anyone else's stray photo is not ours to act on — let it fall through.
+    if (!ctx.isAdmin) return next();
+
+    const recipients = await repositories.users.listBroadcastRecipients();
+    if (recipients.length === 0) return ctx.reply('📭 No users to broadcast to yet.');
+
+    await ctx.reply(
+      `📢 *Broadcast this image?*\n\n` +
+        `It will be copied — with any caption — to *${recipients.length}* user(s).\n` +
+        `This cannot be undone.`,
+      { parse_mode: 'Markdown', ...broadcastConfirmKeyboard(ctx.message.message_id) },
+    );
+  });
+
+  bot.action(/^broadcast:(\d+)$/, async (ctx) => {
+    if (!(await requireAdmin(ctx))) return;
+
+    const sourceMessageId = Number(ctx.match[1]);
+    const sourceChatId = ctx.chat?.id;
+    if (!sourceChatId) return;
+
+    await ctx.answerCbQuery('Broadcasting…');
+    await ctx.editMessageReplyMarkup(undefined).catch(() => undefined);
+
+    const recipients = await repositories.users.listBroadcastRecipients();
+    let delivered = 0;
+    let failed = 0;
+
+    for (const telegramId of recipients) {
+      const target = Number(telegramId);
+      // No point echoing the broadcast back to the admin who just sent it.
+      if (target === ctx.from?.id) continue;
+
+      try {
+        // copyMessage carries the photo and caption without a "forwarded from"
+        // header, so it reads as a message from the shop rather than a forward.
+        await bot.telegram.copyMessage(target, sourceChatId, sourceMessageId);
+        delivered += 1;
+      } catch (error) {
+        // A user who blocked the bot or deleted their account must not stall
+        // the rest of the run — count it and move on.
+        failed += 1;
+        logger.debug({ err: error, target }, 'Broadcast delivery failed');
+      }
+
+      // Stay under Telegram's ~30 messages/second broadcast ceiling.
+      await sleep(40);
+    }
+
+    logger.info({ delivered, failed, by: ctx.from?.id }, 'Broadcast complete');
+    await ctx.reply(
+      `📢 *Broadcast sent.*\n\n` +
+        `✅ Delivered: ${delivered}\n` +
+        (failed > 0 ? `⚠️ Failed: ${failed}` : ''),
+      { parse_mode: 'Markdown' },
+    );
+  });
+
   bot.command('stats', async (ctx) => {
     if (!(await requireAdmin(ctx))) return;
 
@@ -251,16 +306,18 @@ export function registerAdminCommands(bot: Telegraf<BotContext>, container: Cont
 
     let resellerBalance = 'unavailable';
     try {
-      resellerBalance = `${await container.services.hubx.getResellerBalanceUSDT()} USDT`;
+      resellerBalance = Money.fromDecimal(
+        await container.services.yeneshop.getResellerBalanceETB(),
+      ).format();
     } catch {
-      // Non-fatal: stats should still render if HubX is unreachable.
+      // Non-fatal: stats should still render if YeneShop is unreachable.
     }
 
     await ctx.reply(
       `📊 *Store status*\n\n` +
         `Active products: ${products.length}\n` +
         `Pending deposits: ${pending.length}\n` +
-        `HubX balance: ${resellerBalance}`,
+        `YeneShop reseller balance: ${resellerBalance}`,
       { parse_mode: 'Markdown' },
     );
   });

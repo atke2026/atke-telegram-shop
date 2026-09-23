@@ -12,18 +12,25 @@ async function main(): Promise<void> {
   // Must run before the bot or API accept anything, or a fresh deployment
   // would have no administrators at all.
   await container.useCases.manageAdmins.seedIfEmpty(config.ADMIN_TELEGRAM_IDS);
+  await container.services.backups.start();
 
   const bot = createBot(container);
   const scheduler = startScheduler(container);
+  container.services.backups.setRestoreHooks({
+    beforeRestore: scheduler.pause,
+    afterRestore: scheduler.resume,
+  });
 
   await bot.telegram.setMyCommands([
-    { command: 'start', description: 'Start the bot' },
-    { command: 'products', description: 'Browse products' },
-    { command: 'balance', description: 'Check your wallet balance' },
-    { command: 'deposit', description: 'Top up your wallet' },
-    { command: 'orders', description: 'View your recent orders' },
-    { command: 'help', description: 'How this bot works' },
+    { command: 'start', description: 'Open Suq.et' },
   ]);
+  await bot.telegram.setChatMenuButton({
+    menuButton: {
+      type: 'web_app',
+      text: 'Open Suq.et',
+      web_app: { url: config.WEB_APP_URL },
+    },
+  });
 
   const api = createWebApi(container);
   await api.listen({ port: config.WEB_API_PORT, host: config.WEB_API_HOST });

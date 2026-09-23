@@ -1,60 +1,70 @@
 import { Money } from '../../core/entities/Money.js';
 import { resolveSellingPrice, type Product } from '../../core/entities/Product.js';
-import type { ConfigRepository, ProductRepository } from '../../core/ports/repositories.js';
-import type { CachePort, HubxGateway } from '../../core/ports/services.js';
-import { CACHE_KEYS, CONFIG_KEYS } from '../../core/constants.js';
+import type { ProductRepository } from '../../core/ports/repositories.js';
+import type { CachePort, YeneShopGateway } from '../../core/ports/services.js';
+import { CACHE_KEYS } from '../../core/constants.js';
 import type { Logger } from '../../shared/logger.js';
 
 export interface SyncProductsResult {
   synced: number;
   deactivated: number;
-  rate: string;
 }
 
 /**
- * Pulls the HubX catalogue, reprices it into ETB, persists it and refreshes the
- * Redis cache the bot reads from.
+ * Pulls Suq's private YeneShop catalogue through the reseller API. The local
+ * rows are a read cache plus Suq-owned display settings; they are never an
+ * independently managed supplier catalogue.
  */
 export class SyncProductsUseCase {
   constructor(
     private readonly deps: {
-      hubx: HubxGateway;
+      yeneshop: YeneShopGateway;
       products: ProductRepository;
-      config: ConfigRepository;
       cache: CachePort;
-      defaultRate: string;
       logger: Logger;
     },
   ) {}
 
   async execute(): Promise<SyncProductsResult> {
-    const { hubx, products, config, cache, defaultRate, logger } = this.deps;
-
-    const rate = (await config.get(CONFIG_KEYS.usdtEtbRate)) ?? defaultRate;
-    const upstream = await hubx.getProducts();
+    const { yeneshop, products, cache, logger } = this.deps;
+    const upstream = await yeneshop.getProducts();
 
     // Existing rows carry operator-owned pricing that a sync must preserve.
-    const existing = await products.listActive();
+    // Includes rows YeneShop previously deactivated: if they return later, every
+    // operator-owned choice (including availability) must still be there.
+    const existing = await products.findByIds(upstream.map((product) => product.id));
     const existingById = new Map(existing.map((product) => [product.id, product]));
 
     const repriced: Product[] = upstream.map((item) => {
       const current = existingById.get(item.id);
       const markup = current?.markup ?? Money.ZERO;
       const priceOverride = current?.priceOverride ?? null;
+      const suggestedRetailPrice = Money.fromDecimal(item.suggestedRetailPriceETB);
 
       return {
         id: item.id,
         slug: item.slug,
         name: item.name,
         description: item.description,
-        // Written by us, not HubX — carry it across untouched.
+        // Written by Suq — carry it across untouched.
         descriptionOverride: current?.descriptionOverride ?? null,
+        source: 'YENESHOP',
+        imageUrl: item.imageUrl,
+        deliveryType: item.deliveryType,
+        deliveryMessage: null,
+        input: item.input,
         stock: item.stock,
         isActive: item.isActive,
-        costPriceUSDT: item.priceUSDT,
+        operatorAvailable: current?.operatorAvailable ?? true,
+        costPriceETB: item.resellerPriceETB,
+        suggestedRetailPrice,
         markup,
         priceOverride,
-        sellingPrice: resolveSellingPrice(item.priceUSDT, rate, markup, priceOverride),
+        sellingPrice: resolveSellingPrice(suggestedRetailPrice, priceOverride),
+        // Also ours: upsertMany does not write it, but carrying it keeps the
+        // in-memory product honest about where it sits in the catalogue.
+        sortOrder: current?.sortOrder ?? null,
+        logoVersion: current?.logoVersion ?? 0,
         updatedAt: new Date(),
       };
     });
@@ -77,8 +87,8 @@ export class SyncProductsUseCase {
     );
     await cache.set(CACHE_KEYS.lastSync, new Date().toISOString(), 600);
 
-    logger.info({ synced, deactivated, rate }, 'Product sync complete');
+    logger.info({ synced, deactivated }, 'YeneShop catalogue sync complete');
 
-    return { synced, deactivated, rate };
+    return { synced, deactivated };
   }
 }

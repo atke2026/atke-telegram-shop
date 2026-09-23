@@ -1,0 +1,68 @@
+.screen {
+  min-height: var(--app-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: var(--bg-secondary);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 340px;
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.emoji {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.message {
+  margin-bottom: var(--space-2);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.primaryButton,
+.secondaryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 var(--space-4);
+  font-weight: 600;
+  border-radius: var(--radius-button);
+}
+
+.primaryButton {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+
+.secondaryButton {
+  color: var(--accent);
+  border: var(--hairline);
+  background: var(--surface);
+}
+
+.secondaryButton:disabled {
+  cursor: default;
+  opacity: 0.55;
+}

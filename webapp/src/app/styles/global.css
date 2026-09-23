@@ -44,6 +44,14 @@ button {
   border: none;
   background: none;
   cursor: pointer;
+  border-radius: var(--radius-pill) !important;
+}
+
+/* CSS-module names preserve the word "button"; this also catches links styled
+   as actions (for example Join channel) so every tappable action is a stadium. */
+a[class*='Button'],
+a[class*='button'] {
+  border-radius: var(--radius-pill) !important;
 }
 
 input {

@@ -32,6 +32,12 @@
   border: var(--hairline);
 }
 
+.outline {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+
 .ghost {
   background: transparent;
   color: var(--link);

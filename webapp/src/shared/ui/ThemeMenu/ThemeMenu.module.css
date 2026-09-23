@@ -3,6 +3,12 @@
   flex-shrink: 0;
 }
 
+.wrapTile {
+  composes: wrap;
+  min-width: 0;
+  aspect-ratio: 1;
+}
+
 .trigger {
   display: grid;
   place-items: center;
@@ -13,6 +19,55 @@
   border: var(--hairline);
   box-shadow: var(--shadow-card);
   color: var(--text);
+}
+
+.triggerTile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px !important;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  color: var(--text);
+  text-align: left;
+}
+
+.tileIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 28%, var(--surface));
+  color: var(--text);
+}
+
+.tileArrow {
+  position: absolute;
+  top: 18px;
+  right: 17px;
+  color: var(--text-muted);
+}
+
+.tileCopy {
+  display: grid;
+  gap: 2px;
+}
+
+.tileCopy strong {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.tileCopy small {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .scrim {
@@ -34,6 +89,12 @@
   box-shadow: var(--shadow-raised);
   transform-origin: top right;
   overflow: hidden;
+}
+
+.wrapTile .menu {
+  top: auto;
+  right: 8px;
+  bottom: 8px;
 }
 
 .item,

@@ -8,6 +8,7 @@ import {
   type AdminDepositRow,
 } from '@entities/admin';
 import { apiErrorMessage } from '@shared/api/baseApi';
+import { appPath } from '@shared/lib/appPath';
 import { getInitData } from '@shared/lib/telegram';
 import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
@@ -29,7 +30,7 @@ function ReceiptImage({ depositId }: { depositId: string }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/deposits/${depositId}/receipt`, {
+      const response = await fetch(appPath(`/api/admin/deposits/${depositId}/receipt`), {
         headers: { Authorization: `tma ${getInitData()}` },
       });
       if (!response.ok) throw new Error(String(response.status));

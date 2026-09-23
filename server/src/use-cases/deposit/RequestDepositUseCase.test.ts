@@ -13,12 +13,18 @@ function makeProduct(price: string): Product {
     name: `Product ${price}`,
     description: null,
     descriptionOverride: null,
+    source: 'YENESHOP',
+    deliveryMessage: null,
+    input: null,
     stock: 5,
     isActive: true,
-    costPriceUSDT: '1',
+    operatorAvailable: true,
+    costPriceETB: '1',
     markup: Money.ZERO,
     priceOverride: null,
     sellingPrice: Money.fromDecimal(price),
+    sortOrder: null,
+    logoVersion: 0,
     updatedAt: new Date(),
   };
 }
@@ -46,6 +52,7 @@ describe('RequestDepositUseCase', () => {
       adjustBalance: vi.fn(),
       search: vi.fn(),
       setBanned: vi.fn(),
+      listBroadcastRecipients: vi.fn(),
     };
 
     deposits = {
@@ -60,10 +67,15 @@ describe('RequestDepositUseCase', () => {
     products = {
       findById: vi.fn(),
       findBySlugOrId: vi.fn(),
+      findByIds: vi.fn().mockResolvedValue([]),
+      bumpLogoVersion: vi.fn(),
       listActive: vi.fn().mockResolvedValue([makeProduct('9500'), makeProduct('2000'), makeProduct('3900')]),
       setPriceOverride: vi.fn(),
+      setOperatorAvailable: vi.fn(),
       setDescription: vi.fn(),
       upsertMany: vi.fn(),
+      setSortOrder: vi.fn(),
+      clearSortOrder: vi.fn(),
       deactivateMissing: vi.fn(),
     };
 

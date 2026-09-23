@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# YeneShop deployment.
+# Suq deployment.
 #
-# One script for both cases: on a fresh server it installs and configures
-# everything, on an existing one it only ships new code and restarts. Every
-# step is written to be safe to re-run.
+# Mounts Suq beside the existing YeneShop installation at /suq. It owns a
+# separate service, database, web root and API port; it never replaces the
+# YeneShop site or process.
 #
 #   ./deploy.sh              deploy (setup or update, whichever is needed)
 #   ./deploy.sh --logs       tail the running service
@@ -17,12 +17,14 @@ set -euo pipefail
 
 HOST="16.16.104.36"
 DOMAIN="yeneshop.amixmon.com"
-PEM="${YENESHOP_PEM:-$HOME/.ssh/yeneshop.pem}"
-# Used by Let's Encrypt for expiry warnings.
-LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-ermimini10@gmail.com}"
+BASE_PATH="/suq"
+APP_URL="https://${DOMAIN}${BASE_PATH}"
+PEM="${SUQ_PEM:-${YENESHOP_PEM:-$HOME/.ssh/yeneshop.pem}}"
 
-REMOTE_DIR="/opt/yeneshop"
-SERVICE="yeneshop"
+REMOTE_DIR="/opt/suq"
+SERVICE="suq"
+API_PORT="8081"
+WEB_ROOT="/var/www/yeneshop/suq"
 NODE_MAJOR="22"
 
 LOCAL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,7 +57,7 @@ ssh_script() {
 preflight() {
   step "Preflight"
 
-  [ -f "$PEM" ] || die "key not found at $PEM (override with YENESHOP_PEM=...)"
+  [ -f "$PEM" ] || die "key not found at $PEM (override with SUQ_PEM=...)"
 
   # ssh refuses to use a key that others can read.
   local perms
@@ -89,6 +91,21 @@ preflight() {
   ok "remote OS: $os"
 
   [ -f "$LOCAL_ROOT/server/.env" ] || die "server/.env not found — it is the source of the deployed configuration"
+
+  # A first deploy receives the one-time YeneShop key through the process
+  # environment and writes it only to the remote .env. Later deploys keep that
+  # remote file authoritative, so the secret never has to live in the repo.
+  if ssh_run "test -f $REMOTE_DIR/.env"; then
+    (cd "$LOCAL_ROOT/server" && \
+      YENESHOP_API_KEY=ysk_live_deploy_validation_only_000000000000 npm run check:config >/dev/null) || \
+      die "server/.env is invalid"
+  else
+    [ -n "${SUQ_YENESHOP_API_KEY:-}" ] || \
+      die "first deploy requires SUQ_YENESHOP_API_KEY"
+    (cd "$LOCAL_ROOT/server" && \
+      YENESHOP_API_KEY="$SUQ_YENESHOP_API_KEY" npm run check:config >/dev/null) || \
+      die "server/.env is invalid"
+  fi
 }
 
 # --------------------------------------------------- remote system bootstrap ---
@@ -151,24 +168,24 @@ systemctl enable --now redis-server >/dev/null 2>&1 || true
 systemctl enable --now nginx >/dev/null 2>&1 || true
 
 # --- database (created once, never reset) ---
-if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='yeneshop'" | grep -q 1; then
+if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='suq'" | grep -q 1; then
   log "database role already exists"
 else
   log "creating database role and database"
-  sudo -u postgres psql -qc "CREATE ROLE yeneshop LOGIN PASSWORD '\$DB_PASSWORD'"
-  sudo -u postgres createdb -O yeneshop yeneshop
+  sudo -u postgres psql -qc "CREATE ROLE suq LOGIN PASSWORD '\$DB_PASSWORD'"
+  sudo -u postgres createdb -O suq suq
   # Remember it so the app's .env can be generated below.
-  install -m 600 /dev/null /root/.yeneshop-db-password
-  printf '%s' "\$DB_PASSWORD" > /root/.yeneshop-db-password
+  install -m 600 /dev/null /root/.suq-db-password
+  printf '%s' "\$DB_PASSWORD" > /root/.suq-db-password
 fi
 
 # --- directories ---
 # data/ holds uploaded receipts and is deliberately outside server/, which
 # every deploy replaces with rsync --delete.
-mkdir -p "\$APP_DIR" "\$APP_DIR/assets" "\$APP_DIR/data/receipts" /var/www/yeneshop
+mkdir -p "\$APP_DIR" "\$APP_DIR/assets" "\$APP_DIR/data/receipts" "\$APP_DIR/data/backups" "$WEB_ROOT"
 # The deploying account owns the tree so rsync needs no sudo.
-chown -R "$SSH_USER":"$SSH_USER" "\$APP_DIR" /var/www/yeneshop
-chmod 700 "\$APP_DIR/data/receipts"
+chown -R "$SSH_USER":"$SSH_USER" "\$APP_DIR" "$WEB_ROOT"
+chmod 700 "\$APP_DIR/data/receipts" "\$APP_DIR/data/backups"
 
 # --- firewall (only if already enabled; do not lock anyone out) ---
 if ufw status 2>/dev/null | grep -q "Status: active"; then
@@ -192,7 +209,7 @@ push_env() {
   info "first deploy: generating .env from server/.env"
 
   local db_password
-  db_password="$(ssh_run "sudo cat /root/.yeneshop-db-password 2>/dev/null || true")"
+  db_password="$(ssh_run "sudo cat /root/.suq-db-password 2>/dev/null || true")"
   [ -n "$db_password" ] || die "database password not found on server; re-run to bootstrap it"
 
   local tmp
@@ -200,23 +217,30 @@ push_env() {
 
   # Rewrite the values that differ in production and quote anything containing
   # spaces — systemd's EnvironmentFile parser would otherwise truncate at the
-  # first space (PRODUCT_SYNC_CRON is the one that bites).
+  # first space (PRODUCT_SYNC_CRON is the one that bites). Use a dedicated file
+  # descriptor instead of redirecting the compound loop: some managed shells
+  # emit startup diagnostics on stdout, and those must never enter an env file.
+  exec 3>"$tmp"
   while IFS= read -r line; do
     case "$line" in
-      '#'*|'') printf '%s\n' "$line" ;;
+      '#'*|'') printf '%s\n' "$line" >&3 ;;
       DATABASE_URL=*)
-        printf 'DATABASE_URL=postgresql://yeneshop:%s@127.0.0.1:5432/yeneshop?schema=public\n' "$db_password" ;;
-      WEB_APP_ORIGINS=*)  printf 'WEB_APP_ORIGINS=https://%s\n' "$DOMAIN" ;;
-      NODE_ENV=*)         printf 'NODE_ENV=production\n' ;;
-      LOG_LEVEL=*)        printf 'LOG_LEVEL=info\n' ;;
+        printf 'DATABASE_URL=postgresql://suq:%s@127.0.0.1:5432/suq?schema=public\n' "$db_password" >&3 ;;
+      WEB_APP_ORIGINS=*)  printf 'WEB_APP_ORIGINS=https://%s\n' "$DOMAIN" >&3 ;;
+      WEB_APP_URL=*)      printf 'WEB_APP_URL=%s/\n' "$APP_URL" >&3 ;;
+      WEB_API_PORT=*)     printf 'WEB_API_PORT=%s\n' "$API_PORT" >&3 ;;
+      YENESHOP_API_KEY=*) printf 'YENESHOP_API_KEY=%s\n' "$SUQ_YENESHOP_API_KEY" >&3 ;;
+      NODE_ENV=*)         printf 'NODE_ENV=production\n' >&3 ;;
+      LOG_LEVEL=*)        printf 'LOG_LEVEL=info\n' >&3 ;;
       *)
         local key="${line%%=*}" value="${line#*=}"
         case "$value" in
-          *' '*) printf '%s="%s"\n' "$key" "$value" ;;
-          *)     printf '%s\n' "$line" ;;
+          *' '*) printf '%s="%s"\n' "$key" "$value" >&3 ;;
+          *)     printf '%s\n' "$line" >&3 ;;
         esac ;;
     esac
-  done < "$LOCAL_ROOT/server/.env" > "$tmp"
+  done < "$LOCAL_ROOT/server/.env"
+  exec 3>&-
 
   scp -q -i "$PEM" "$tmp" "${SSH_USER}@${HOST}:${REMOTE_DIR}/.env"
   ssh_run "chmod 600 $REMOTE_DIR/.env"
@@ -236,9 +260,17 @@ build_webapp() {
   # Fonts are build inputs, not sources; regenerate if absent.
   [ -f public/fonts/SchriftedSans-Regular.woff2 ] || npm run fonts:build
 
-  npm run build
+  VITE_BASE_PATH="$BASE_PATH/" npm run build
   cd "$LOCAL_ROOT"
   ok "webapp built"
+}
+
+validate_webapp_build() {
+  local index="$LOCAL_ROOT/webapp/dist/index.html"
+
+  [ -f "$index" ] || die "webapp/dist is missing — build the web app before deploying"
+  grep -qE '(src|href)="/suq/assets/' "$index" || \
+    die "webapp build does not target /suq/ — rebuild with VITE_BASE_PATH=/suq/"
 }
 
 ship() {
@@ -250,12 +282,15 @@ ship() {
     "$LOCAL_ROOT/server/" "${SSH_USER}@${HOST}:${REMOTE_DIR}/server/"
   ok "server source"
 
-  rsync -az --delete -e "ssh -i $PEM -o StrictHostKeyChecking=accept-new" \
+  # Deliberately no --delete: logos uploaded from the admin panel live in this
+  # directory and exist only on the server, so mirroring the local copy would
+  # wipe every product whose artwork was added after the last checkout.
+  rsync -az -e "ssh -i $PEM -o StrictHostKeyChecking=accept-new" \
     "$LOCAL_ROOT/assets/" "${SSH_USER}@${HOST}:${REMOTE_DIR}/assets/"
   ok "product logos"
 
   rsync -az --delete -e "ssh -i $PEM -o StrictHostKeyChecking=accept-new" \
-    "$LOCAL_ROOT/webapp/dist/" "${SSH_USER}@${HOST}:/var/www/yeneshop/"
+    "$LOCAL_ROOT/webapp/dist/" "${SSH_USER}@${HOST}:$WEB_ROOT/"
   ok "web app"
 }
 
@@ -299,7 +334,7 @@ set -euo pipefail
 
 cat > /etc/systemd/system/$SERVICE.service <<'UNIT'
 [Unit]
-Description=YeneShop Telegram bot and web API
+Description=Suq Telegram bot and web API
 After=network-online.target postgresql.service redis-server.service
 Wants=network-online.target
 
@@ -333,112 +368,97 @@ REMOTE
 # --------------------------------------------------------------------- nginx ---
 
 configure_nginx() {
-  step "Nginx"
+  step "Nginx sub-application"
 
   ssh_script <<REMOTE
 set -euo pipefail
 
-# Written without TLS directives; configure_tls re-applies the certificate
-# afterwards. This file is regenerated on every deploy so config changes ship,
-# which means certbot's edits are lost here and must be restored there.
-cat > /etc/nginx/sites-available/yeneshop <<'CONF'
-server {
-    listen 80;
-    listen [::]:80;
-    server_name $DOMAIN;
+SITE="/etc/nginx/sites-available/yeneshop"
+SNIPPET_DIR="/etc/nginx/snippets/yeneshop-apps"
+SNIPPET="\$SNIPPET_DIR/suq.conf"
+INCLUDE_LINE="include /etc/nginx/snippets/yeneshop-apps/*.conf;"
 
+test -f "\$SITE" || {
+  echo "YeneShop nginx site is missing at \$SITE; deploy YeneShop first" >&2
+  exit 1
+}
+
+mkdir -p "\$SNIPPET_DIR"
+
+cat > "\$SNIPPET" <<'CONF'
+# Suq is an independent service mounted beside YeneShop.
+location = /suq {
+    return 308 /suq/;
+}
+
+location ^~ /suq/assets/ {
     root /var/www/yeneshop;
-    index index.html;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
 
-    # Uploaded receipts are base64 in a JSON body; the API caps them at 5MB.
-    client_max_body_size 12M;
+location ^~ /suq/fonts/ {
+    root /var/www/yeneshop;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
 
-    gzip on;
-    gzip_types text/css application/javascript image/svg+xml application/json;
-    gzip_min_length 1024;
+location ^~ /suq/logos/ {
+    alias /opt/suq/assets/logos/;
+    expires 7d;
+    add_header Cache-Control "public";
+}
 
-    # Hashed filenames, so they can be cached indefinitely.
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
+location ^~ /suq/api/admin/backups {
+    client_max_body_size 1024M;
+    proxy_pass http://127.0.0.1:8081/api/admin/backups;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_request_buffering off;
+    proxy_buffering off;
+    proxy_read_timeout 660s;
+    proxy_send_timeout 660s;
+}
 
-    location /fonts/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
+location ^~ /suq/api/ {
+    proxy_pass http://127.0.0.1:8081/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_read_timeout 60s;
+}
 
-    # Served straight from disk rather than through node.
-    location /logos/ {
-        alias $REMOTE_DIR/assets/logos/;
-        expires 7d;
-        add_header Cache-Control "public";
-    }
+location = /suq/index.html {
+    root /var/www/yeneshop;
+    add_header Cache-Control "no-cache";
+}
 
-    location /api/ {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 60s;
-    }
-
-    # Single-page app: unknown paths return the shell, not a 404.
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
+location ^~ /suq/ {
+    root /var/www/yeneshop;
+    try_files \$uri \$uri/ /suq/index.html;
 }
 CONF
 
-ln -sf /etc/nginx/sites-available/yeneshop /etc/nginx/sites-enabled/yeneshop
-rm -f /etc/nginx/sites-enabled/default
+# Current production may predate the extension point. Add it once inside the
+# existing YeneShop server block; future YeneShop deploys preserve this line.
+if ! grep -Fq "\$INCLUDE_LINE" "\$SITE"; then
+  # Insert only in the first (HTTPS) server block. The site also has an HTTP
+  # redirect block with the same server_name, where location snippets are not
+  # useful and can create duplicate-location errors.
+  sed -i "0,/server_name $DOMAIN;/{/server_name $DOMAIN;/a\\    \$INCLUDE_LINE
+}" "\$SITE"
+fi
 
 nginx -t
 systemctl reload nginx
 REMOTE
 
-  ok "nginx configured for $DOMAIN"
-}
-
-configure_tls() {
-  step "TLS certificate"
-
-  if ssh_run "sudo test -d /etc/letsencrypt/live/$DOMAIN"; then
-    # configure_nginx rewrote the site file from scratch, which removes the
-    # listen 443 / ssl_certificate lines certbot had added. Re-install the
-    # existing certificate into the fresh config rather than requesting a new
-    # one — issuing is rate-limited, installing is not.
-    info "certificate exists; re-applying it to the regenerated nginx config"
-
-    ssh_script <<REMOTE
-set -euo pipefail
-certbot install --nginx --cert-name "$DOMAIN" --redirect --non-interactive
-systemctl reload nginx
-REMOTE
-
-    ok "certificate re-applied (renewal runs from certbot's timer)"
-    return
-  fi
-
-  info "requesting a certificate from Let's Encrypt for $DOMAIN"
-  info "this needs the domain's DNS to already point at $HOST, and port 80 open"
-
-  if ssh_script <<REMOTE
-set -euo pipefail
-certbot --nginx -d "$DOMAIN" \
-  --non-interactive --agree-tos -m "$LETSENCRYPT_EMAIL" \
-  --redirect
-systemctl reload nginx
-REMOTE
-  then
-    ok "certificate issued, HTTP now redirects to HTTPS"
-  else
-    warn "certbot failed — the site will still serve over plain HTTP"
-    warn "check that DNS for $DOMAIN resolves to $HOST and that port 80 is open in the security group"
-    warn "then re-run: ./deploy.sh"
-  fi
+  ok "mounted Suq at $APP_URL without replacing YeneShop's site"
 }
 
 # -------------------------------------------------------------------- verify ---
@@ -459,23 +479,23 @@ verify() {
   fi
 
   local api
-  api="$(ssh_run "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8080/api/health" || true)"
+  api="$(ssh_run "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:$API_PORT/api/health" || true)"
   [ "$api" = "200" ] && ok "API health check passed" || warn "API health check returned $api"
 
   local site
-  site="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://$DOMAIN/" || true)"
+  site="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$APP_URL/" || true)"
   if [ "$site" = "200" ]; then
-    ok "https://$DOMAIN is serving the web app"
+    ok "$APP_URL is serving the web app"
   else
-    site="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "http://$DOMAIN/" || true)"
-    [ "$site" = "200" ] && warn "http://$DOMAIN works but HTTPS does not yet" \
+    site="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "http://$DOMAIN$BASE_PATH/" || true)"
+    [ "$site" = "200" ] && warn "http://$DOMAIN$BASE_PATH works but HTTPS does not yet" \
                         || warn "the site returned $site"
   fi
 }
 
 summary() {
   printf '\n%s──────────────────────────────────────────────%s\n' "$DIM" "$RESET"
-  printf '%sDeployed%s  https://%s\n' "$BOLD" "$RESET" "$DOMAIN"
+  printf '%sDeployed%s  %s\n' "$BOLD" "$RESET" "$APP_URL"
   printf '\n'
   printf '  logs     ./deploy.sh --logs\n'
   printf '  status   ./deploy.sh --status\n'
@@ -483,7 +503,7 @@ summary() {
   printf '%sOne bot token cannot poll from two places.%s\n' "$YELLOW" "$RESET"
   printf 'Stop any local instance, or Telegram will 409 and updates will be split.\n'
   printf '\n'
-  printf 'Set the Mini App URL with @BotFather:  https://%s\n' "$DOMAIN"
+  printf 'Set the Mini App URL with @BotFather:  %s\n' "$APP_URL"
   printf '%s──────────────────────────────────────────────%s\n\n' "$DIM" "$RESET"
 }
 
@@ -513,10 +533,10 @@ preflight
 bootstrap_system
 push_env
 [ "$SKIP_BUILD" -eq 1 ] || build_webapp
+validate_webapp_build
 ship
 install_app
 install_service
 configure_nginx
-configure_tls
 verify
 summary

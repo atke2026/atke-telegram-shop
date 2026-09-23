@@ -1,9 +1,27 @@
+import { randomUUID } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import type { Readable } from 'node:stream';
+
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
+import { CACHE_KEYS } from '../../core/constants.js';
 import { Money } from '../../core/entities/Money.js';
+import { hasUnlimitedStock, productDetails } from '../../core/entities/Product.js';
 import type { User } from '../../core/entities/User.js';
 import { isDiscountLive } from '../../core/entities/Discount.js';
-import { isStoredReceipt } from '../../infrastructure/storage/ReceiptStorage.js';
+import {
+  getMaintenance,
+  maintenanceImageUrl,
+  setMaintenance,
+  type MaintenanceState,
+} from '../../core/maintenance.js';
+import type { LogoBackground } from '../../infrastructure/storage/LogoStorage.js';
+import { isStoredReceipt, UnsupportedImageError } from '../../infrastructure/storage/ReceiptStorage.js';
+import {
+  MoneyAnalytics,
+  parseAnalyticsDateRange,
+  todayInAnalyticsTimezone,
+} from '../../infrastructure/database/MoneyAnalytics.js';
 import { NotAnAdminError } from '../../use-cases/admin/ManageAdminsUseCase.js';
 import type { Container } from '../../shared/container.js';
 import { toDepositDto, toOrderDto, toProductDto } from './serializers.js';
@@ -18,6 +36,7 @@ import { toDepositDto, toOrderDto, toProductDto } from './serializers.js';
  */
 export function registerAdminRoutes(app: FastifyInstance, container: Container): void {
   const { repositories, useCases, services, logger, bot } = container;
+  const moneyAnalytics = new MoneyAnalytics(container.prisma, services.yeneshop);
 
   const requireAdmin = async (request: FastifyRequest): Promise<User> => {
     const user = request.currentUser;
@@ -34,6 +53,89 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
     return user;
   };
 
+  const requireBackupOwner = async (request: FastifyRequest): Promise<User> => {
+    const admin = await requireAdmin(request);
+    if (!container.config.ADMIN_TELEGRAM_IDS.some((id) => id === admin.telegramId)) {
+      throw new NotAnAdminError();
+    }
+    return admin;
+  };
+
+  // --- full backups -----------------------------------------------------
+
+  app.get('/api/admin/backups', async (request) => {
+    const admin = await requireAdmin(request);
+    return {
+      ...(await services.backups.status()),
+      canRestore: container.config.ADMIN_TELEGRAM_IDS.some((id) => id === admin.telegramId),
+    };
+  });
+
+  app.post('/api/admin/backups/schedule', async (request) => {
+    await requireAdmin(request);
+    const body = request.body as { intervalHours?: unknown } | undefined;
+    const intervalHours =
+      body?.intervalHours === null
+        ? null
+        : typeof body?.intervalHours === 'number'
+          ? body.intervalHours
+          : Number.NaN;
+    return services.backups.setIntervalHours(intervalHours);
+  });
+
+  app.post('/api/admin/backups', async (request) => {
+    const admin = await requireAdmin(request);
+    return services.backups.createManualBackup(admin.telegramId);
+  });
+
+  app.get('/api/admin/backups/:name/download', async (request, reply) => {
+    await requireAdmin(request);
+    const { name } = request.params as { name: string };
+    const archive = services.backups.resolveArchive(name);
+
+    return reply
+      .header('Content-Type', 'application/gzip')
+      .header('Content-Disposition', `attachment; filename="${name}"`)
+      .header('Cache-Control', 'private, no-store')
+      .send(createReadStream(archive));
+  });
+
+  app.post('/api/admin/backups/:name/restore', async (request, reply) => {
+    const admin = await requireBackupOwner(request);
+    const { name } = request.params as { name: string };
+    const body = request.body as { confirmation?: unknown } | undefined;
+    if (body?.confirmation !== 'RESTORE') {
+      return reply.code(400).send({
+        error: 'RESTORE_CONFIRMATION_REQUIRED',
+        message: 'Type RESTORE to confirm the full restore.',
+      });
+    }
+    return services.backups.restoreStored(name, admin.telegramId);
+  });
+
+  app.post('/api/admin/backups/import', async (request, reply) => {
+    const admin = await requireBackupOwner(request);
+    if (request.headers['x-backup-confirmation'] !== 'RESTORE') {
+      return reply.code(400).send({
+        error: 'RESTORE_CONFIRMATION_REQUIRED',
+        message: 'Type RESTORE to confirm the full restore.',
+      });
+    }
+
+    const body = request.body as Readable | undefined;
+    if (!body || typeof body.pipe !== 'function') {
+      return reply.code(400).send({
+        error: 'BACKUP_FILE_REQUIRED',
+        message: 'Choose a Suq backup archive to restore.',
+      });
+    }
+    const rawLength = request.headers['content-length'];
+    const contentLength =
+      typeof rawLength === 'string' && /^\d+$/.test(rawLength) ? Number(rawLength) : undefined;
+    const imported = await services.backups.saveImport(body, contentLength);
+    return services.backups.restoreImported(imported, admin.telegramId);
+  });
+
   // --- overview ---------------------------------------------------------
 
   app.get('/api/admin/summary', async (request) => {
@@ -46,9 +148,9 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
 
     let resellerBalance: string | null = null;
     try {
-      resellerBalance = await services.hubx.getResellerBalanceUSDT();
+      resellerBalance = await services.yeneshop.getResellerBalanceETB();
     } catch {
-      // The panel must still render when HubX is unreachable.
+      // The panel must still render when YeneShop is unreachable.
     }
 
     const pendingTotal = pendingDeposits.reduce(
@@ -59,14 +161,99 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
     return {
       products: {
         active: products.length,
-        outOfStock: products.filter((product) => product.stock === 0).length,
+        outOfStock: products.filter((product) => !product.operatorAvailable || product.stock === 0)
+          .length,
       },
       deposits: {
         pending: pendingDeposits.length,
         pendingTotal: { amount: pendingTotal.toDecimalString(), label: pendingTotal.format() },
       },
-      hubx: { balanceUSDT: resellerBalance },
+      yeneshop: {
+        balance: resellerBalance === null
+          ? null
+          : { amount: resellerBalance, label: Money.fromDecimal(resellerBalance).format() },
+      },
     };
+  });
+
+  // --- money analytics --------------------------------------------------
+
+  app.get('/api/admin/analytics', async (request, reply) => {
+    await requireAdmin(request);
+
+    const query = request.query as { from?: string; to?: string };
+    const today = todayInAnalyticsTimezone();
+    const range = parseAnalyticsDateRange(query.from ?? today, query.to ?? today);
+    if (!range) {
+      return reply.code(400).send({
+        error: 'INVALID_DATE_RANGE',
+        message: 'Choose a valid start and end date.',
+      });
+    }
+
+    return moneyAnalytics.get(range);
+  });
+
+  // --- maintenance ------------------------------------------------------
+
+  const maintenanceDto = (state: MaintenanceState) => ({
+    enabled: state.enabled,
+    message: state.message,
+    imageUrl: maintenanceImageUrl(state),
+  });
+
+  app.get('/api/admin/maintenance', async (request) => {
+    await requireAdmin(request);
+    return maintenanceDto(await getMaintenance(repositories.config));
+  });
+
+  app.post('/api/admin/maintenance', async (request) => {
+    const admin = await requireAdmin(request);
+    const body = request.body as { enabled?: unknown; message?: unknown } | undefined;
+
+    const patch: Partial<MaintenanceState> = {};
+    if (typeof body?.enabled === 'boolean') patch.enabled = body.enabled;
+    // Blank is the same as cleared: fall back to the default notice at display.
+    if (body?.message === null) patch.message = null;
+    else if (typeof body?.message === 'string') patch.message = body.message.trim() || null;
+
+    const state = await setMaintenance(repositories.config, patch);
+    logger.warn(
+      { by: admin.telegramId.toString(), enabled: state.enabled },
+      'Maintenance mode changed from the panel',
+    );
+    return maintenanceDto(state);
+  });
+
+  app.post('/api/admin/maintenance/image', async (request, reply) => {
+    await requireAdmin(request);
+    const body = request.body as { imageBase64?: unknown } | undefined;
+
+    // Explicit null clears the current image.
+    if (body?.imageBase64 === null) {
+      return maintenanceDto(await setMaintenance(repositories.config, { imageFileId: null }));
+    }
+
+    if (typeof body?.imageBase64 !== 'string' || body.imageBase64.length === 0) {
+      return reply.code(400).send({ error: 'imageBase64 is required' });
+    }
+
+    // Accepts a bare base64 payload or a data: URL from a file input.
+    const base64 = body.imageBase64.replace(/^data:image\/[a-z+]+;base64,/, '');
+    const buffer = Buffer.from(base64, 'base64');
+    if (buffer.length === 0) return reply.code(400).send({ error: 'image is empty' });
+
+    try {
+      // Stored on disk beside the receipts; the public image route streams it,
+      // and the bot sends it from the same buffer while the notice is on.
+      const reference = await services.receipts.save(buffer);
+      return maintenanceDto(await setMaintenance(repositories.config, { imageFileId: reference }));
+    } catch (error) {
+      if (error instanceof UnsupportedImageError) {
+        return reply.code(400).send({ error: 'UNSUPPORTED_IMAGE', message: error.message });
+      }
+      throw error;
+    }
   });
 
   // --- deposits ---------------------------------------------------------
@@ -190,13 +377,111 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
   app.get('/api/admin/products', async (request) => {
     await requireAdmin(request);
 
-    const products = await repositories.products.listActive();
+    // Deliberately the customer-facing order, not the alphabetical one: the
+    // admin drags rows in this list, so it has to be the list being reordered.
+    const entries = await useCases.listProducts.priced();
     return {
-      products: products.map((product) => ({
-        ...toProductDto(product),
-        costPriceUSDT: product.costPriceUSDT,
+      products: entries.map(({ product, priced }) => ({
+        ...toProductDto(product, priced),
+        costPriceETB: product.costPriceETB,
         fixedPrice: product.priceOverride !== null,
+        placed: product.sortOrder !== null,
+        source: product.source,
+        finiteStock: !hasUnlimitedStock(product),
+        operatorAvailable: product.operatorAvailable,
       })),
+    };
+  });
+
+  /**
+   * Replaces the hand-picked order wholesale. The body is the full arrangement
+   * of placed products, top first; anything omitted returns to the automatic
+   * ranking.
+   */
+  app.post('/api/admin/products/order', async (request, reply) => {
+    await requireAdmin(request);
+
+    const body = request.body as { productIds?: unknown } | undefined;
+    if (!Array.isArray(body?.productIds) || body.productIds.some((id) => typeof id !== 'string')) {
+      return reply.code(400).send({ error: 'productIds must be an array of product ids' });
+    }
+
+    return useCases.reorderProducts.execute(body.productIds as string[]);
+  });
+
+  app.delete('/api/admin/products/order', async (request) => {
+    await requireAdmin(request);
+    return useCases.reorderProducts.reset();
+  });
+
+  /**
+   * One deliberate admin action does both halves of "new arrival": position
+   * the item first in every catalogue and announce the customer-facing price.
+   */
+  app.post('/api/admin/products/:slug/new-arrival', async (request) => {
+    const admin = await requireAdmin(request);
+    const { slug } = request.params as { slug: string };
+
+    const result = await useCases.announceNewArrival.execute({
+      slugOrId: slug,
+      announcedByTelegramId: admin.telegramId,
+    });
+
+    logger.warn(
+      {
+        by: admin.telegramId.toString(),
+        slug,
+      },
+      'New arrival promoted and announcement queued',
+    );
+
+    return result;
+  });
+
+  app.post('/api/admin/products/:slug/channel-stock', async (request) => {
+    const admin = await requireAdmin(request);
+    const { slug } = request.params as { slug: string };
+    const result = await useCases.publishLowStock.execute(slug);
+
+    logger.warn(
+      {
+        by: admin.telegramId.toString(),
+        slug,
+        stock: result.stock,
+        channelMessageId: result.messageId,
+      },
+      'Low-stock product published to channel',
+    );
+
+    return result;
+  });
+
+  app.post('/api/admin/products/:slug/availability', async (request, reply) => {
+    const admin = await requireAdmin(request);
+    const { slug } = request.params as { slug: string };
+    const body = request.body as { available?: unknown } | undefined;
+
+    if (typeof body?.available !== 'boolean') {
+      return reply.code(400).send({ error: 'available must be a boolean' });
+    }
+
+    const product = await useCases.setProductAvailability.execute({
+      slugOrId: slug,
+      available: body.available,
+    });
+
+    logger.warn(
+      {
+        by: admin.telegramId.toString(),
+        slug: product.slug,
+        operatorAvailable: product.operatorAvailable,
+      },
+      'YeneShop product availability changed',
+    );
+
+    return {
+      product: toProductDto(product),
+      operatorAvailable: product.operatorAvailable,
     };
   });
 
@@ -220,6 +505,85 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
       previousPrice: result.previousPrice.format(),
       computedPrice: result.computedPrice.format(),
     };
+  });
+
+  /**
+   * The product page shown before purchase and, since it is what the customer
+   * needs to redeem what they bought, sent again after delivery. Stored as an
+   * override so a catalogue sync never overwrites it.
+   */
+  app.post('/api/admin/products/:slug/instructions', async (request, reply) => {
+    await requireAdmin(request);
+
+    const { slug } = request.params as { slug: string };
+    const body = request.body as { instructions?: unknown } | undefined;
+
+    if (body?.instructions !== null && typeof body?.instructions !== 'string') {
+      return reply.code(400).send({ error: 'instructions must be a string, or null to clear it' });
+    }
+
+    const product = await repositories.products.findBySlugOrId(slug);
+    if (!product) return reply.code(404).send({ error: 'PRODUCT_NOT_FOUND' });
+
+    // Blank is the same as cleared: an empty page would otherwise be sent to
+    // a customer as their redemption instructions.
+    const trimmed = typeof body.instructions === 'string' ? body.instructions.trim() : null;
+    const updated = await repositories.products.setDescription(product.id, trimmed || null);
+
+    await services.cache.del(CACHE_KEYS.products);
+    return { product: toProductDto(updated) };
+  });
+
+  app.post('/api/admin/products/:slug/logo', async (request, reply) => {
+    await requireAdmin(request);
+
+    const { slug } = request.params as { slug: string };
+    const body = request.body as { imageBase64?: unknown; background?: unknown } | undefined;
+
+    if (typeof body?.imageBase64 !== 'string' || body.imageBase64.length === 0) {
+      return reply.code(400).send({ error: 'imageBase64 is required' });
+    }
+
+    // 'auto' measures whether the mark survives a dark theme without a plate.
+    const background: LogoBackground =
+      body.background === 'transparent' || body.background === 'white' ? body.background : 'auto';
+
+    const product = await repositories.products.findBySlugOrId(slug);
+    if (!product) return reply.code(404).send({ error: 'PRODUCT_NOT_FOUND' });
+
+    // Accepts a bare base64 payload or a data: URL from a file input.
+    const base64 = body.imageBase64.replace(/^data:image\/[a-z+]+;base64,/, '');
+    const buffer = Buffer.from(base64, 'base64');
+
+    try {
+      // Named by the product's own slug, never the path parameter, so a
+      // crafted request cannot choose the filename it writes.
+      const saved = await services.logos.save(product.slug, buffer, background);
+
+      // Only after the file is on disk: the version is what tells every
+      // client the picture changed, so it must never run ahead of the write.
+      const updated = await repositories.products.bumpLogoVersion(product.id);
+      await services.cache.del(CACHE_KEYS.products);
+      logger.info(
+        {
+          slug: product.slug,
+          bytes: buffer.length,
+          logoVersion: updated.logoVersion,
+          background,
+          transparent: saved.transparent,
+        },
+        'Product logo replaced',
+      );
+
+      // The panel says which way it went, so an automatic decision the
+      // operator disagrees with is visible rather than a mystery.
+      return { logoUrl: toProductDto(updated).logoUrl, transparent: saved.transparent };
+    } catch (error) {
+      if (error instanceof UnsupportedImageError) {
+        return reply.code(400).send({ error: 'UNSUPPORTED_IMAGE', message: error.message });
+      }
+      throw error;
+    }
   });
 
   app.post('/api/admin/sync', async (request) => {
@@ -264,6 +628,40 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
     };
   });
 
+  // --- feedback ---------------------------------------------------------
+
+  app.get('/api/admin/feedback', async (request) => {
+    await requireAdmin(request);
+
+    const { limit, offset } = request.query as { limit?: string; offset?: string };
+
+    const result = await repositories.feedback.list({
+      // Capped like the user list, so a crafted limit cannot ask for the lot.
+      limit: Math.min(Number(limit) || 30, 100),
+      offset: Math.max(Number(offset) || 0, 0),
+    });
+
+    return {
+      total: result.total,
+      // Rounded to one decimal here rather than in the client, so the bot and
+      // the panel would report the same headline figure.
+      average: result.average === null ? null : Math.round(result.average * 10) / 10,
+      entries: result.entries.map((entry) => ({
+        id: entry.feedback.id,
+        rating: entry.feedback.rating,
+        createdAt: entry.feedback.createdAt.toISOString(),
+        updatedAt: entry.feedback.updatedAt.toISOString(),
+        user: {
+          id: entry.user.id,
+          telegramId: entry.user.telegramId.toString(),
+          firstName: entry.user.firstName,
+          username: entry.user.username,
+          isBanned: entry.user.isBanned,
+        },
+      })),
+    };
+  });
+
   app.get('/api/admin/users/:telegramId', async (request, reply) => {
     await requireAdmin(request);
 
@@ -304,13 +702,54 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
         orderCount: orders.length,
         depositCount: deposits.length,
       },
-      // Delivered items are withheld: an admin has no reason to read a
-      // customer's license keys, and this endpoint would be the easy way.
-      orders: orders.map((order) => ({ ...toOrderDto(order), deliveredItems: null })),
+      // The contents are withheld here on purpose — a support question is
+      // almost always "did anything arrive?", which the count answers without
+      // putting every customer's license keys in a routine list response.
+      // Reading the items themselves is a separate, logged request below.
+      //   null = never fulfilled, 0 = fulfilled but empty (upstream sent
+      //   nothing), n = delivered.
+      orders: orders.map((order) => ({
+        ...toOrderDto(order),
+        deliveredItems: null,
+        deliveredItemCount: order.deliveredItems === null ? null : order.deliveredItems.length,
+      })),
       deposits: deposits.map((deposit) => ({
         ...toDepositDto(deposit),
         hasReceiptImage: deposit.screenshotUrl !== 'webapp-upload',
       })),
+    };
+  });
+
+  /**
+   * The delivered contents of one order — license keys, links, credentials.
+   *
+   * Deliberately a separate call rather than a field on the user page: this is
+   * the one place an admin can read what a customer bought, so every read is
+   * logged with who asked and whose order it was.
+   */
+  app.get('/api/admin/orders/:orderId/items', async (request, reply) => {
+    const admin = await requireAdmin(request);
+
+    const { orderId } = request.params as { orderId: string };
+    const order = await repositories.orders.findById(orderId);
+    if (!order) return reply.code(404).send({ error: 'ORDER_NOT_FOUND' });
+
+    logger.info(
+      {
+        adminTelegramId: admin.telegramId.toString(),
+        orderId: order.id,
+        customerId: order.userId,
+        itemCount: order.deliveredItems?.length ?? 0,
+      },
+      'Admin read the delivered items of an order',
+    );
+
+    return {
+      orderId: order.id,
+      productName: order.productName,
+      status: order.status,
+      yeneshopOrderId: order.yeneshopOrderId,
+      deliveredItems: order.deliveredItems ?? [],
     };
   });
 
@@ -358,7 +797,10 @@ export function registerAdminRoutes(app: FastifyInstance, container: Container):
     const user = await repositories.users.findByTelegramId(BigInt(telegramId));
     if (!user) return reply.code(404).send({ error: 'USER_NOT_FOUND' });
 
-    const updated = await repositories.users.adjustBalance(user.id, Money.fromDecimal(deltaETB));
+    const updated = await repositories.users.adjustBalance(user.id, Money.fromDecimal(deltaETB), {
+      actorTelegramId: admin.telegramId,
+      adjustmentId: randomUUID(),
+    });
 
     // Manual balance changes are the highest-trust action in the panel.
     logger.warn(

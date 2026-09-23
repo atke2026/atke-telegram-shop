@@ -1,4 +1,4 @@
-import { Check, DeviceMobile, Moon, Sun } from '@phosphor-icons/react';
+import { ArrowRight, Check, DeviceMobile, Moon, PaintBrush, Sun } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
@@ -12,7 +12,7 @@ const ICONS: Record<ThemeMode, typeof Sun> = {
   dark: Moon,
 };
 
-export function ThemeMenu() {
+export function ThemeMenu({ variant = 'icon' }: { variant?: 'icon' | 'tile' }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<ThemeMode>(() => getThemeMode());
 
@@ -36,12 +36,14 @@ export function ThemeMenu() {
   };
 
   const CurrentIcon = ICONS[mode];
+  const currentLabel = THEME_MODES.find((entry) => entry.id === mode)?.label ?? 'Telegram';
+  const tile = variant === 'tile';
 
   return (
-    <div className={styles.wrap}>
+    <div className={tile ? styles.wrapTile : styles.wrap}>
       <motion.button
         type="button"
-        className={styles.trigger}
+        className={tile ? styles.triggerTile : styles.trigger}
         aria-label="Change theme"
         whileTap={{ scale: 0.94 }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -50,7 +52,18 @@ export function ThemeMenu() {
           setOpen((current) => !current);
         }}
       >
-        <CurrentIcon size={19} weight="regular" />
+        {tile ? (
+          <>
+            <span className={styles.tileIcon}><PaintBrush size={22} weight="fill" /></span>
+            <ArrowRight className={styles.tileArrow} size={17} />
+            <span className={styles.tileCopy}>
+              <strong>Appearance</strong>
+              <small>{currentLabel} theme</small>
+            </span>
+          </>
+        ) : (
+          <CurrentIcon size={19} weight="regular" />
+        )}
       </motion.button>
 
       <AnimatePresence>

@@ -1,11 +1,60 @@
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-3);
+  /*
+   * minmax(0, 1fr), not 1fr: a plain `1fr` track is `minmax(auto, 1fr)`, and
+   * that auto floor is the item's min-content width. The product name is a
+   * single nowrap line, so its min-content is the whole untruncated string —
+   * which pushed the column wider than half the screen instead of letting the
+   * ellipsis do its job. Zero floor lets the track shrink and the name clip.
+   */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  /* The extra paint gutter lets each card's downward shadow finish instead of
+     meeting the grid boundary and looking sliced off. Negative margins keep
+     the visible grid aligned with the search field above it. */
+  margin: 0;
+  padding: 0 0 8px;
+  /* Rows size to their tallest card and every card fills that height, so a
+     discount badge or a two-line name never leaves a neighbour hanging. */
+  align-items: stretch;
+}
+
+/* The animation wrapper is the grid item; without this the card inside it
+   shrink-wraps its content and the stretch above has nothing to act on. */
+.item {
+  height: 100%;
+  /* Same reason as the track floor above: this wrapper is the grid item, and
+     without it the nowrap name inside still sets a content-based minimum. */
+  min-width: 0;
+  animation: rise 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* content-visibility creates paint containment at this exact edge, which
+     clipped the Card shadow. The grid stays light through memoised cards and
+     lazy-loaded logos without that shadow mask. */
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    /* translate3d, not translateY: keeps the entrance on the compositor
+       instead of forcing a layout pass per frame per tile. */
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* The global reduced-motion rule only shortens durations; this drops the
+   offset too, so the grid appears in place rather than snapping from below. */
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    animation: none;
+  }
 }
 
 @media (min-width: 520px) {
   .grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

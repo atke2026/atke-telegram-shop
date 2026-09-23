@@ -1,7 +1,7 @@
 .screen {
-  padding: var(--space-4) var(--space-4) calc(var(--nav-height) + var(--space-6));
-  min-height: var(--app-height);
-  background: var(--bg-secondary);
+  padding: 14px var(--space-4) var(--space-6);
+  min-height: calc(var(--app-height) - var(--topbar-height));
+  background: var(--bg);
 }
 
 .header {
@@ -10,6 +10,21 @@
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
+}
+
+.headerSticky {
+  composes: header;
+  position: sticky;
+  top: var(--topbar-height);
+  z-index: 10;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-4);
+  padding: var(--space-4);
+  border-bottom: var(--hairline);
+  /* Whiteish in Day mode, while still using the active theme's surface.
+     Enough transparency remains for content to softly show through the blur. */
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(14px) saturate(180%);
 }
 
 .title {

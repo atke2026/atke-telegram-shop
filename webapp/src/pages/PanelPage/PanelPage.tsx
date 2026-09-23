@@ -8,18 +8,24 @@ import { Spinner } from '@shared/ui/Spinner';
 import { AdminAdmins } from './sections/AdminAdmins';
 import { AdminDeposits } from './sections/AdminDeposits';
 import { AdminDiscounts } from './sections/AdminDiscounts';
+import { AdminFeedback } from './sections/AdminFeedback';
+import { AdminMaintenance } from './sections/AdminMaintenance';
 import { AdminOverview } from './sections/AdminOverview';
 import { AdminProducts } from './sections/AdminProducts';
 import { AdminUsers } from './sections/AdminUsers';
+import { AdminBackup } from './sections/AdminBackup';
 import styles from './PanelPage.module.css';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
+  { id: 'users', label: 'Users' },
+  { id: 'feedback', label: 'Feedback' },
   { id: 'deposits', label: 'Deposits' },
   { id: 'products', label: 'Products' },
   { id: 'discounts', label: 'Discounts' },
-  { id: 'users', label: 'Users' },
   { id: 'admins', label: 'Admins' },
+  { id: 'maintenance', label: 'Maintenance' },
+  { id: 'backup', label: 'Backup' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -70,7 +76,10 @@ export function PanelPage() {
       {tab === 'products' ? <AdminProducts /> : null}
       {tab === 'discounts' ? <AdminDiscounts /> : null}
       {tab === 'users' ? <AdminUsers /> : null}
+      {tab === 'feedback' ? <AdminFeedback /> : null}
       {tab === 'admins' ? <AdminAdmins currentTelegramId={user.telegramId} /> : null}
+      {tab === 'maintenance' ? <AdminMaintenance /> : null}
+      {tab === 'backup' ? <AdminBackup /> : null}
     </Screen>
   );
 }

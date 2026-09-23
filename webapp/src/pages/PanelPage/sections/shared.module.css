@@ -66,14 +66,40 @@
 
 .actions {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
+}
+
+/* The only part of a product row that starts a drag. Sized past the 44px
+   touch target with its negative margin so it is easy to grab on a phone. */
+.dragHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 44px;
+  margin: -8px -4px -8px -8px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  cursor: grab;
+  /* A long-press drag must not also select the row's text. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+  color: var(--text);
 }
 
 .logo {
   width: 36px;
   height: 36px;
   object-fit: contain;
-  background: #ffffff;
+  /* Not white: a logo that kept its transparency shows the tile through it,
+     and a hardcoded white square would be the one thing on the card that
+     ignores the theme. Marks that need white carry their own. */
+  background: var(--bg-secondary);
   border: var(--hairline);
   border-radius: 8px;
   flex-shrink: 0;
@@ -146,4 +172,53 @@
 .chevron {
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.logoPreview {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  /* Not white: a logo that kept its transparency shows the tile through it,
+     and a hardcoded white square would be the one thing on the card that
+     ignores the theme. Marks that need white carry their own. */
+  background: var(--bg-secondary);
+  border: var(--hairline);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.instructionsEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: var(--hairline);
+  border-radius: var(--radius-button);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.logoEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }

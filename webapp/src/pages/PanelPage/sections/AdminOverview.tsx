@@ -1,5 +1,6 @@
-import { ArrowsClockwise } from '@phosphor-icons/react';
+import { ArrowsClockwise, ChartLineUp } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useGetAdminSummaryQuery, useSyncProductsMutation } from '@entities/admin';
 import { apiErrorMessage } from '@shared/api/baseApi';
@@ -9,6 +10,7 @@ import { Spinner } from '@shared/ui/Spinner';
 import styles from './shared.module.css';
 
 export function AdminOverview() {
+  const navigate = useNavigate();
   const { data, isLoading } = useGetAdminSummaryQuery();
   const [sync, { isLoading: syncing }] = useSyncProductsMutation();
   const [message, setMessage] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export function AdminOverview() {
     setMessage(null);
     try {
       const result = await sync().unwrap();
-      setMessage(`Synced ${result.synced} product(s) at ${result.rate} ETB/USDT.`);
+      setMessage(`Synced ${result.synced} product(s) from YeneShop.`);
     } catch (error) {
       setMessage(apiErrorMessage(error, 'Sync failed.'));
     }
@@ -42,9 +44,9 @@ export function AdminOverview() {
         </Card>
         <Card className={styles.stat}>
           <p className={styles.statValue}>
-            {data?.hubx.balanceUSDT ? `${data.hubx.balanceUSDT}` : '—'}
+            {data?.yeneshop.balance?.label ?? '—'}
           </p>
-          <p className={styles.statLabel}>HubX balance (USDT)</p>
+          <p className={styles.statLabel}>YeneShop reseller balance</p>
         </Card>
       </div>
 
@@ -52,8 +54,12 @@ export function AdminOverview() {
         <p className={styles.hint}>{data.products.outOfStock} product(s) are out of stock upstream.</p>
       ) : null}
 
+      <Button variant="secondary" fullWidth onClick={() => navigate('/panel/analytics')}>
+        <ChartLineUp size={17} /> Open money analytics
+      </Button>
+
       <Button variant="secondary" fullWidth loading={syncing} onClick={() => void runSync()}>
-        <ArrowsClockwise size={17} /> Sync catalogue from HubX
+        <ArrowsClockwise size={17} /> Sync catalogue from YeneShop
       </Button>
 
       {message ? <p className={styles.hint}>{message}</p> : null}

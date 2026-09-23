@@ -1,12 +1,15 @@
-import { ArrowLeft, Prohibit, ShieldCheck } from '@phosphor-icons/react';
+import { ArrowLeft, Check, Copy, Eye, Prohibit, ShieldCheck } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
   useAdjustBalanceMutation,
   useGetAdminUserQuery,
+  useLazyGetAdminOrderItemsQuery,
   useSetUserBannedMutation,
+  type AdminUserDetail,
 } from '@entities/admin';
+import { itemToText } from '@entities/order';
 import { useGetMeQuery } from '@entities/user';
 import { apiErrorMessage } from '@shared/api/baseApi';
 import { haptics } from '@shared/lib/telegram';
@@ -17,6 +20,102 @@ import { EmptyState } from '@shared/ui/EmptyState';
 import { Screen } from '@shared/ui/Screen';
 import { Spinner } from '@shared/ui/Spinner';
 import styles from './AdminUserPage.module.css';
+
+type AdminOrder = AdminUserDetail['orders'][number];
+
+/**
+ * One order, with what was actually delivered.
+ *
+ * The count is shown unconditionally because it answers the usual support
+ * question — "did anything arrive?" — and, when it is zero on a completed
+ * order, points at an upstream delivery that silently returned nothing. The
+ * contents are fetched only when asked for: that request is logged.
+ */
+function AdminOrderRow({ order }: { order: AdminOrder }) {
+  const [fetchItems, { data, isFetching, isError }] = useLazyGetAdminOrderItemsQuery();
+  const [shown, setShown] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const missing = order.status === 'COMPLETED' && order.deliveredItemCount === 0;
+
+  const reveal = () => {
+    setShown(true);
+    haptics.tap('light');
+    void fetchItems(order.id);
+  };
+
+  const copy = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(key);
+      haptics.notify('success');
+      window.setTimeout(() => setCopied((current) => (current === key ? null : current)), 1500);
+    } catch {
+      haptics.notify('error');
+    }
+  };
+
+  const deliveredTexts = data?.deliveredItems.map(itemToText) ?? [];
+
+  return (
+    <Card className={styles.orderRow}>
+      <div className={styles.listRow}>
+        <div className={styles.rowMain}>
+          <p className={styles.rowTitle}>{order.productName}</p>
+          <p className={styles.meta}>
+            {order.status} · {new Date(order.createdAt).toLocaleString()}
+          </p>
+          <p className={missing ? styles.deliveryBad : styles.meta}>
+            {order.deliveredItemCount === null
+              ? 'Not fulfilled'
+              : missing
+                ? '⚠ Nothing was delivered'
+                : `${order.deliveredItemCount} item(s) delivered`}
+          </p>
+        </div>
+        <p className={styles.rowAmount}>{order.pricePaid.label}</p>
+      </div>
+
+      {order.deliveredItemCount ? (
+        shown ? (
+          <div className={styles.delivery}>
+            {isFetching ? <Spinner /> : null}
+            {isError ? <p className={styles.error}>Could not load the delivered items.</p> : null}
+            {deliveredTexts.map((text, index) => (
+              <div key={index} className={styles.deliveryItemRow}>
+                <pre className={styles.deliveryItem}>{text}</pre>
+                <button
+                  type="button"
+                  className={styles.copyButton}
+                  onClick={() => void copy(text, String(index))}
+                >
+                  {copied === String(index) ? <Check size={14} /> : <Copy size={14} />}
+                  {copied === String(index) ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            ))}
+            {deliveredTexts.length > 1 ? (
+              <Button
+                variant="ghost"
+                onClick={() => void copy(deliveredTexts.join('\n\n'), 'all')}
+              >
+                {copied === 'all' ? <Check size={16} /> : <Copy size={16} />}
+                {copied === 'all' ? 'Copied all' : 'Copy all'}
+              </Button>
+            ) : null}
+            {data?.yeneshopOrderId ? (
+              <p className={styles.meta}>YeneShop order {data.yeneshopOrderId}</p>
+            ) : null}
+          </div>
+        ) : (
+          <Button variant="ghost" onClick={reveal}>
+            <Eye size={16} /> Show item
+          </Button>
+        )
+      ) : null}
+    </Card>
+  );
+}
 
 export function AdminUserPage() {
   const { telegramId = '' } = useParams();
@@ -147,17 +246,7 @@ export function AdminUserPage() {
       {orders.length === 0 ? (
         <p className={styles.hint}>No orders yet.</p>
       ) : (
-        orders.map((order) => (
-          <Card key={order.id} className={styles.listRow}>
-            <div className={styles.rowMain}>
-              <p className={styles.rowTitle}>{order.productName}</p>
-              <p className={styles.meta}>
-                {order.status} · {new Date(order.createdAt).toLocaleString()}
-              </p>
-            </div>
-            <p className={styles.rowAmount}>{order.pricePaid.label}</p>
-          </Card>
-        ))
+        orders.map((order) => <AdminOrderRow key={order.id} order={order} />)
       )}
 
       <h2 className={styles.sectionTitle}>Deposits</h2>

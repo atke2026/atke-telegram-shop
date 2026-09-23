@@ -50,6 +50,16 @@
   border-top: var(--hairline);
 }
 
+/* Paid, and waiting on the shop to send it by hand. */
+.awaiting {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--hairline);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 .reveal {
   font-size: 13px;
   font-weight: 600;
@@ -77,4 +87,26 @@
   font-size: 11px;
   color: var(--text-muted);
   text-align: center;
+}
+
+.instructions {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--hairline);
+}
+
+.instructionsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: var(--space-2);
+}
+
+.instructionsBody {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  /* Operator copy is written with real line breaks and bullet characters. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

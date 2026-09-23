@@ -16,16 +16,16 @@ export interface PaymentMethod {
 export const PAYMENT_METHODS: readonly PaymentMethod[] = [
   {
     id: 'telebirr',
-    name: 'Telebirr',
-    accountNumber: '0975915991',
-    accountName: 'Mikiyas Mulat Asmare',
+    name: 'Telebirr / E-birr',
+    accountNumber: '0906818924',
+    accountName: 'Mohammed Abdirahman Ibrahim',
     logoSlug: 'telebirr',
   },
   {
     id: 'cbe',
     name: 'CBE',
-    accountNumber: '1000480204941',
-    accountName: 'Mikiyas Mulat Asmare',
+    accountNumber: '1000233801837',
+    accountName: 'Mohammed Abdirahman Ibrahim',
     logoSlug: 'cbe',
   },
 ];

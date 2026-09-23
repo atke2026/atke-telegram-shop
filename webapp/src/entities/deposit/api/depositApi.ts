@@ -1,4 +1,5 @@
 import { baseApi, type MoneyDto } from '@shared/api/baseApi';
+import { appPath } from '@shared/lib/appPath';
 
 export type DepositStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -28,6 +29,13 @@ export const depositApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getDeposits: builder.query<DepositsResponse, void>({
       query: () => '/deposits',
+      transformResponse: (response: DepositsResponse) => ({
+        ...response,
+        paymentMethods: response.paymentMethods.map((method) => ({
+          ...method,
+          logoUrl: appPath(method.logoUrl),
+        })),
+      }),
       providesTags: ['Deposit'],
     }),
     requestDeposit: builder.mutation<

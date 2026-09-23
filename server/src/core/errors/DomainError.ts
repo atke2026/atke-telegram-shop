@@ -27,7 +27,7 @@ export class OutOfStockError extends DomainError {
   }
 }
 
-/** The reseller (HubX) account itself cannot fund the purchase — user is not at fault. */
+/** Suq's YeneShop reseller account cannot fund the purchase — user is not at fault. */
 export class SystemOfflineError extends DomainError {
   readonly code = 'SYSTEM_OFFLINE';
 
@@ -41,6 +41,30 @@ export class ProductNotFoundError extends DomainError {
 
   constructor(readonly productId: string) {
     super(`Product ${productId} was not found`);
+  }
+}
+
+export class ProductImageNotFoundError extends DomainError {
+  readonly code = 'PRODUCT_IMAGE_NOT_FOUND';
+
+  constructor(readonly productId: string) {
+    super(`Product ${productId} has no publishable image`);
+  }
+}
+
+export class NoFiniteStockError extends DomainError {
+  readonly code = 'NO_FINITE_STOCK';
+
+  constructor(readonly productId: string) {
+    super(`Product ${productId} does not have a finite stock count`);
+  }
+}
+
+export class ChannelPublishError extends DomainError {
+  readonly code = 'CHANNEL_PUBLISH_FAILED';
+
+  constructor() {
+    super('The product post could not be published to the announcement channel');
   }
 }
 
@@ -84,11 +108,76 @@ export class InvalidAmountError extends DomainError {
   }
 }
 
-/** HubX rejected our credentials — the admin must rotate the key. */
+/** YeneShop rejected Suq's credentials — the operator must rotate the key. */
 export class InvalidApiKeyError extends DomainError {
   readonly code = 'INVALID_API_KEY';
 
   constructor() {
-    super('HubX rejected the reseller API key');
+    super('YeneShop rejected the reseller API key');
+  }
+}
+
+export class NotAResellerError extends DomainError {
+  readonly code = 'NOT_A_RESELLER';
+
+  constructor() {
+    super('This account does not have reseller access');
+  }
+}
+
+export class ResellerSuspendedError extends DomainError {
+  readonly code = 'RESELLER_SUSPENDED';
+
+  constructor() {
+    super('This reseller account is suspended');
+  }
+}
+
+export class InvalidResellerApiKeyError extends DomainError {
+  readonly code = 'INVALID_RESELLER_API_KEY';
+
+  constructor() {
+    super('The reseller API key is invalid or revoked');
+  }
+}
+
+export class ResellerProductUnavailableError extends DomainError {
+  readonly code = 'RESELLER_PRODUCT_UNAVAILABLE';
+
+  constructor(readonly productId: string) {
+    super(`Product ${productId} is not available to resellers`);
+  }
+}
+
+export class InvalidResellerPriceError extends DomainError {
+  readonly code = 'INVALID_RESELLER_PRICE';
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class ResellerExternalIdConflictError extends DomainError {
+  readonly code = 'RESELLER_EXTERNAL_ID_CONFLICT';
+
+  constructor(readonly externalId: string) {
+    super(`External id ${externalId} has already been used for another order`);
+  }
+}
+
+export class InvalidResellerExternalIdError extends DomainError {
+  readonly code = 'INVALID_RESELLER_EXTERNAL_ID';
+
+  constructor() {
+    super('External order ID must be 1-100 URL-safe characters');
+  }
+}
+
+/** Internal race signal: the unique reseller/external-id boundary won elsewhere. */
+export class ResellerExternalOrderExistsError extends DomainError {
+  readonly code = 'RESELLER_EXTERNAL_ORDER_EXISTS';
+
+  constructor() {
+    super('The reseller order already exists');
   }
 }
