@@ -115,6 +115,10 @@ function handleIncomingMessage(array $message): void {
 function upsertUser(int $telegramId, ?string $username, string $firstName, ?string $lastName, string $langCode, int $isBot): void {
     try {
         $db = getDb();
+        if (!$db) {
+            error_log("Database not connected yet; skipping upsertUser.");
+            return;
+        }
         $stmt = $db->prepare("
             INSERT INTO `users` (`telegram_id`, `username`, `first_name`, `last_name`, `language_code`, `is_bot`)
             VALUES (:telegram_id, :username, :first_name, :last_name, :language_code, :is_bot)
@@ -253,6 +257,14 @@ function sendSupportMessage(int|string $chatId): void {
 function sendUserOrders(int|string $chatId, int $telegramId): void {
     try {
         $db = getDb();
+        if (!$db) {
+            sendTelegramApi('sendMessage', [
+                'chat_id' => $chatId,
+                'text' => "📦 Please check your orders in the store:\n",
+                'reply_markup' => ['inline_keyboard' => [[['text' => '🛍️ Open Storefront', 'web_app' => ['url' => WEB_APP_URL]]]]]
+            ]);
+            return;
+        }
         $stmt = $db->prepare("
             SELECT * FROM `orders` 
             WHERE `telegram_user_id` = :uid 

@@ -150,7 +150,7 @@ define('PAYMENT_CHANNELS', [
  * PDO Database Connection Provider (Singleton with Row-Locking Ready)
  * --------------------------------------------------------------------
  */
-function getDb(): PDO {
+function getDb(): ?PDO {
     static $pdoInstance = null;
 
     if ($pdoInstance === null) {
@@ -173,9 +173,8 @@ function getDb(): PDO {
             $pdoInstance = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
             error_log("Database connection failed: " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['error' => 'Database connection failed. Please verify Plesk DB settings in config.php']);
-            exit;
+            // Do not exit with 500 fatal error so Webhook can still reply to users
+            return null;
         }
     }
 
