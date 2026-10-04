@@ -185,8 +185,8 @@ function sendWelcomeMessage(int|string $chatId, string $firstName): void {
                 ['text' => '🛍️ Launch Storefront', 'web_app' => ['url' => WEB_APP_URL]]
             ],
             [
-                ['text' => '📋 My Orders', 'callback_query' => 'cmd_myorders'],
-                ['text' => '💬 Payment Guide & Support', 'callback_query' => 'cmd_support']
+                ['text' => '📋 My Orders', 'callback_data' => 'cmd_myorders'],
+                ['text' => '💬 Payment Guide & Support', 'callback_data' => 'cmd_support']
             ]
         ]
     ];
