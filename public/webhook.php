@@ -64,14 +64,9 @@ function handleIncomingMessage(array $message): void {
     $langCode   = $from['language_code'] ?? 'en';
     $isBot      = !empty($from['is_bot']) ? 1 : 0;
 
-    // Upsert user into database
-    upsertUser($telegramId, $username, $firstName, $lastName, $langCode, $isBot);
-
-    // Register persistent Web App Menu Button
-    setupPersistentMenuButton($chatId);
-
     $command = explode(' ', $text)[0];
 
+    // 1. Immediately dispatch response to user with zero latency
     switch ($command) {
         case '/start':
             sendWelcomeMessage($chatId, $firstName);
@@ -105,6 +100,9 @@ function handleIncomingMessage(array $message): void {
             sendDefaultHelpMessage($chatId);
             break;
     }
+
+    // 2. Perform background user sync in non-blocking manner
+    upsertUser($telegramId, $username, $firstName, $lastName, $langCode, $isBot);
 }
 
 /**

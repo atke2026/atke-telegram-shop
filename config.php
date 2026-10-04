@@ -165,6 +165,7 @@ function getDb(): ?PDO {
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_TIMEOUT            => 1, // Fast failure if DB is unreachable
             PDO::ATTR_EMULATE_PREPARES   => false, // Native prepared statements for safety and row-level locking
             PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . DB_CHARSET . " COLLATE utf8mb4_unicode_ci"
         ];
@@ -201,8 +202,9 @@ function sendTelegramApi(string $method, array $params = []): array {
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); // Avoid slow IPv6 lookup on shared hosting
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
     $response = curl_exec($ch);
