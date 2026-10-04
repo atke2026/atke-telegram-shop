@@ -92,7 +92,7 @@ define('DB_CHARSET', 'utf8mb4');
  */
 define('TELEGRAM_BOT_TOKEN', (string) env('BOT_TOKEN', '8849880809:AAHwlV7suX-urb47VNorbuV-CEdbXtcJZ24'));
 define('TELEGRAM_BOT_USERNAME', (string) env('BOT_USERNAME', 'atke_shop_bot'));
-define('WEB_APP_URL', (string) env('WEB_APP_URL', 'https://shop.atke.com.et/'));
+define('WEB_APP_URL', (string) env('WEB_APP_URL', 'https://shop.atke.com.et/public_html/index.html'));
 
 // Admin Telegram user IDs allowed to approve orders & receive alerts
 $adminIdsRaw = (string) env('ADMIN_TELEGRAM_IDS', '7608745515');

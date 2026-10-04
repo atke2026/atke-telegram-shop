@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Atke Digital Shop | Telegram Mini App</title>
+  
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="brand-logo">⚡</div>
+        <div class="brand-info">
+          <h1>Atke Digital Shop</h1>
+          <p><span class="badge-online"></span> Instant Auto-Delivery</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btnOpenOrders" class="btn-header-icon" title="My Orders">
+          <span>📦 My Orders</span>
+          <span id="ordersCountBadge" class="orders-badge-count hidden">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Hero Promotional Banner -->
+    <section class="hero-banner">
+      <div class="hero-content">
+        <h2>Premium Accounts & Software Keys</h2>
+        <p>Instant fulfillment on verified orders. Pay seamlessly via your preferred local Ethiopian bank or mobile wallet.</p>
+        <div class="hero-payment-tags">
+          <span class="pill-tag">🏦 CBE Birr</span>
+          <span class="pill-tag">📱 Telebirr / E-Birr</span>
+          <span class="pill-tag">💳 Kaafi</span>
+          <span class="pill-tag">⚡ 24/7 Verified</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Category Navigation -->
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search Canva, Coursera, AI tools...">
+    </div>
+
+    <div class="category-tabs" id="categoryTabs">
+      <button class="category-pill active" data-category="ALL">All Products</button>
+      <button class="category-pill" data-category="AI Tools">🤖 AI Tools</button>
+      <button class="category-pill" data-category="Education & Design">🎓 Education</button>
+      <button class="category-pill" data-category="Business & Career">💼 Business</button>
+      <button class="category-pill" data-category="Software & Productivity">💻 Software</button>
+    </div>
+
+    <!-- Products Catalog Section -->
+    <main class="products-section">
+      <div class="section-title">Available Subscriptions</div>
+      
+      <div id="productsGrid" class="products-grid">
+        <!-- Dynamically rendered via app.js -->
+        <div class="product-card" style="text-align: center; padding: 40px 20px;">
+          <div class="spinner"></div>
+          <p style="margin-top: 12px; font-size: 0.85rem; color: var(--hint-color);">Loading verified digital catalog...</p>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ====================================================================
+       MODAL 1: CHECKOUT & LOCAL PAYMENT RECONCILIATION
+       ==================================================================== -->
+  <div id="checkoutModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 id="checkoutTitle">Order Checkout</h3>
+        <button id="btnCloseCheckout" class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Item Preview -->
+      <div class="order-summary-box">
+        <div>
+          <h4 id="checkoutItemName">Selected Item</h4>
+          <span id="checkoutItemWarranty" style="font-size: 0.75rem; color: var(--accent-amber);">Warranty Included</span>
+        </div>
+        <div class="order-amount" id="checkoutItemPrice">0.00 ETB</div>
+      </div>
+
+      <!-- Payment Channel Selector -->
+      <label class="input-label">Select Payment Method (Ethiopia):</label>
+      <div class="channel-selector" id="channelSelector">
+        <div class="channel-card active" data-channel="CBE">
+          <div class="channel-icon">🏦</div>
+          <div class="channel-title">CBE Birr</div>
+        </div>
+        <div class="channel-card" data-channel="EBIRR">
+          <div class="channel-icon">📱</div>
+          <div class="channel-title">E-Birr / Telebirr</div>
+        </div>
+        <div class="channel-card" data-channel="KAAFI">
+          <div class="channel-icon">💳</div>
+          <div class="channel-title">Kaafi</div>
+        </div>
+      </div>
+
+      <!-- Dynamic Bank Account Box -->
+      <div class="account-details-box">
+        <div class="account-row">
+          <span class="account-label">Payment Channel:</span>
+          <span class="account-val" id="dispChannelName">Commercial Bank of Ethiopia</span>
+        </div>
+        <div class="account-row">
+          <span class="account-label">Account Holder:</span>
+          <span class="account-val" id="dispAccountHolder">Mohammed Abdirahman Ibrahim</span>
+        </div>
+        <div class="account-row" style="margin-top: 10px;">
+          <span class="account-label">Account Number:</span>
+          <span class="account-val" id="dispAccountNumber" style="color: var(--link-color);">1000233801837</span>
+        </div>
+        <div style="text-align: right; margin-top: 8px;">
+          <button id="btnCopyAccount" class="btn-copy-account">
+            <span>📋 Copy Account Number</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bank Transaction Reference Form -->
+      <div class="input-group">
+        <label for="txReferenceInput" class="input-label">Transaction Reference / FT Number:</label>
+        <input type="text" id="txReferenceInput" class="input-field" placeholder="e.g. FT240987123 or TxID from SMS" autocomplete="off" autocapitalize="characters">
+        <p class="input-hint" id="channelInstructions">Copy the unique confirmation reference code sent to your phone upon completing your mobile transfer.</p>
+      </div>
+
+      <!-- Submit Order Button -->
+      <button id="btnSubmitOrder" class="btn-submit-order">
+        <span id="submitOrderBtnText">Confirm & Submit Payment</span>
+        <div id="submitSpinner" class="spinner hidden"></div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 2: LIVE ORDER TRACKING & FULFILLMENT DELIVERY
+       ==================================================================== -->
+  <div id="statusModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3>Order Status & Delivery</h3>
+        <button id="btnCloseStatus" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="tracking-stepper">
+        <div class="step-item active" id="step1">
+          <div class="step-circle">1</div>
+          <div class="step-label">Submitted</div>
+        </div>
+        <div class="step-item" id="step2">
+          <div class="step-circle">2</div>
+          <div class="step-label">Reconciling</div>
+        </div>
+        <div class="step-item" id="step3">
+          <div class="step-circle">3</div>
+          <div class="step-label">Delivered</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 16px;">
+        <h4 id="statusItemName" style="font-size: 1.1rem; margin-bottom: 4px;">Product Name</h4>
+        <p style="font-size: 0.8rem; color: var(--hint-color);">Order UUID: <code id="statusOrderUuid">ATKE-XXXX</code></p>
+      </div>
+
+      <!-- In Progress Alert -->
+      <div id="statusPendingBox" class="account-details-box" style="text-align: center; padding: 20px;">
+        <div class="spinner" style="margin-bottom: 12px; border-top-color: var(--button-color); border-color: rgba(59, 130, 246, 0.2);"></div>
+        <h4 style="font-size: 0.95rem; margin-bottom: 4px;">Verifying Payment Reference</h4>
+        <p style="font-size: 0.8rem; color: var(--hint-color);">
+          Our reconciliation desk has been notified. Once confirmed with CBE/E-Birr, your digital key will unlock here automatically.
+        </p>
+      </div>
+
+      <!-- Delivery Secret Card (Shown when fulfilled) -->
+      <div id="statusDeliveryBox" class="delivery-secret-card hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h4 style="font-size: 0.9rem; color: var(--accent-emerald);">🔑 Digital Product Delivery</h4>
+          <span class="pill-tag" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">Ready</span>
+        </div>
+        <div id="deliveryCodeDisplay" class="code-display">YOUR-CODE-WILL-APPEAR-HERE</div>
+        <button id="btnCopyDeliveryCode" class="btn-copy-account" style="width: 100%; justify-content: center; margin-top: 6px;">
+          <span>📋 Copy Voucher / Credentials</span>
+        </button>
+      </div>
+
+      <!-- Redemption Instructions -->
+      <div id="redemptionInstructionsBox" class="instructions-card hidden">
+        <h5>Redemption & Setup Guide:</h5>
+        <div id="redemptionText">Follow instructions to redeem your subscription.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 3: MY ORDERS DRAWER
+       ==================================================================== -->
+  <div id="ordersModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3>My Purchase History</h3>
+        <button id="btnCloseOrders" class="modal-close-btn">&times;</button>
+      </div>
+      <div id="myOrdersList" class="purchases-list">
+        <!-- Rendered dynamically -->
+        <p style="text-align: center; color: var(--hint-color); padding: 30px 0;">Loading your purchases...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Box -->
+  <div id="appToast" class="toast-box">
+    <span id="toastIcon">ℹ️</span>
+    <span id="toastMessage">Notification message</span>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
