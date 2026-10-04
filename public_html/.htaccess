@@ -1,0 +1,26 @@
+# ====================================================================
+# ATKE DIGITAL STORE - PLESK / APACHE SERVER CONFIGURATION
+# ====================================================================
+
+# Enable UTF-8 encoding
+AddDefaultCharset UTF-8
+
+# Prevent directory indexing
+Options -Indexes
+
+# Security: Deny direct browser access to sensitive files
+<FilesMatch "(\.env|\.sql|\.git|composer\.json|package\.json|deploy\.md)$">
+    Require all denied
+</FilesMatch>
+
+# Enable CORS for Telegram WebApp
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-Telegram-Init-Data"
+</IfModule>
+
+# Ensure PHP 8.x handles PHP files
+<IfModule mod_mime.c>
+    AddType application/x-httpd-php .php
+</IfModule>
