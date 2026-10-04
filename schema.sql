@@ -110,7 +110,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`) VALUES
 ('usd_to_etb_rate', '140.00', 'Exchange rate used when converting wholesale USD to ETB prices'),
 ('auto_fulfillment', '0', 'Set to 1 for instant automated API purchase upon admin verification, 0 for manual approval'),
-('support_contact', '@suq_support', 'Telegram handle for customer payment inquiries'),
+('support_contact', '@Captain_levi123', 'Telegram handle for customer payment inquiries'),
 ('cbe_account', '1000233801837', 'Commercial Bank of Ethiopia Account Number'),
 ('cbe_holder', 'Mohammed Abdirahman Ibrahim', 'CBE Account Holder Name'),
 ('ebirr_account', '0906818924', 'E-Birr / Telebirr Account Number'),

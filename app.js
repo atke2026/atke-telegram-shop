@@ -11,10 +11,109 @@ const API_BASE_URL = window.location.pathname.includes('/public_html/')
   ? '../api.php' 
   : 'api.php';
 
-// Application State
+// Application State with pre-cached catalog for zero-latency initial paint
+const INITIAL_PRODUCTS = [
+  {
+    id: 'canva-admin-3y',
+    name: 'Canva Admin Panel (3 Years)',
+    category: 'Education & Design',
+    description: 'Get full access to Canva Education with Advanced verified Admin tools. Access to Canva Pro features, 3-Year account.',
+    instructions: 'Account format: CANVA & Outlook EMAIL:PASS | 2FA EMAIL:PASS | 2FA website.',
+    selling_price: '3200.00',
+    currency: 'ETB',
+    stock: 10,
+    badge: 'Popular',
+    warranty: '2-Month Warranty'
+  },
+  {
+    id: 'coursera-plus-1y',
+    name: 'Coursera Premium (1 Year)',
+    category: 'Education & Design',
+    description: 'Org+ Premium Access. All courses and professional certificates issued in your own name. Ready-made account with mail access.',
+    instructions: 'Instructions: Log in using provided details. Change name and password after first login. Duration: 12 Months.',
+    selling_price: '850.00',
+    currency: 'ETB',
+    stock: 50,
+    badge: 'Instant Delivery',
+    warranty: '1-Month Warranty'
+  },
+  {
+    id: 'elevenlabs-creator-1y',
+    name: 'ElevenLabs Creator (1 Year)',
+    category: 'AI Tools',
+    description: 'Official Coupon Code for 12 months Creator plan with monthly voice generation quota. Activated directly on your account.',
+    instructions: 'Instructions: 1. Sign up at elevenlabs.io. 2. Upgrade to Creator plan with Monthly billing. 3. Enter promo code at checkout.',
+    selling_price: '7500.00',
+    currency: 'ETB',
+    stock: 15,
+    badge: 'High Demand',
+    warranty: 'Activation Guarantee'
+  },
+  {
+    id: 'gamma-pro-1y',
+    name: 'Gamma Pro (1 Year)',
+    category: 'AI Tools',
+    description: 'Create stunning presentations, docs, and web pages with AI. Official 12-month coupon code redeemable on your own account.',
+    instructions: 'Instructions: Log in at gamma.app, select Gamma Pro Yearly, enter promo code at checkout.',
+    selling_price: '4600.00',
+    currency: 'ETB',
+    stock: 25,
+    badge: 'Best Seller',
+    warranty: 'Activation Guarantee'
+  },
+  {
+    id: 'factory-pro-1y',
+    name: 'Factory Pro AI (1 Year)',
+    category: 'AI Tools',
+    description: 'Autonomous AI software development platform. Official 12-month voucher code redeemable on your account.',
+    instructions: 'Instructions: Create account at app.factory.ai. Visit app.factory.ai/voucher and enter your voucher code.',
+    selling_price: '2400.00',
+    currency: 'ETB',
+    stock: 12,
+    badge: 'Developer Choice',
+    warranty: 'Activation Guarantee'
+  },
+  {
+    id: 'linkedin-business-2m',
+    name: 'LinkedIn Business (2 Months)',
+    category: 'Business & Career',
+    description: 'Premium Business upgrade. 15 InMails/month, see who viewed your profile, Unlimited People Browsing, and business insights.',
+    instructions: 'Works on accounts that have not had active premium in last 12 months. Open redeem link in browser and click Activate.',
+    selling_price: '650.00',
+    currency: 'ETB',
+    stock: 30,
+    badge: 'Special Offer',
+    warranty: 'Activation Guarantee'
+  },
+  {
+    id: 'lovable-lite-1y',
+    name: 'Lovable Lite (1 Year)',
+    category: 'AI Tools',
+    description: 'Build full-stack apps and tools with AI. 12-month full Lite access with 150 monthly credits and custom domain support.',
+    instructions: 'Instructions: Redeem link must be applied within 72 hours of receiving order.',
+    selling_price: '950.00',
+    currency: 'ETB',
+    stock: 20,
+    badge: 'Hot',
+    warranty: '1-Month Warranty'
+  },
+  {
+    id: 'm365-family-1y',
+    name: 'Microsoft 365 Family (1 Year)',
+    category: 'Software & Productivity',
+    description: 'Direct yearly billed plan. Word, Excel, PowerPoint, Outlook, plus 1TB OneDrive cloud storage. Readymade account with mail access.',
+    instructions: 'Login with credentials provided. Password can be changed immediately.',
+    selling_price: '1450.00',
+    currency: 'ETB',
+    stock: 18,
+    badge: 'Productivity',
+    warranty: 'Full Term Access'
+  }
+];
+
 const state = {
-  products: [],
-  filteredProducts: [],
+  products: [...INITIAL_PRODUCTS],
+  filteredProducts: [...INITIAL_PRODUCTS],
   activeCategory: 'ALL',
   searchQuery: '',
   selectedProduct: null,
@@ -58,7 +157,8 @@ const tg = window.Telegram?.WebApp || null;
 document.addEventListener('DOMContentLoaded', () => {
   initTelegram();
   bindEvents();
-  loadCatalog();
+  renderProducts(state.products); // Instant 0ms render from pre-cached catalog
+  loadCatalog();                  // Background sync with live server/Ethio-Viral
   loadPaymentChannels();
   checkStoredActiveOrder();
 });
@@ -507,7 +607,7 @@ async function checkOrderStatus(orderUuid) {
       document.getElementById('statusPendingBox').innerHTML = `
         <div style="color: var(--accent-rose); font-size: 2rem; margin-bottom: 8px;">❌</div>
         <h4 style="color: var(--accent-rose); margin-bottom: 4px;">Payment Verification Failed</h4>
-        <p style="font-size: 0.8rem; color: var(--hint-color);">We could not verify the provided transaction reference. Please contact support via @suq_support.</p>
+        <p style="font-size: 0.8rem; color: var(--hint-color);">We could not verify the provided transaction reference. Please contact support via <a href="https://t.me/Captain_levi123" target="_blank" style="color: var(--link-color);">@Captain_levi123</a>.</p>
       `;
       triggerHaptic('error');
     }

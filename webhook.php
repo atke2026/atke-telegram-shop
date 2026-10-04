@@ -229,7 +229,7 @@ function sendSupportMessage(int|string $chatId): void {
     $text .= "2. Select your product and chosen payment channel.\n";
     $text .= "3. Paste your bank Transaction Reference into the checkout box.\n";
     $text .= "4. Your order is instantly queued and verified!\n\n";
-    $text .= "Need manual help? Contact support: @suq_support";
+    $text .= "Need manual help? Contact support: @Captain_levi123";
 
     $inlineKeyboard = [
         'inline_keyboard' => [
@@ -691,7 +691,7 @@ function processOrderRejection(int $orderDbId, int|string $adminChatId, ?int $ad
         $custText = "⚠️ <b>Order Payment Notice</b>\n\n";
         $custText .= "We were unable to verify your payment reference (<code>{$order['transaction_reference']}</code>) for order <code>{$order['order_uuid']}</code>.\n\n";
         $custText .= "If this was an error, please reach out to our support team with your payment receipt:\n";
-        $custText .= "💬 Support: @suq_support";
+        $custText .= "💬 Support: @Captain_levi123";
 
         sendTelegramApi('sendMessage', [
             'chat_id'    => $order['telegram_user_id'],
