@@ -173,9 +173,6 @@ function initTelegram() {
       if (tg.setHeaderColor) {
         tg.setHeaderColor('secondary_bg_color');
       }
-      if (tg.enableClosingConfirmation) {
-        tg.enableClosingConfirmation();
-      }
 
       // Extract User Information
       if (tg.initDataUnsafe?.user) {
