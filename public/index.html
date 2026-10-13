@@ -580,10 +580,37 @@
         </div>
       </div>
 
+      <!-- Gift Option Selector (Matches NovaPlus & Competitor Analysis) -->
+      <div class="gift-option-card">
+        <div class="gift-toggle-row">
+          <span class="gift-toggle-label">
+            <span class="gift-icon">🎁</span>
+            <span id="txtGiftToggleHeading">Purchase Mode:</span>
+          </span>
+          <div class="gift-pills" id="giftPills">
+            <button type="button" class="gift-pill active" data-type="self" id="btnGiftSelf">👤 ለራሴ (For Myself)</button>
+            <button type="button" class="gift-pill" data-type="gift" id="btnGiftOther">🎁 ለስጦታ (As a Gift)</button>
+          </div>
+        </div>
+        <div id="giftDetailsBox" class="gift-details-box hidden">
+          <div class="input-group" style="margin-top: 10px; margin-bottom: 8px;">
+            <label for="giftRecipientInput" class="input-label" id="lblGiftRecipient">Recipient Telegram Username or Phone:</label>
+            <input type="text" id="giftRecipientInput" class="input-field" placeholder="@username or 09xxxxxxxx" autocomplete="off">
+          </div>
+          <div class="input-group" style="margin-bottom: 0;">
+            <label for="giftMessageInput" class="input-label" id="lblGiftMessage">Gift Note / መልእክት (Optional):</label>
+            <input type="text" id="giftMessageInput" class="input-field" placeholder="e.g. Best wishes! Enjoy your subscription 🎉">
+          </div>
+        </div>
+      </div>
+
       <!-- Bank Transaction Reference Form -->
       <div class="input-group">
         <label for="txReferenceInput" class="input-label">Transaction Reference / FT Number <span style="font-size:0.75rem; color:var(--hint-color);">(Optional if screenshot attached)</span>:</label>
         <input type="text" id="txReferenceInput" class="input-field" placeholder="e.g. FT240987123 or TxID from SMS" autocomplete="off" autocapitalize="characters">
+        <div id="txRefAutoExtractedBadge" class="auto-extract-badge hidden">
+          <span>✨ Auto-extracted from SMS</span>
+        </div>
         <p class="input-hint" id="channelInstructions">Copy the unique confirmation reference code sent to your phone upon completing your mobile transfer.</p>
       </div>
 

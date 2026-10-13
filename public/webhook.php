@@ -78,6 +78,12 @@ function handleIncomingMessage(array $message): void {
     // 1. Immediately dispatch response to user with zero latency
     if ($commandLower === '/start' || $cleanText === 'start') {
         sendWelcomeMessage($chatId, $firstName);
+    } else if ($commandLower === '/stars' || str_contains($cleanText, 'star')) {
+        sendStarsCard($chatId);
+    } else if ($commandLower === '/deals' || $commandLower === '/flash' || str_contains($cleanText, 'deal') || str_contains($cleanText, 'flash')) {
+        sendFlashDealsCard($chatId);
+    } else if ($commandLower === '/gift' || str_contains($cleanText, 'gift') || str_contains($cleanText, 'ስጦታ')) {
+        sendGiftGuideCard($chatId);
     } else if ($commandLower === '/profile' || str_contains($cleanText, 'profile')) {
         sendUserProfileCard($chatId, $telegramId, $firstName, $username);
     } else if ($commandLower === '/wallet' || str_contains($cleanText, 'wallet')) {
@@ -186,8 +192,12 @@ function sendWelcomeMessage(int|string $chatId, string $firstName): void {
                 ['text' => '🛍️ Launch Storefront', 'web_app' => ['url' => WEB_APP_URL]]
             ],
             [
+                ['text' => '⭐ Telegram Stars', 'callback_data' => 'cmd_stars'],
+                ['text' => '⚡ Flash Deals', 'callback_data' => 'cmd_deals']
+            ],
+            [
                 ['text' => '📋 My Orders', 'callback_data' => 'cmd_myorders'],
-                ['text' => '💬 Payment Guide & Support', 'callback_data' => 'cmd_support']
+                ['text' => '💬 Support (@AtkeShop)', 'callback_data' => 'cmd_support']
             ]
         ]
     ];
@@ -289,6 +299,111 @@ function sendWalletCard(int|string $chatId, int $telegramId): void {
                 ['text' => '💳 Add Money in Store', 'web_app' => ['url' => WEB_APP_URL]],
                 ['text' => '📦 My Orders', 'callback_data' => 'cmd_myorders']
             ]
+        ]
+    ];
+
+    sendTelegramApi('sendMessage', [
+        'chat_id'      => $chatId,
+        'text'         => $text,
+        'parse_mode'   => 'HTML',
+        'reply_markup' => $inlineKeyboard
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Telegram Stars Top-Up Card (/stars)
+ * --------------------------------------------------------------------
+ */
+function sendStarsCard(int|string $chatId): void {
+    $text = "⭐ <b>Telegram Stars Top-Up (ቴሌግራም ስታርስ)</b>\n\n";
+    $text .= "Get official Telegram Stars transferred instantly to your account or sent as a gift to any username!\n\n";
+    $text .= "💎 <b>Available Packages:</b>\n";
+    $text .= "• 50 Stars — <b>175 ETB</b> <i>(Best Price in Ethiopia!)</i>\n";
+    $text .= "• 100 Stars — <b>340 ETB</b>\n";
+    $text .= "• 250 Stars — <b>820 ETB</b>\n";
+    $text .= "• 500 Stars — <b>1,600 ETB</b>\n\n";
+    $text .= "⚡ <b>Delivery:</b> 1-5 minutes via username transfer.\n";
+    $text .= "Tap below to order instantly in the Mini App:";
+
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => '⭐ 50 Stars (175 ETB)', 'web_app' => ['url' => WEB_APP_URL . '?startapp=item_telegram-stars-50']],
+                ['text' => '⭐ 100 Stars (340 ETB)', 'web_app' => ['url' => WEB_APP_URL . '?startapp=item_telegram-stars-100']]
+            ],
+            [
+                ['text' => '🛍️ View All Packages in Store', 'web_app' => ['url' => WEB_APP_URL]]
+            ]
+        ]
+    ];
+
+    sendTelegramApi('sendMessage', [
+        'chat_id'      => $chatId,
+        'text'         => $text,
+        'parse_mode'   => 'HTML',
+        'reply_markup' => $inlineKeyboard
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Live Flash Deals Card (/deals or /flash)
+ * --------------------------------------------------------------------
+ */
+function sendFlashDealsCard(int|string $chatId): void {
+    $text = "⚡ <b>ACTIVE FLASH DEALS — TODAY ONLY!</b>\n\n";
+    $text .= "🔥 <b>Google AI Pro (18 Months)</b>\n";
+    $text .= "• Slashed Price: <s>500 ETB</s> ➡️ <b>350 ETB</b> (-30% OFF!)\n";
+    $text .= "• Includes 5TB Cloud Storage & Gemini 1.5 Pro intelligence.\n\n";
+    $text .= "🔥 <b>Coursera Premium (1 Year)</b>\n";
+    $text .= "• Slashed Price: <s>1,200 ETB</s> ➡️ <b>850 ETB</b>\n";
+    $text .= "• Org+ All Courses & Certificates in your name.\n\n";
+    $text .= "🔥 <b>Canva Admin Panel (3 Years)</b>\n";
+    $text .= "• Slashed Price: <s>4,500 ETB</s> ➡️ <b>3,200 ETB</b>\n\n";
+    $text .= "🎁 <b>Review Bonus:</b> Share review in @AtkeStore for 50 ETB wallet cashback!\n\n";
+    $text .= "Tap below to checkout in 1-tap:";
+
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => '⚡ Buy Google AI Pro (350 ETB)', 'web_app' => ['url' => WEB_APP_URL . '?startapp=item_google-ai-pro-18m']]
+            ],
+            [
+                ['text' => '🎓 Buy Coursera 1-Year (850 ETB)', 'web_app' => ['url' => WEB_APP_URL . '?startapp=item_coursera-plus-1y']]
+            ],
+            [
+                ['text' => '🛍️ Open Full Catalog', 'web_app' => ['url' => WEB_APP_URL]]
+            ]
+        ]
+    ];
+
+    sendTelegramApi('sendMessage', [
+        'chat_id'      => $chatId,
+        'text'         => $text,
+        'parse_mode'   => 'HTML',
+        'reply_markup' => $inlineKeyboard
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Gift Feature Guide Card (/gift)
+ * --------------------------------------------------------------------
+ */
+function sendGiftGuideCard(int|string $chatId): void {
+    $text = "🎁 <b>Send Subscriptions as Gifts! (ለስጦታ ይግዙ)</b>\n\n";
+    $text .= "Want to surprise a friend, younger sibling, or colleague with Canva Pro, Coursera, or Google AI?\n\n";
+    $text .= "1️⃣ Open the store and select any product.\n";
+    $text .= "2️⃣ In checkout, tap <b>🎁 ለስጦታ (As a Gift)</b>.\n";
+    $text .= "3️⃣ Enter their Telegram handle (e.g. <code>@friend</code>) and an optional warm note.\n";
+    $text .= "4️⃣ Pay via CBE, Telebirr, or Kaafi.\n\n";
+    $text .= "Upon verification, you receive an official branded <b>Gift Certificate Voucher</b> ready to forward!\n\n";
+    $text .= "Tap below to try it now:";
+
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [['text' => '🛍️ Browse Gifts in Store', 'web_app' => ['url' => WEB_APP_URL]]]
         ]
     ];
 
@@ -526,6 +641,21 @@ function handleCallbackQuery(array $callbackQuery): void {
     $messageId  = $message['message_id'] ?? null;
 
     // Handle user quick buttons
+    if ($data === 'cmd_stars') {
+        sendStarsCard($chatId);
+        sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
+        return;
+    }
+    if ($data === 'cmd_deals') {
+        sendFlashDealsCard($chatId);
+        sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
+        return;
+    }
+    if ($data === 'cmd_gift') {
+        sendGiftGuideCard($chatId);
+        sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
+        return;
+    }
     if ($data === 'cmd_support') {
         sendSupportMessage($chatId);
         sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
@@ -757,14 +887,30 @@ function processOrderApproval(int $orderDbId, int|string $adminChatId, ?int $adm
         }
 
         // 4. Send Instant Delivery Notification to Customer with Social Proof Cashback Prompt
-        $custText = "🎉 <b>Payment Verified & Your Order is Ready!</b>\n\n";
-        $custText .= "📦 <b>Product:</b> {$order['product_name']}\n";
-        $custText .= "🧾 <b>Order ID:</b> <code>{$order['order_uuid']}</code>\n\n";
-        $custText .= "🔑 <b>Delivery Code / Access Details:</b>\n";
-        $custText .= "<pre>" . htmlspecialchars((string)$deliveryCode, ENT_QUOTES, 'UTF-8') . "</pre>\n\n";
+        $isGiftOrder = str_contains((string)($order['customer_notes'] ?? ''), '[GIFT FOR:');
 
-        if (!empty($instructions)) {
-            $custText .= "💡 <b>Instructions:</b>\n" . htmlspecialchars($instructions, ENT_QUOTES, 'UTF-8') . "\n\n";
+        if ($isGiftOrder) {
+            $custText = "🎁 <b>Your Gift Purchase is Ready to Forward!</b>\n\n";
+            $custText .= "📦 <b>Product:</b> {$order['product_name']}\n";
+            $custText .= "🧾 <b>Order ID:</b> <code>{$order['order_uuid']}</code>\n\n";
+            $custText .= "━━━━━━━━━━━━━━━━━━━━\n";
+            $custText .= "🎀 <b>OFFICIAL ATKE DIGITAL GIFT VOUCHER</b>\n";
+            $custText .= "🔑 <b>Redemption Key / Details:</b>\n<pre>" . htmlspecialchars((string)$deliveryCode, ENT_QUOTES, 'UTF-8') . "</pre>\n";
+            if (!empty($instructions)) {
+                $custText .= "💡 <b>Instructions:</b>\n" . htmlspecialchars($instructions, ENT_QUOTES, 'UTF-8') . "\n";
+            }
+            $custText .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+            $custText .= "<i>Forward this voucher message directly to your recipient!</i>\n\n";
+        } else {
+            $custText = "🎉 <b>Payment Verified & Your Order is Ready!</b>\n\n";
+            $custText .= "📦 <b>Product:</b> {$order['product_name']}\n";
+            $custText .= "🧾 <b>Order ID:</b> <code>{$order['order_uuid']}</code>\n\n";
+            $custText .= "🔑 <b>Delivery Code / Access Details:</b>\n";
+            $custText .= "<pre>" . htmlspecialchars((string)$deliveryCode, ENT_QUOTES, 'UTF-8') . "</pre>\n\n";
+
+            if (!empty($instructions)) {
+                $custText .= "💡 <b>Instructions:</b>\n" . htmlspecialchars($instructions, ENT_QUOTES, 'UTF-8') . "\n\n";
+            }
         }
 
         $custText .= "🎁 <b>50 ETB Wallet Cashback Incentive:</b>\n";

@@ -186,6 +186,19 @@ function handleGetProducts(): void {
 function getStaticCatalogFallback(): array {
     return [
         [
+            'id' => 'google-ai-pro-18m',
+            'name' => 'Google AI Pro (18 Months)',
+            'category' => 'AI Tools',
+            'description' => 'Redeem link activated on your own Gmail. 5 TB cloud storage, Gemini 1.5 Pro advanced intelligence, zero card required.',
+            'instructions' => 'Open the delivered redeem link in any web browser and tap Activate Offer.',
+            'selling_price' => '350.00',
+            'currency' => 'ETB',
+            'stock' => 45,
+            'badge' => 'Flash Deal',
+            'warranty' => 'Activation Guarantee',
+            'image_url' => null
+        ],
+        [
             'id' => 'canva-admin-3y',
             'name' => 'Canva Admin Panel (3 Years)',
             'category' => 'Education & Design',
@@ -287,6 +300,45 @@ function getStaticCatalogFallback(): array {
             'stock' => 18,
             'badge' => 'Productivity',
             'warranty' => 'Full Term Access',
+            'image_url' => null
+        ],
+        [
+            'id' => 'telegram-stars-50',
+            'name' => 'Telegram Stars (50 Stars)',
+            'category' => 'Software & Productivity',
+            'description' => 'Instant transfer to your Telegram account or gift to any username. Official Stars for bots, channels, and mini apps.',
+            'instructions' => 'Enter your Telegram @username or recipient handle in order notes. Stars transferred within 5 minutes.',
+            'selling_price' => '175.00',
+            'currency' => 'ETB',
+            'stock' => 100,
+            'badge' => 'Instant Delivery',
+            'warranty' => 'Instant Delivery',
+            'image_url' => null
+        ],
+        [
+            'id' => 'telegram-stars-100',
+            'name' => 'Telegram Stars (100 Stars)',
+            'category' => 'Software & Productivity',
+            'description' => 'Instant transfer of 100 Telegram Stars. Use for reactions, bot subscriptions, digital goods, and gifts.',
+            'instructions' => 'Enter your Telegram @username or recipient handle in order notes.',
+            'selling_price' => '340.00',
+            'currency' => 'ETB',
+            'stock' => 100,
+            'badge' => 'Popular',
+            'warranty' => 'Instant Delivery',
+            'image_url' => null
+        ],
+        [
+            'id' => 'capcut-pro-1m',
+            'name' => 'CapCut Pro (1 Month)',
+            'category' => 'Education & Design',
+            'description' => 'Unlock all VIP video effects, transitions, AI auto-captions, 4K export, and cloud space. Works on Android, iOS, and PC.',
+            'instructions' => 'Login credentials or redeem invite provided immediately upon payment verification.',
+            'selling_price' => '450.00',
+            'currency' => 'ETB',
+            'stock' => 25,
+            'badge' => 'Hot',
+            'warranty' => 'Full Month Guarantee',
             'image_url' => null
         ]
     ];
@@ -432,6 +484,16 @@ function handleCreateOrder(array $body): void {
         $product = $prodStmt->fetch();
 
         if (!$product) {
+            $staticList = getStaticCatalogFallback();
+            foreach ($staticList as $sp) {
+                if ($sp['id'] === $productId) {
+                    $product = $sp;
+                    break;
+                }
+            }
+        }
+
+        if (!$product) {
             $db->rollBack();
             sendJsonResponse([
                 'success' => false,
@@ -451,9 +513,17 @@ function handleCreateOrder(array $body): void {
         $orderUuid = 'ATKE-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
         $idempotencyKey = 'ev_ord_' . md5($orderUuid . '_' . $cleanTxRef . '_' . time());
 
-        // Process Optional Receipt Image & Customer Notes
+        // Process Optional Receipt Image, Customer Notes & Gift Option
         $receiptImage  = $body['receipt_image'] ?? null;
         $customerNotes = trim((string) ($body['customer_notes'] ?? $body['comment'] ?? ''));
+
+        $isGift = !empty($body['is_gift']);
+        $giftRecipient = trim((string) ($body['gift_recipient'] ?? ''));
+        $giftMessage   = trim((string) ($body['gift_message'] ?? ''));
+        if ($isGift && !empty($giftRecipient)) {
+            $giftPrefix = "🎁 [GIFT FOR: {$giftRecipient}]" . (!empty($giftMessage) ? " Note: \"{$giftMessage}\" | " : " | ");
+            $customerNotes = $giftPrefix . $customerNotes;
+        }
 
         $receiptRecord = null;
         if (!empty($receiptImage) && is_string($receiptImage) && str_starts_with($receiptImage, 'data:image')) {

@@ -53,7 +53,13 @@ const I18N = {
     nav_profile: 'Profile',
     select_payment: 'Select Payment Method (Ethiopia):',
     confirm_payment: '⚡ Confirm & Submit Payment',
-    optional_note: 'Optional note / comments...'
+    optional_note: 'Optional note / comments...',
+    purchase_mode: 'Purchase Mode:',
+    for_myself: '👤 For Myself',
+    as_gift: '🎁 As a Gift',
+    recipient_label: 'Recipient Telegram Username or Phone:',
+    gift_note_label: 'Gift Note / መልእክት (Optional):',
+    auto_extracted: '✨ Auto-extracted from SMS'
   },
   am: {
     lang_toggle: '🌐 EN',
@@ -94,7 +100,13 @@ const I18N = {
     nav_profile: 'ፕሮፋይል',
     select_payment: 'የመክፈያ ዘዴ ይምረጡ (ኢትዮጵያ)፦',
     confirm_payment: '⚡ ክፍያውን አረጋግጥ እና ላክ',
-    optional_note: 'ተጨማሪ አስተያየት ወይም ማስታወሻ...'
+    optional_note: 'ተጨማሪ አስተያየት ወይም ማስታወሻ...',
+    purchase_mode: 'የግዢ አይነት፦',
+    for_myself: '👤 ለራሴ',
+    as_gift: '🎁 ለስጦታ',
+    recipient_label: 'የስጦታ ተቀባዩ ቴሌግራም ወይም ስልክ፦',
+    gift_note_label: 'የስጦታ መልእክት (አማራጭ)፦',
+    auto_extracted: '✨ ከኤስኤምኤስ በራስ-ሰር ተለይቷል'
   }
 };
 
@@ -252,6 +264,57 @@ const INITIAL_PRODUCTS = [
     badge: 'Productivity',
     instant: true,
     warranty: 'Full Term Access'
+  },
+  {
+    id: 'telegram-stars-50',
+    name: 'Telegram Stars (50 Stars)',
+    name_am: 'ቴሌግራም ስታርስ (50 ስታርስ)',
+    category: 'Software & Productivity',
+    description: 'Instant transfer to your Telegram account or gift to any username. Official Stars for bots, channels, and mini apps.',
+    description_am: 'በቀጥታ ወደ እርስዎ ወይም ለጓደኛዎ ቴሌግራም የሚላክ 50 ስታርስ። ለቦቶች፣ ቻናሎች እና አፖች የሚሆን።',
+    instructions: 'Enter your Telegram @username or recipient handle in order notes. Stars transferred within 5 minutes.',
+    selling_price: '175.00',
+    original_price: '200.00',
+    discount: '13%',
+    currency: 'ETB',
+    stock: 100,
+    badge: 'Instant Delivery',
+    instant: true,
+    warranty: 'Instant Delivery'
+  },
+  {
+    id: 'telegram-stars-100',
+    name: 'Telegram Stars (100 Stars)',
+    name_am: 'ቴሌግራም ስታርስ (100 ስታርስ)',
+    category: 'Software & Productivity',
+    description: 'Instant transfer of 100 Telegram Stars. Use for reactions, bot subscriptions, digital goods, and gifts.',
+    description_am: '100 የቴሌግራም ስታርስ ፈጣን አቅርቦት። ለምርቶች፣ ሪአክሽኖች እና ለቦቶች ምዝገባ የሚሆን።',
+    instructions: 'Enter your Telegram @username or recipient handle in order notes.',
+    selling_price: '340.00',
+    original_price: '390.00',
+    discount: '13%',
+    currency: 'ETB',
+    stock: 100,
+    badge: 'Popular',
+    instant: true,
+    warranty: 'Instant Delivery'
+  },
+  {
+    id: 'capcut-pro-1m',
+    name: 'CapCut Pro (1 Month)',
+    name_am: 'ካፕካት ፕሮ (1 ወር)',
+    category: 'Education & Design',
+    description: 'Unlock all VIP video effects, transitions, AI auto-captions, 4K export, and cloud space. Works on Android, iOS, and PC.',
+    description_am: 'ሁሉንም የቪአይፒ ቪዲዮ ማቀናበሪያዎች፣ የኤአይ ጽሑፍ እና 4K ኤክስፖርት የሚያስችል የ1 ወር ካፕካት ፕሮ።',
+    instructions: 'Login credentials or redeem invite provided immediately upon payment verification.',
+    selling_price: '450.00',
+    original_price: '600.00',
+    discount: '25%',
+    currency: 'ETB',
+    stock: 25,
+    badge: 'Hot',
+    instant: true,
+    warranty: 'Full Month Guarantee'
   }
 ];
 
@@ -266,6 +329,9 @@ const state = {
   selectedTopupChannel: 'CBE',
   checkoutReceiptBase64: null,
   topupReceiptBase64: null,
+  isGift: false,
+  giftRecipient: '',
+  giftMessage: '',
   activeTab: 'viewHome',
   userWalletBalance: 0.00,
   webAppUser: null,
@@ -501,6 +567,21 @@ function applyLanguage(lang) {
     const s = cbBtn.querySelector('span');
     if (s) s.textContent = t.cashback_btn;
   }
+
+  // Gift Option Card Elements
+  const giftToggleHeading = document.getElementById('txtGiftToggleHeading');
+  const btnGiftSelf = document.getElementById('btnGiftSelf');
+  const btnGiftOther = document.getElementById('btnGiftOther');
+  const lblGiftRecipient = document.getElementById('lblGiftRecipient');
+  const lblGiftMessage = document.getElementById('lblGiftMessage');
+  const autoExtBadge = document.querySelector('#txRefAutoExtractedBadge span');
+
+  if (giftToggleHeading) giftToggleHeading.textContent = t.purchase_mode;
+  if (btnGiftSelf) btnGiftSelf.textContent = t.for_myself;
+  if (btnGiftOther) btnGiftOther.textContent = t.as_gift;
+  if (lblGiftRecipient) lblGiftRecipient.textContent = t.recipient_label;
+  if (lblGiftMessage) lblGiftMessage.textContent = t.gift_note_label;
+  if (autoExtBadge) autoExtBadge.textContent = t.auto_extracted;
 
   // Rerender product cards with translated metadata
   renderProducts(state.filteredProducts);
@@ -871,11 +952,81 @@ function bindEvents() {
     copyToClipboard(accNum, 'Account number copied to clipboard! 📋');
   });
 
+  // Direct Click on Account Number to Copy
+  document.getElementById('dispAccountNumber')?.addEventListener('click', () => {
+    const accNum = document.getElementById('dispAccountNumber').textContent.trim();
+    copyToClipboard(accNum, 'Account number copied to clipboard! 📋');
+  });
+
   // Copy Delivery Code Button
   document.getElementById('btnCopyDeliveryCode')?.addEventListener('click', () => {
     const code = document.getElementById('deliveryCodeDisplay').textContent.trim();
     copyToClipboard(code, 'Delivery code / credentials copied! 🔑');
   });
+
+  // Gift Option Toggle Switcher
+  const giftPills = document.getElementById('giftPills');
+  if (giftPills) {
+    giftPills.addEventListener('click', (e) => {
+      const btn = e.target.closest('.gift-pill');
+      if (!btn) return;
+      document.querySelectorAll('.gift-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const isGift = btn.dataset.type === 'gift';
+      state.isGift = isGift;
+      const detailsBox = document.getElementById('giftDetailsBox');
+      if (detailsBox) {
+        if (isGift) {
+          detailsBox.classList.remove('hidden');
+          document.getElementById('giftRecipientInput')?.focus();
+        } else {
+          detailsBox.classList.add('hidden');
+        }
+      }
+      triggerHaptic('selection');
+    });
+  }
+
+  // Transaction Reference Auto-Sanitizer (Regex extraction from SMS)
+  const txRefInput = document.getElementById('txReferenceInput');
+  const autoBadge = document.getElementById('txRefAutoExtractedBadge');
+  function sanitizeBankReference(rawVal) {
+    if (!rawVal) return;
+    const cleanText = rawVal.trim();
+    // 1. CBE FT Reference pattern: FT followed by alphanumeric (e.g., FT24098... or FT...)
+    const cbeMatch = cleanText.match(/\b(FT[0-9A-Za-z]{6,16})\b/i);
+    // 2. Telebirr Txn reference pattern: e.g., Txn ID: 9A8B7C... or Ref: ...
+    const telebirrMatch = cleanText.match(/\b(?:Txn|Ref|Transaction(?:\s*ID)?|ትራንዛክሽን)\s*[:\-\s]*([A-Za-z0-9]{8,16})\b/i);
+
+    if (cbeMatch) {
+      const extracted = cbeMatch[1].toUpperCase();
+      if (txRefInput.value !== extracted) {
+        txRefInput.value = extracted;
+        if (autoBadge) autoBadge.classList.remove('hidden');
+        triggerHaptic('selection');
+      }
+    } else if (telebirrMatch) {
+      const extracted = telebirrMatch[1].toUpperCase();
+      if (txRefInput.value !== extracted) {
+        txRefInput.value = extracted;
+        if (autoBadge) autoBadge.classList.remove('hidden');
+        triggerHaptic('selection');
+      }
+    }
+  }
+
+  if (txRefInput) {
+    txRefInput.addEventListener('input', (e) => {
+      if (e.target.value.length > 20) {
+        sanitizeBankReference(e.target.value);
+      }
+    });
+    txRefInput.addEventListener('paste', () => {
+      setTimeout(() => {
+        sanitizeBankReference(txRefInput.value);
+      }, 50);
+    });
+  }
 
   // Setup Screenshot Dropzones (Checkout & Top-up)
   setupImageDropzone(
@@ -1537,6 +1688,18 @@ window.openCheckoutModal = function(productId) {
   const notesInput = document.getElementById('orderNotesInput');
   if (notesInput) notesInput.value = '';
 
+  // Reset gift option
+  state.isGift = false;
+  document.querySelectorAll('.gift-pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === 'self');
+  });
+  document.getElementById('giftDetailsBox')?.classList.add('hidden');
+  const recInput = document.getElementById('giftRecipientInput');
+  if (recInput) recInput.value = '';
+  const msgInput = document.getElementById('giftMessageInput');
+  if (msgInput) msgInput.value = '';
+  document.getElementById('txRefAutoExtractedBadge')?.classList.add('hidden');
+
   selectPaymentChannel(state.selectedChannel || 'CBE');
 
   const modal = document.getElementById('checkoutModal');
@@ -1573,6 +1736,8 @@ async function submitOrder() {
   spinner.classList.remove('hidden');
 
   const notes = document.getElementById('orderNotesInput')?.value.trim() || '';
+  const giftRecipient = document.getElementById('giftRecipientInput')?.value.trim() || '';
+  const giftMessage = document.getElementById('giftMessageInput')?.value.trim() || '';
   const currentUserId = state.tgUser?.id || (state.webAppUser ? state.webAppUser.id : 12345678);
   const currentUsername = state.tgUser?.username || (state.webAppUser ? state.webAppUser.username : 'user');
   const currentFirstName = state.tgUser?.first_name || (state.webAppUser ? state.webAppUser.name : 'Customer');
@@ -1585,6 +1750,9 @@ async function submitOrder() {
     transaction_reference: txRef,
     receipt_image: state.checkoutReceiptBase64 || null,
     customer_notes: notes,
+    is_gift: state.isGift,
+    gift_recipient: state.isGift ? giftRecipient : null,
+    gift_message: state.isGift ? giftMessage : null,
     init_data: tg?.initData || '',
     fallback_telegram_id: currentUserId,
     fallback_username: currentUsername,
