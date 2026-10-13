@@ -92,12 +92,20 @@ define('DB_CHARSET', 'utf8mb4');
  */
 define('TELEGRAM_BOT_TOKEN', (string) env('BOT_TOKEN', '8849880809:AAHwlV7suX-urb47VNorbuV-CEdbXtcJZ24'));
 define('TELEGRAM_BOT_USERNAME', (string) env('BOT_USERNAME', 'atke_shop_bot'));
-define('WEB_APP_URL', (string) env('WEB_APP_URL', 'https://shop.atke.com.et/public_html/index.html'));
+define('WEB_APP_URL', (string) env('WEB_APP_URL', 'https://shop.atke.com.et/'));
 
 // Admin Telegram user IDs allowed to approve orders & receive alerts
 $adminIdsRaw = (string) env('ADMIN_TELEGRAM_IDS', '7608745515');
 $adminIds = array_filter(array_map('trim', explode(',', $adminIdsRaw)));
 define('ADMIN_TELEGRAM_IDS', $adminIds);
+
+// Dynamic support username (Telegram handle without or with @)
+$supportRaw = (string) env('SUPPORT_CONTACT', 'AtkeShop');
+define('SUPPORT_CONTACT', str_starts_with($supportRaw, '@') ? $supportRaw : '@' . $supportRaw);
+
+// Target Telegram channel for automated promotional broadcasts
+$channelRaw = (string) env('TELEGRAM_CHANNEL_USERNAME', '@AtkeStore');
+define('TELEGRAM_CHANNEL_USERNAME', str_starts_with($channelRaw, '@') ? $channelRaw : '@' . $channelRaw);
 
 /**
  * --------------------------------------------------------------------
@@ -172,6 +180,7 @@ function getDb(): ?PDO {
 
         try {
             $pdoInstance = new PDO($dsn, DB_USER, DB_PASS, $options);
+            ensureDatabaseSchema($pdoInstance);
         } catch (PDOException $e) {
             error_log("Database connection failed: " . $e->getMessage());
             // Do not exit with 500 fatal error so Webhook can still reply to users
@@ -180,6 +189,56 @@ function getDb(): ?PDO {
     }
 
     return $pdoInstance;
+}
+
+/**
+ * Ensures newly added database schema features exist automatically without requiring manual SQL execution
+ */
+function ensureDatabaseSchema(PDO $pdo): void {
+    static $alreadyChecked = false;
+    if ($alreadyChecked) {
+        return;
+    }
+    $alreadyChecked = true;
+
+    try {
+        // 1. Ensure receipt_image and customer_notes exist in orders
+        $orderCols = $pdo->query("SHOW COLUMNS FROM `orders`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('receipt_image', $orderCols, true)) {
+            $pdo->exec("ALTER TABLE `orders` ADD COLUMN `receipt_image` MEDIUMTEXT DEFAULT NULL AFTER `redemption_instructions`");
+        }
+        if (!in_array('customer_notes', $orderCols, true)) {
+            $pdo->exec("ALTER TABLE `orders` ADD COLUMN `customer_notes` TEXT DEFAULT NULL AFTER `receipt_image`");
+        }
+
+        // 2. Ensure wallet_balance exists in users
+        $userCols = $pdo->query("SHOW COLUMNS FROM `users`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('wallet_balance', $userCols, true)) {
+            $pdo->exec("ALTER TABLE `users` ADD COLUMN `wallet_balance` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 AFTER `first_name`");
+        }
+
+        // 3. Ensure wallet_transactions table exists
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `wallet_transactions` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `telegram_user_id` BIGINT UNSIGNED NOT NULL,
+            `amount` DECIMAL(12, 2) NOT NULL,
+            `type` ENUM('deposit', 'purchase', 'refund', 'bonus') NOT NULL,
+            `payment_channel` VARCHAR(32) DEFAULT NULL,
+            `transaction_reference` VARCHAR(128) DEFAULT NULL,
+            `status` ENUM('pending', 'completed', 'rejected') NOT NULL DEFAULT 'pending',
+            `description` VARCHAR(255) DEFAULT NULL,
+            `receipt_image` MEDIUMTEXT DEFAULT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX `idx_user_tx` (`telegram_user_id`, `created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $txCols = $pdo->query("SHOW COLUMNS FROM `wallet_transactions`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('receipt_image', $txCols, true)) {
+            $pdo->exec("ALTER TABLE `wallet_transactions` ADD COLUMN `receipt_image` MEDIUMTEXT DEFAULT NULL AFTER `description`");
+        }
+    } catch (Throwable $e) {
+        error_log("Automatic schema check notice: " . $e->getMessage());
+    }
 }
 
 /**
@@ -362,4 +421,35 @@ function sendJsonResponse(array $payload, int $statusCode = 200): void {
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Retrieve Dynamic Support Handle (from DB or config fallback)
+ * --------------------------------------------------------------------
+ */
+function getSupportContact(): string {
+    static $cachedSupport = null;
+    if ($cachedSupport !== null) {
+        return $cachedSupport;
+    }
+
+    try {
+        $db = getDb();
+        if ($db) {
+            $stmt = $db->prepare("SELECT setting_value FROM `system_settings` WHERE setting_key = 'support_contact' LIMIT 1");
+            $stmt->execute();
+            $val = $stmt->fetchColumn();
+            if ($val && is_string($val) && trim($val) !== '') {
+                $val = trim($val);
+                $cachedSupport = str_starts_with($val, '@') ? $val : '@' . $val;
+                return $cachedSupport;
+            }
+        }
+    } catch (\Throwable $e) {
+        // Fallback to constant
+    }
+
+    $cachedSupport = defined('SUPPORT_CONTACT') ? SUPPORT_CONTACT : '@AtkeShop';
+    return $cachedSupport;
 }

@@ -41,8 +41,8 @@ export function TopAppBar() {
           href={SUPPORT_URL}
           target="_blank"
           rel="noreferrer"
-          aria-label="Chat with Suq customer support"
-          title="Chat with @erminana"
+          aria-label="Chat with Atke Digital customer support"
+          title={`Chat with @${SUPPORT_USERNAME}`}
           onClick={() => haptics.tap()}
         >
           <PaperPlaneTilt size={19} weight="fill" />

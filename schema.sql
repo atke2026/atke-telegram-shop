@@ -18,6 +18,7 @@ CREATE TABLE `users` (
     `first_name` VARCHAR(128) NOT NULL DEFAULT '',
     `last_name` VARCHAR(128) DEFAULT NULL,
     `language_code` VARCHAR(10) DEFAULT 'en',
+    `wallet_balance` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     `is_bot` TINYINT(1) DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -25,6 +26,27 @@ CREATE TABLE `users` (
     INDEX `idx_username` (`username`),
     INDEX `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------------------
+-- 1b. Table: wallet_transactions
+-- Tracks balance deposits, purchases, refunds, and promo credits
+-- --------------------------------------------------------------------
+DROP TABLE IF EXISTS `wallet_transactions`;
+CREATE TABLE `wallet_transactions` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `telegram_user_id` BIGINT UNSIGNED NOT NULL,
+    `amount` DECIMAL(12, 2) NOT NULL,
+    `type` ENUM('deposit', 'purchase', 'refund', 'bonus') NOT NULL,
+    `payment_channel` VARCHAR(32) DEFAULT NULL,
+    `transaction_reference` VARCHAR(128) DEFAULT NULL,
+    `status` ENUM('pending', 'completed', 'rejected') NOT NULL DEFAULT 'pending',
+    `description` VARCHAR(255) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_user_tx` (`telegram_user_id`, `created_at`),
+    CONSTRAINT `fk_wallet_user` FOREIGN KEY (`telegram_user_id`) 
+        REFERENCES `users` (`telegram_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- --------------------------------------------------------------------
 -- 2. Table: products_cache
@@ -74,6 +96,8 @@ CREATE TABLE `orders` (
     `fulfillment_status` ENUM('pending', 'processing', 'completed', 'failed') NOT NULL DEFAULT 'pending',
     `delivery_code` TEXT DEFAULT NULL,
     `redemption_instructions` TEXT DEFAULT NULL,
+    `receipt_image` MEDIUMTEXT DEFAULT NULL,
+    `customer_notes` TEXT DEFAULT NULL,
     `admin_notes` TEXT DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -110,7 +134,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`) VALUES
 ('usd_to_etb_rate', '140.00', 'Exchange rate used when converting wholesale USD to ETB prices'),
 ('auto_fulfillment', '0', 'Set to 1 for instant automated API purchase upon admin verification, 0 for manual approval'),
-('support_contact', '@Captain_levi123', 'Telegram handle for customer payment inquiries'),
+('support_contact', '@AtkeShop', 'Telegram handle for customer payment inquiries'),
 ('cbe_account', '1000233801837', 'Commercial Bank of Ethiopia Account Number'),
 ('cbe_holder', 'Mohammed Abdirahman Ibrahim', 'CBE Account Holder Name'),
 ('ebirr_account', '0906818924', 'E-Birr / Telebirr Account Number'),

@@ -10,3 +10,6 @@ data/
 
 # Database dumps and worktree snapshots: real customer data, never committed.
 backups/
+
+*.mp4
+

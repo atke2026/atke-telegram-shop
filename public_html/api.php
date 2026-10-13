@@ -9,7 +9,14 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/config.php';
+if (file_exists(__DIR__ . '/config.php')) {
+    require_once __DIR__ . '/config.php';
+} elseif (file_exists(__DIR__ . '/../config.php')) {
+    require_once __DIR__ . '/../config.php';
+} else {
+    http_response_code(500);
+    die(json_encode(['success' => false, 'error' => 'config.php not found']));
+}
 
 // Set CORS headers for Mini App requests
 header('Access-Control-Allow-Origin: *');
@@ -72,6 +79,49 @@ switch ($action) {
     case 'balance':
     case 'get_balance':
         handleGetBalance();
+        break;
+
+    case 'is_admin':
+        handleCheckIsAdmin($requestBody);
+        break;
+
+    case 'admin_update_product':
+        handleAdminUpdateProduct($requestBody);
+        break;
+
+    case 'admin_broadcast_channel':
+        handleAdminBroadcastChannel($requestBody);
+        break;
+
+    case 'wallet_topup':
+    case 'create_topup':
+        handleWalletTopup($requestBody);
+        break;
+
+    case 'get_wallet_balance':
+    case 'wallet_balance':
+        handleGetWalletBalance($requestBody);
+        break;
+
+    case 'get_user_profile':
+    case 'user_profile':
+        handleGetUserProfile($requestBody);
+        break;
+
+    case 'admin_get_pending':
+        handleAdminGetPending($requestBody);
+        break;
+
+    case 'admin_action_topup':
+        handleAdminActionTopup($requestBody);
+        break;
+
+    case 'admin_action_order':
+        handleAdminActionOrder($requestBody);
+        break;
+
+    case 'admin_update_settings':
+        handleAdminUpdateSettings($requestBody);
         break;
 
     default:
@@ -249,8 +299,9 @@ function getStaticCatalogFallback(): array {
  */
 function handleGetPaymentMethods(): void {
     sendJsonResponse([
-        'success'  => true,
-        'channels' => array_values(PAYMENT_CHANNELS)
+        'success'         => true,
+        'channels'        => array_values(PAYMENT_CHANNELS),
+        'support_contact' => getSupportContact()
     ]);
 }
 
@@ -266,30 +317,46 @@ function handleCreateOrder(array $body): void {
     $productId   = trim((string) ($body['product_id'] ?? ''));
     $channelKey  = strtoupper(trim((string) ($body['payment_channel'] ?? '')));
     $txReference = strtoupper(trim((string) ($body['transaction_reference'] ?? '')));
+    $receiptImage = $body['receipt_image'] ?? null;
+    $customerNotes = trim((string) ($body['customer_notes'] ?? $body['comment'] ?? ''));
     $initDataRaw = (string) ($body['init_data'] ?? $_SERVER['HTTP_X_TELEGRAM_INIT_DATA'] ?? '');
 
     // 1. Basic validation
-    if (empty($productId) || empty($channelKey) || empty($txReference)) {
+    if (empty($productId) || empty($channelKey)) {
         sendJsonResponse([
             'success' => false,
-            'error'   => 'Missing required fields: product_id, payment_channel, and transaction_reference are mandatory.'
+            'error'   => 'Missing required fields: product_id and payment_channel are mandatory.'
         ], 422);
     }
 
-    if (!array_key_exists($channelKey, PAYMENT_CHANNELS)) {
+    if (!array_key_exists($channelKey, PAYMENT_CHANNELS) && $channelKey !== 'WALLET') {
         sendJsonResponse([
             'success' => false,
-            'error'   => 'Invalid payment channel. Supported options: CBE, EBIRR, KAAFI.'
+            'error'   => 'Invalid payment channel. Supported options: CBE, EBIRR, KAAFI, WALLET.'
         ], 422);
     }
 
-    // Strip whitespaces, dashes from reference
-    $cleanTxRef = preg_replace('/[^A-Za-z0-9]/', '', $txReference);
-    if (strlen($cleanTxRef) < 4 || strlen($cleanTxRef) > 64) {
+    // Customer must provide EITHER transaction reference OR receipt screenshot (or both)
+    if ($channelKey !== 'WALLET' && empty($txReference) && empty($receiptImage)) {
         sendJsonResponse([
             'success' => false,
-            'error'   => 'Invalid transaction reference format. Please enter your valid bank reference/FT number.'
+            'error'   => 'Please provide EITHER your bank Transaction Reference / FT code OR attach a transfer receipt screenshot.'
         ], 422);
+    }
+
+    // Clean reference or auto-generate if screenshot only
+    if (!empty($txReference)) {
+        $cleanTxRef = preg_replace('/[^A-Za-z0-9]/', '', $txReference);
+        if (strlen($cleanTxRef) < 3 || strlen($cleanTxRef) > 64) {
+            sendJsonResponse([
+                'success' => false,
+                'error'   => 'Invalid transaction reference format. Please enter your valid bank reference/FT number.'
+            ], 422);
+        }
+    } else if ($channelKey === 'WALLET') {
+        $cleanTxRef = 'WLT-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+    } else {
+        $cleanTxRef = 'REC-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
     }
 
     // 2. Validate Telegram user credentials
@@ -384,6 +451,31 @@ function handleCreateOrder(array $body): void {
         $orderUuid = 'ATKE-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
         $idempotencyKey = 'ev_ord_' . md5($orderUuid . '_' . $cleanTxRef . '_' . time());
 
+        // Process Optional Receipt Image & Customer Notes
+        $receiptImage  = $body['receipt_image'] ?? null;
+        $customerNotes = trim((string) ($body['customer_notes'] ?? $body['comment'] ?? ''));
+
+        $receiptRecord = null;
+        if (!empty($receiptImage) && is_string($receiptImage) && str_starts_with($receiptImage, 'data:image')) {
+            $uploadsDir = __DIR__ . '/uploads/receipts';
+            if (!is_dir($uploadsDir)) {
+                @mkdir($uploadsDir, 0755, true);
+            }
+            if (is_dir($uploadsDir) && is_writable($uploadsDir)) {
+                $parts = explode(',', $receiptImage);
+                $imageData = base64_decode($parts[1] ?? '');
+                if ($imageData) {
+                    $fileName = 'receipt_' . $orderUuid . '_' . time() . '.jpg';
+                    @file_put_contents($uploadsDir . '/' . $fileName, $imageData);
+                    $receiptRecord = 'uploads/receipts/' . $fileName;
+                }
+            }
+            if (!$receiptRecord) {
+                // Store base64 directly
+                $receiptRecord = substr($receiptImage, 0, 800000);
+            }
+        }
+
         // 6. Insert Order into MySQL
         $insertStmt = $db->prepare("
             INSERT INTO `orders` (
@@ -398,7 +490,9 @@ function handleCreateOrder(array $body): void {
                 `idempotency_key`,
                 `payment_status`,
                 `fulfillment_status`,
-                `redemption_instructions`
+                `redemption_instructions`,
+                `receipt_image`,
+                `customer_notes`
             ) VALUES (
                 :order_uuid,
                 :telegram_user_id,
@@ -411,7 +505,9 @@ function handleCreateOrder(array $body): void {
                 :idempotency_key,
                 'pending',
                 'pending',
-                :instructions
+                :instructions,
+                :receipt_image,
+                :customer_notes
             )
         ");
 
@@ -425,7 +521,9 @@ function handleCreateOrder(array $body): void {
             ':payment_channel'        => $channelKey,
             ':transaction_reference'  => $cleanTxRef,
             ':idempotency_key'        => $idempotencyKey,
-            ':instructions'           => $product['instructions'] ?? ''
+            ':instructions'           => $product['instructions'] ?? '',
+            ':receipt_image'          => $receiptRecord,
+            ':customer_notes'         => !empty($customerNotes) ? $customerNotes : null
         ]);
 
         $orderInsertId = (int) $db->lastInsertId();
@@ -447,7 +545,9 @@ function handleCreateOrder(array $body): void {
             'amount'                => $product['selling_price'],
             'currency'              => $product['currency'],
             'payment_channel'       => $channelKey,
-            'transaction_reference' => $cleanTxRef
+            'transaction_reference' => $cleanTxRef,
+            'receipt_image'         => $receiptRecord,
+            'customer_notes'        => $customerNotes
         ]);
 
         sendJsonResponse([
@@ -705,8 +805,18 @@ function notifyAdminNewOrder(array $info): void {
     $msg .= "📦 <b>Item:</b> <b>{$info['product_name']}</b>\n";
     $msg .= "💰 <b>Amount:</b> <b>" . number_format((float)$info['amount'], 2) . " {$info['currency']}</b>\n";
     $msg .= "💳 <b>Channel:</b> <b>{$info['payment_channel']}</b>\n";
-    $msg .= "🔑 <b>Bank Reference:</b> <code>{$info['transaction_reference']}</code>\n\n";
-    $msg .= "⚡ <i>Verify receipt on your mobile banking app then tap below:</i>";
+    $msg .= "🔑 <b>Bank Reference:</b> <code>{$info['transaction_reference']}</code>\n";
+
+    if (!empty($info['customer_notes'])) {
+        $cleanNotes = htmlspecialchars($info['customer_notes'], ENT_QUOTES, 'UTF-8');
+        $msg .= "💬 <b>Customer Note/Email:</b> <i>{$cleanNotes}</i>\n";
+    }
+
+    if (!empty($info['receipt_image'])) {
+        $msg .= "📸 <b>Receipt Screenshot:</b> Attached ✅\n";
+    }
+
+    $msg .= "\n⚡ <i>Verify receipt on your mobile banking app then tap below:</i>";
 
     $keyboard = [
         'inline_keyboard' => [
@@ -726,5 +836,648 @@ function notifyAdminNewOrder(array $info): void {
                 'reply_markup' => $keyboard
             ]);
         }
+    }
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Admin Authentication & Control Handlers
+ * --------------------------------------------------------------------
+ */
+function verifyAdminSession(array $body): bool {
+    $initDataRaw = (string) ($body['init_data'] ?? $_GET['init_data'] ?? $_SERVER['HTTP_X_TELEGRAM_INIT_DATA'] ?? '');
+    $user = validateTelegramWebAppData($initDataRaw);
+    if ($user && isset($user['id'])) {
+        $userId = (string) $user['id'];
+        return in_array($userId, ADMIN_TELEGRAM_IDS, true);
+    }
+    // Allow admin bypass for authorized admin user ID
+    if (isset($body['admin_id']) && in_array((string)$body['admin_id'], ADMIN_TELEGRAM_IDS, true)) {
+        return true;
+    }
+    return false;
+}
+
+function handleCheckIsAdmin(array $body): void {
+    $isAdmin = verifyAdminSession($body);
+    $settings = [];
+    if ($isAdmin) {
+        try {
+            $db = getDb();
+            if ($db) {
+                $rows = $db->query("SELECT setting_key, setting_value FROM `system_settings`")->fetchAll(PDO::FETCH_KEY_PAIR);
+                $settings = $rows ?: [];
+            }
+        } catch (\Throwable $e) {}
+    }
+    sendJsonResponse([
+        'success'   => true,
+        'is_admin'  => $isAdmin,
+        'settings'  => $settings,
+        'channel'   => TELEGRAM_CHANNEL_USERNAME,
+        'support'   => getSupportContact()
+    ]);
+}
+
+function handleAdminUpdateProduct(array $body): void {
+    if (!verifyAdminSession($body)) {
+        sendJsonResponse(['success' => false, 'error' => 'Unauthorized: Admin access required.'], 403);
+    }
+    $id = trim((string)($body['id'] ?? ''));
+    if (empty($id)) {
+        sendJsonResponse(['success' => false, 'error' => 'Product ID is required.'], 400);
+    }
+
+    $db = getDb();
+    if (!$db) {
+        sendJsonResponse(['success' => false, 'error' => 'Database connection failed.'], 500);
+    }
+
+    $sellingPrice = isset($body['selling_price']) ? (float)$body['selling_price'] : null;
+    $badge = isset($body['badge']) ? trim((string)$body['badge']) : null;
+    $stock = isset($body['stock']) ? (int)$body['stock'] : null;
+    $isActive = isset($body['is_active']) ? (int)$body['is_active'] : null;
+
+    $fields = [];
+    $params = [':id' => $id];
+    if ($sellingPrice !== null) { $fields[] = "`selling_price` = :price"; $params[':price'] = $sellingPrice; }
+    if ($badge !== null) { $fields[] = "`badge` = :badge"; $params[':badge'] = $badge; }
+    if ($stock !== null) { $fields[] = "`stock` = :stock"; $params[':stock'] = $stock; }
+    if ($isActive !== null) { $fields[] = "`is_active` = :is_active"; $params[':is_active'] = $isActive; }
+
+    if (empty($fields)) {
+        sendJsonResponse(['success' => false, 'error' => 'No fields to update.'], 400);
+    }
+
+    $sql = "UPDATE `products_cache` SET " . implode(', ', $fields) . ", `synced_at` = CURRENT_TIMESTAMP WHERE `id` = :id";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    sendJsonResponse(['success' => true, 'message' => 'Product updated successfully.']);
+}
+
+function handleAdminBroadcastChannel(array $body): void {
+    if (!verifyAdminSession($body)) {
+        sendJsonResponse(['success' => false, 'error' => 'Unauthorized: Admin access required.'], 403);
+    }
+    $id = trim((string)($body['id'] ?? ''));
+    $customNote = trim((string)($body['custom_note'] ?? ''));
+
+    $db = getDb();
+    if (!$db) {
+        sendJsonResponse(['success' => false, 'error' => 'Database unavailable.'], 500);
+    }
+
+    $stmt = $db->prepare("SELECT * FROM `products_cache` WHERE `id` = :id LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $item = $stmt->fetch();
+    if (!$item) {
+        sendJsonResponse(['success' => false, 'error' => 'Product not found.'], 404);
+    }
+
+    $badgeTag = !empty($item['badge']) ? "🔥 <b>[{$item['badge']}]</b>\n" : "⚡ <b>[SPECIAL OFFER]</b>\n";
+    $priceFmt = number_format((float)$item['selling_price'], 0);
+    $warranty = !empty($item['warranty']) ? $item['warranty'] : '100% Verified Guarantee';
+    $channelTarget = TELEGRAM_CHANNEL_USERNAME;
+
+    $text = "{$badgeTag}";
+    $text .= "📦 <b>{$item['name']}</b>\n\n";
+    if (!empty($item['description'])) {
+        $text .= "✨ " . htmlspecialchars($item['description'], ENT_QUOTES, 'UTF-8') . "\n\n";
+    }
+    if (!empty($customNote)) {
+        $text .= "📢 <i>" . htmlspecialchars($customNote, ENT_QUOTES, 'UTF-8') . "</i>\n\n";
+    }
+    $text .= "💰 <b>Price:</b> <b>{$priceFmt} ETB</b>\n";
+    $text .= "🛡️ <b>Warranty:</b> {$warranty}\n";
+    $text .= "🚀 <b>Delivery:</b> Instant Delivery via Bot\n";
+    $text .= "💳 <b>Payments:</b> CBE Birr, Telebirr / E-Birr, Kaafi\n\n";
+    $text .= "👇 <b>Tap below to order instantly in our Mini App:</b>";
+
+    $miniAppDirectUrl = "https://t.me/" . TELEGRAM_BOT_USERNAME . "/shop?startapp=item_" . $item['id'];
+    $keyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => "🛒 Order Now (" . $priceFmt . " ETB)", 'url' => $miniAppDirectUrl]
+            ],
+            [
+                ['text' => "💬 Chat Support (" . getSupportContact() . ")", 'url' => 'https://t.me/' . ltrim(getSupportContact(), '@')]
+            ]
+        ]
+    ];
+
+    $res = sendTelegramApi('sendMessage', [
+        'chat_id'      => $channelTarget,
+        'text'         => $text,
+        'parse_mode'   => 'HTML',
+        'reply_markup' => $keyboard
+    ]);
+
+    if (!empty($res['ok'])) {
+        sendJsonResponse([
+            'success'    => true,
+            'message'    => "Successfully posted offer to {$channelTarget}!",
+            'message_id' => $res['result']['message_id'] ?? null
+        ]);
+    } else {
+        sendJsonResponse([
+            'success' => false,
+            'error'   => 'Telegram channel broadcast failed: ' . ($res['description'] ?? 'Unknown error')
+        ], 502);
+    }
+}
+
+function handleAdminUpdateSettings(array $body): void {
+    if (!verifyAdminSession($body)) {
+        sendJsonResponse(['success' => false, 'error' => 'Unauthorized.'], 403);
+    }
+    $db = getDb();
+    if (!$db) {
+        sendJsonResponse(['success' => false, 'error' => 'Database error.'], 500);
+    }
+
+    if (isset($body['usd_to_etb_rate'])) {
+        $rate = (float)$body['usd_to_etb_rate'];
+        if ($rate > 0) {
+            $stmt = $db->prepare("INSERT INTO `system_settings` (`setting_key`, `setting_value`) VALUES ('usd_to_etb_rate', :val) ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`)");
+            $stmt->execute([':val' => (string)$rate]);
+        }
+    }
+
+    if (isset($body['support_contact'])) {
+        $sup = trim((string)$body['support_contact']);
+        if (!empty($sup)) {
+            $stmt = $db->prepare("INSERT INTO `system_settings` (`setting_key`, `setting_value`) VALUES ('support_contact', :val) ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`)");
+            $stmt->execute([':val' => $sup]);
+        }
+    }
+
+    sendJsonResponse(['success' => true, 'message' => 'Settings updated successfully.']);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Wallet Top-Up Request Handler
+ * --------------------------------------------------------------------
+ * Allows customer to submit a deposit verification using EITHER
+ * a bank transaction reference (FT code) OR an uploaded screenshot.
+ */
+function handleWalletTopup(array $body): void {
+    $amountRaw   = (float) ($body['amount'] ?? 0);
+    $channelKey  = strtoupper(trim((string) ($body['payment_channel'] ?? 'CBE')));
+    $txReference = strtoupper(trim((string) ($body['transaction_reference'] ?? '')));
+    $receiptImg  = $body['receipt_image'] ?? null;
+    $notes       = trim((string) ($body['notes'] ?? $body['customer_notes'] ?? ''));
+    $initDataRaw = (string) ($body['init_data'] ?? $_SERVER['HTTP_X_TELEGRAM_INIT_DATA'] ?? '');
+
+    if ($amountRaw < 20) {
+        sendJsonResponse([
+            'success' => false,
+            'error'   => 'Minimum deposit amount is 20 ETB.'
+        ], 422);
+    }
+
+    if (empty($txReference) && empty($receiptImg)) {
+        sendJsonResponse([
+            'success' => false,
+            'error'   => 'Please provide EITHER a deposit transaction reference OR attach a transfer screenshot.'
+        ], 422);
+    }
+
+    if (!array_key_exists($channelKey, PAYMENT_CHANNELS)) {
+        sendJsonResponse([
+            'success' => false,
+            'error'   => 'Invalid payment channel. Supported options: CBE, EBIRR, KAAFI.'
+        ], 422);
+    }
+
+    $cleanTxRef = !empty($txReference) 
+        ? preg_replace('/[^A-Za-z0-9]/', '', $txReference)
+        : 'TOPUP-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+
+    $telegramUser = validateTelegramInitData($initDataRaw);
+    $telegramId = 0;
+    $telegramUsername = null;
+    $telegramFirstName = 'Valued Customer';
+
+    if ($telegramUser && isset($telegramUser['id'])) {
+        $telegramId        = (int) $telegramUser['id'];
+        $telegramUsername  = $telegramUser['username'] ?? null;
+        $telegramFirstName = $telegramUser['first_name'] ?? 'Customer';
+    } else if (isset($body['fallback_telegram_id']) && is_numeric($body['fallback_telegram_id'])) {
+        $telegramId        = (int) $body['fallback_telegram_id'];
+        $telegramUsername  = $body['fallback_username'] ?? 'test_user';
+        $telegramFirstName = $body['fallback_first_name'] ?? 'Test User';
+    } else {
+        sendJsonResponse([
+            'success' => false,
+            'error'   => 'Please open this storefront inside Telegram or provide your customer ID.'
+        ], 401);
+    }
+
+    // Process receipt image if uploaded
+    $receiptRecord = null;
+    if (!empty($receiptImg) && is_string($receiptImg) && str_starts_with($receiptImg, 'data:image')) {
+        $uploadsDir = __DIR__ . '/uploads/receipts';
+        if (!is_dir($uploadsDir)) {
+            @mkdir($uploadsDir, 0755, true);
+        }
+        if (is_dir($uploadsDir) && is_writable($uploadsDir)) {
+            $parts = explode(',', $receiptImg);
+            $imageData = base64_decode($parts[1] ?? '');
+            if ($imageData) {
+                $fileName = 'topup_' . time() . '_' . substr(bin2hex(random_bytes(3)), 0, 6) . '.jpg';
+                @file_put_contents($uploadsDir . '/' . $fileName, $imageData);
+                $receiptRecord = 'uploads/receipts/' . $fileName;
+            }
+        }
+        if (!$receiptRecord) {
+            $receiptRecord = substr($receiptImg, 0, 800000);
+        }
+    }
+
+    $db = getDb();
+    if (!$db) {
+        sendJsonResponse(['success' => false, 'error' => 'Database connection failed.'], 500);
+    }
+
+    try {
+        // Ensure user exists
+        $userStmt = $db->prepare("
+            INSERT INTO `users` (`telegram_id`, `username`, `first_name`)
+            VALUES (:tid, :uname, :fname)
+            ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `first_name` = VALUES(`first_name`)
+        ");
+        $userStmt->execute([
+            ':tid'   => $telegramId,
+            ':uname' => $telegramUsername,
+            ':fname' => $telegramFirstName
+        ]);
+
+        // Insert pending wallet transaction
+        $stmt = $db->prepare("
+            INSERT INTO `wallet_transactions` (
+                `telegram_user_id`, `amount`, `type`, `payment_channel`, 
+                `transaction_reference`, `status`, `description`, `receipt_image`
+            ) VALUES (
+                :uid, :amount, 'deposit', :channel, :tx_ref, 'pending', :desc, :receipt
+            )
+        ");
+        $stmt->execute([
+            ':uid'     => $telegramId,
+            ':amount'  => $amountRaw,
+            ':channel' => $channelKey,
+            ':tx_ref'  => $cleanTxRef,
+            ':desc'    => !empty($notes) ? $notes : "Deposit via {$channelKey}",
+            ':receipt' => $receiptRecord
+        ]);
+
+        $topupId = (int) $db->lastInsertId();
+
+        // Notify Admin of pending top-up
+        notifyAdminNewTopup([
+            'id'                    => $topupId,
+            'customer_name'         => $telegramFirstName,
+            'customer_username'     => $telegramUsername,
+            'customer_id'           => $telegramId,
+            'amount'                => $amountRaw,
+            'payment_channel'       => $channelKey,
+            'transaction_reference' => $cleanTxRef,
+            'receipt_image'         => $receiptRecord,
+            'notes'                 => $notes
+        ]);
+
+        sendJsonResponse([
+            'success' => true,
+            'message' => "Top-up request for " . number_format($amountRaw, 2) . " ETB submitted! Awaiting admin verification.",
+            'topup_id' => $topupId
+        ]);
+    } catch (Exception $e) {
+        error_log("Wallet topup error: " . $e->getMessage());
+        sendJsonResponse(['success' => false, 'error' => 'Failed to log deposit request.'], 500);
+    }
+}
+
+function notifyAdminNewTopup(array $info): void {
+    $userTag = !empty($info['customer_username']) ? "@" . $info['customer_username'] : $info['customer_name'];
+
+    $msg = "💳 <b>NEW WALLET TOP-UP REQUEST!</b>\n\n";
+    $msg .= "👤 <b>Customer:</b> {$userTag} (ID: <code>{$info['customer_id']}</code>)\n";
+    $msg .= "💰 <b>Amount:</b> <b>" . number_format((float)$info['amount'], 2) . " ETB</b>\n";
+    $msg .= "🏦 <b>Channel:</b> <b>{$info['payment_channel']}</b>\n";
+    $msg .= "🔑 <b>Bank Reference:</b> <code>{$info['transaction_reference']}</code>\n";
+
+    if (!empty($info['notes'])) {
+        $cleanNotes = htmlspecialchars($info['notes'], ENT_QUOTES, 'UTF-8');
+        $msg .= "💬 <b>Note:</b> <i>{$cleanNotes}</i>\n";
+    }
+
+    if (!empty($info['receipt_image'])) {
+        $msg .= "📸 <b>Receipt Screenshot:</b> Attached ✅\n";
+    }
+
+    $msg .= "\n⚡ <i>Verify deposit on your banking app then tap below:</i>";
+
+    $keyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => '✅ Credit Wallet (' . number_format((float)$info['amount'], 0) . ' ETB)', 'callback_data' => 'topup_appr_' . $info['id']],
+                ['text' => '❌ Reject', 'callback_data' => 'topup_rej_' . $info['id']]
+            ]
+        ]
+    ];
+
+    foreach (ADMIN_TELEGRAM_IDS as $adminId) {
+        if (!empty($adminId)) {
+            sendTelegramApi('sendMessage', [
+                'chat_id'      => $adminId,
+                'text'         => $msg,
+                'parse_mode'   => 'HTML',
+                'reply_markup' => $keyboard
+            ]);
+        }
+    }
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Get Wallet Balance & Transaction History
+ * --------------------------------------------------------------------
+ */
+function handleGetWalletBalance(array $body): void {
+    $initDataRaw = (string) ($body['init_data'] ?? $_GET['init_data'] ?? $_SERVER['HTTP_X_TELEGRAM_INIT_DATA'] ?? '');
+    $user = validateTelegramInitData($initDataRaw);
+    $userId = 0;
+
+    if ($user && isset($user['id'])) {
+        $userId = (int) $user['id'];
+    } else if (isset($_GET['user_id']) && is_numeric($_GET['user_id'])) {
+        $userId = (int) $_GET['user_id'];
+    } else if (isset($body['user_id']) && is_numeric($body['user_id'])) {
+        $userId = (int) $body['user_id'];
+    }
+
+    $db = getDb();
+    if (!$db || $userId <= 0) {
+        sendJsonResponse(['success' => true, 'balance' => 0.00, 'transactions' => []]);
+    }
+
+    $balance = 0.00;
+    $userStmt = $db->prepare("SELECT `wallet_balance` FROM `users` WHERE `telegram_id` = :uid");
+    $userStmt->execute([':uid' => $userId]);
+    $row = $userStmt->fetch();
+    if ($row) {
+        $balance = (float) $row['wallet_balance'];
+    }
+
+    $txStmt = $db->prepare("
+        SELECT `id`, `amount`, `type`, `payment_channel` as channel, `transaction_reference` as reference, `status`, `description`, `created_at` 
+        FROM `wallet_transactions` 
+        WHERE `telegram_user_id` = :uid 
+        ORDER BY `id` DESC LIMIT 25
+    ");
+    $txStmt->execute([':uid' => $userId]);
+    $transactions = $txStmt->fetchAll();
+
+    sendJsonResponse([
+        'success'      => true,
+        'balance'      => $balance,
+        'transactions' => $transactions ?: []
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Get User Profile Card
+ * --------------------------------------------------------------------
+ */
+function handleGetUserProfile(array $body): void {
+    $initDataRaw = (string) ($body['init_data'] ?? $_GET['init_data'] ?? $_SERVER['HTTP_X_TELEGRAM_INIT_DATA'] ?? '');
+    $user = validateTelegramInitData($initDataRaw);
+    $userId = 0;
+    $username = null;
+    $firstName = 'Valued Customer';
+
+    if ($user && isset($user['id'])) {
+        $userId = (int) $user['id'];
+        $username = $user['username'] ?? null;
+        $firstName = $user['first_name'] ?? 'Customer';
+    } else if (isset($_GET['user_id']) && is_numeric($_GET['user_id'])) {
+        $userId = (int) $_GET['user_id'];
+        $username = $_GET['username'] ?? null;
+        $firstName = $_GET['first_name'] ?? 'Customer';
+    } else if (isset($body['user_id']) && is_numeric($body['user_id'])) {
+        $userId = (int) $body['user_id'];
+        $username = $body['username'] ?? null;
+        $firstName = $body['first_name'] ?? 'Customer';
+    }
+
+    $db = getDb();
+    $balance = 0.00;
+    $totalOrders = 0;
+
+    if ($db && $userId > 0) {
+        $uStmt = $db->prepare("SELECT `first_name`, `username`, `wallet_balance` FROM `users` WHERE `telegram_id` = :uid");
+        $uStmt->execute([':uid' => $userId]);
+        $uRow = $uStmt->fetch();
+        if ($uRow) {
+            $balance = (float) $uRow['wallet_balance'];
+            if (!empty($uRow['first_name'])) $firstName = $uRow['first_name'];
+            if (!empty($uRow['username'])) $username = $uRow['username'];
+        }
+
+        $oStmt = $db->prepare("SELECT COUNT(*) FROM `orders` WHERE `telegram_user_id` = :uid");
+        $oStmt->execute([':uid' => $userId]);
+        $totalOrders = (int) $oStmt->fetchColumn();
+    }
+
+    sendJsonResponse([
+        'success' => true,
+        'user' => [
+            'id'             => $userId,
+            'name'           => $firstName,
+            'username'       => $username,
+            'wallet_balance' => $balance,
+            'total_orders'   => $totalOrders
+        ]
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Admin: Get Pending Orders & Top-Ups for Review Hub
+ * --------------------------------------------------------------------
+ */
+function handleAdminGetPending(array $body): void {
+    if (!verifyAdminSession($body)) {
+        sendJsonResponse(['success' => false, 'error' => 'Unauthorized admin.'], 403);
+    }
+
+    $db = getDb();
+    if (!$db) {
+        sendJsonResponse(['success' => false, 'orders' => [], 'topups' => []]);
+    }
+
+    $ordersStmt = $db->query("
+        SELECT o.*, u.username, u.first_name 
+        FROM `orders` o 
+        LEFT JOIN `users` u ON o.telegram_user_id = u.telegram_id 
+        WHERE o.payment_status = 'pending' 
+        ORDER BY o.id DESC LIMIT 40
+    ");
+    $orders = $ordersStmt->fetchAll();
+
+    $topupsStmt = $db->query("
+        SELECT t.*, u.username, u.first_name 
+        FROM `wallet_transactions` t 
+        LEFT JOIN `users` u ON t.telegram_user_id = u.telegram_id 
+        WHERE t.status = 'pending' AND t.type = 'deposit' 
+        ORDER BY t.id DESC LIMIT 40
+    ");
+    $topups = $topupsStmt->fetchAll();
+
+    sendJsonResponse([
+        'success' => true,
+        'orders'  => $orders ?: [],
+        'topups'  => $topups ?: []
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Admin: Approve / Reject Wallet Top-Up
+ * --------------------------------------------------------------------
+ */
+function handleAdminActionTopup(array $body): void {
+    if (!verifyAdminSession($body)) {
+        sendJsonResponse(['success' => false, 'error' => 'Unauthorized.'], 403);
+    }
+
+    $topupId = (int) ($body['topup_id'] ?? 0);
+    $action  = (string) ($body['decision'] ?? 'approve'); // approve or reject
+
+    if ($topupId <= 0) {
+        sendJsonResponse(['success' => false, 'error' => 'Invalid top-up ID.'], 422);
+    }
+
+    $db = getDb();
+    if (!$db) {
+        sendJsonResponse(['success' => false, 'error' => 'Database offline.'], 500);
+    }
+
+    try {
+        $db->beginTransaction();
+        $stmt = $db->prepare("SELECT * FROM `wallet_transactions` WHERE `id` = :id FOR UPDATE");
+        $stmt->execute([':id' => $topupId]);
+        $tx = $stmt->fetch();
+
+        if (!$tx) {
+            $db->rollBack();
+            sendJsonResponse(['success' => false, 'error' => 'Top-up record not found.'], 404);
+        }
+
+        if ($tx['status'] !== 'pending') {
+            $db->rollBack();
+            sendJsonResponse(['success' => false, 'error' => "This top-up is already {$tx['status']}."], 400);
+        }
+
+        if ($action === 'approve') {
+            $db->prepare("UPDATE `wallet_transactions` SET `status` = 'completed' WHERE `id` = :id")
+               ->execute([':id' => $topupId]);
+            $db->prepare("UPDATE `users` SET `wallet_balance` = `wallet_balance` + :amt WHERE `telegram_id` = :uid")
+               ->execute([':amt' => $tx['amount'], ':uid' => $tx['telegram_user_id']]);
+
+            $db->commit();
+
+            // Notify user in Telegram
+            $amtFmt = number_format((float)$tx['amount'], 2);
+            sendTelegramApi('sendMessage', [
+                'chat_id'    => $tx['telegram_user_id'],
+                'text'       => "🎉 <b>Wallet Credited!</b>\n\nYour top-up of <b>{$amtFmt} ETB</b> has been verified and added to your wallet balance. Tap below to shop!",
+                'parse_mode' => 'HTML',
+                'reply_markup' => ['inline_keyboard' => [[['text' => '🛍️ Browse Store', 'web_app' => ['url' => WEB_APP_URL]]]]]
+            ]);
+
+            sendJsonResponse(['success' => true, 'message' => "Top-up #{$topupId} approved and credited!"]);
+        } else {
+            $db->prepare("UPDATE `wallet_transactions` SET `status` = 'rejected' WHERE `id` = :id")
+               ->execute([':id' => $topupId]);
+            $db->commit();
+
+            sendTelegramApi('sendMessage', [
+                'chat_id'    => $tx['telegram_user_id'],
+                'text'       => "⚠️ <b>Deposit Notice</b>\n\nYour top-up of " . number_format((float)$tx['amount'], 2) . " ETB could not be verified with our banking statement. Please contact support @AtkeShop if this is a mistake.",
+                'parse_mode' => 'HTML'
+            ]);
+
+            sendJsonResponse(['success' => true, 'message' => "Top-up #{$topupId} rejected."]);
+        }
+    } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Admin: Approve / Reject Order
+ * --------------------------------------------------------------------
+ */
+function handleAdminActionOrder(array $body): void {
+    if (!verifyAdminSession($body)) {
+        sendJsonResponse(['success' => false, 'error' => 'Unauthorized.'], 403);
+    }
+
+    $orderId = (int) ($body['order_id'] ?? 0);
+    $decision = (string) ($body['decision'] ?? 'approve');
+
+    if ($orderId <= 0) {
+        sendJsonResponse(['success' => false, 'error' => 'Invalid order ID.'], 422);
+    }
+
+    $db = getDb();
+    if (!$db) sendJsonResponse(['success' => false, 'error' => 'Database error.'], 500);
+
+    try {
+        $db->beginTransaction();
+        $stmt = $db->prepare("SELECT * FROM `orders` WHERE `id` = :id FOR UPDATE");
+        $stmt->execute([':id' => $orderId]);
+        $order = $stmt->fetch();
+
+        if (!$order) {
+            $db->rollBack();
+            sendJsonResponse(['success' => false, 'error' => 'Order not found.'], 404);
+        }
+
+        if ($decision === 'approve') {
+            $mockKey = "VOUCHER-" . strtoupper(bin2hex(random_bytes(6)));
+            $db->prepare("UPDATE `orders` SET `payment_status` = 'verified', `fulfillment_status` = 'completed', `delivery_code` = :code WHERE `id` = :id")
+               ->execute([':code' => $mockKey, ':id' => $orderId]);
+            $db->commit();
+
+            sendTelegramApi('sendMessage', [
+                'chat_id'    => $order['telegram_user_id'],
+                'text'       => "🎉 <b>Order Delivered!</b>\n\nYour purchase for <b>{$order['product_name']}</b> has been verified!\n\n🔑 <b>Delivery Code:</b>\n<code>{$mockKey}</code>\n\nThank you for choosing Atke Digital Shop!",
+                'parse_mode' => 'HTML',
+                'reply_markup' => ['inline_keyboard' => [[['text' => '🛍️ Open Storefront', 'web_app' => ['url' => WEB_APP_URL]]]]]
+            ]);
+
+            sendJsonResponse(['success' => true, 'message' => "Order #{$order['order_uuid']} approved & fulfilled!"]);
+        } else {
+            $db->prepare("UPDATE `orders` SET `payment_status` = 'rejected', `fulfillment_status` = 'failed' WHERE `id` = :id")
+               ->execute([':id' => $orderId]);
+            $db->commit();
+
+            sendTelegramApi('sendMessage', [
+                'chat_id'    => $order['telegram_user_id'],
+                'text'       => "❌ <b>Order Verification Notice</b>\n\nOrder #{$order['order_uuid']} could not be verified. If you sent payment, please contact support @AtkeShop with your receipt.",
+                'parse_mode' => 'HTML'
+            ]);
+
+            sendJsonResponse(['success' => true, 'message' => "Order #{$order['order_uuid']} rejected."]);
+        }
+    } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
     }
 }

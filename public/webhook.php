@@ -9,7 +9,14 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/config.php';
+if (file_exists(__DIR__ . '/config.php')) {
+    require_once __DIR__ . '/config.php';
+} elseif (file_exists(__DIR__ . '/../config.php')) {
+    require_once __DIR__ . '/../config.php';
+} else {
+    http_response_code(500);
+    die("config.php not found");
+}
 
 // Accept incoming webhook update
 $rawInput = file_get_contents('php://input');
@@ -64,41 +71,37 @@ function handleIncomingMessage(array $message): void {
     $langCode   = $from['language_code'] ?? 'en';
     $isBot      = !empty($from['is_bot']) ? 1 : 0;
 
+    $cleanText = mb_strtolower(trim($text));
     $command = explode(' ', $text)[0];
+    $commandLower = mb_strtolower($command);
 
     // 1. Immediately dispatch response to user with zero latency
-    switch ($command) {
-        case '/start':
-            sendWelcomeMessage($chatId, $firstName);
-            break;
-
-        case '/paysupport':
-        case '/support':
-            sendSupportMessage($chatId);
-            break;
-
-        case '/myorders':
-        case '/orders':
-            sendUserOrders($chatId, $telegramId);
-            break;
-
-        case '/balance':
-            if (isAdmin($telegramId)) {
-                sendAdminBalance($chatId);
-            } else {
-                sendWelcomeMessage($chatId, $firstName);
-            }
-            break;
-
-        case '/pending':
-            if (isAdmin($telegramId)) {
-                sendAdminPendingOrders($chatId);
-            }
-            break;
-
-        default:
-            sendDefaultHelpMessage($chatId);
-            break;
+    if ($commandLower === '/start' || $cleanText === 'start') {
+        sendWelcomeMessage($chatId, $firstName);
+    } else if ($commandLower === '/profile' || str_contains($cleanText, 'profile')) {
+        sendUserProfileCard($chatId, $telegramId, $firstName, $username);
+    } else if ($commandLower === '/wallet' || str_contains($cleanText, 'wallet')) {
+        sendWalletCard($chatId, $telegramId);
+    } else if ($commandLower === '/myorders' || $commandLower === '/orders' || str_contains($cleanText, 'orders')) {
+        sendUserOrders($chatId, $telegramId);
+    } else if ($commandLower === '/admin' || str_contains($cleanText, 'admin')) {
+        if (isAdmin($telegramId)) {
+            sendAdminDashboard($chatId);
+        } else {
+            sendUserProfileCard($chatId, $telegramId, $firstName, $username);
+        }
+    } else if ($commandLower === '/pending') {
+        if (isAdmin($telegramId)) {
+            sendAdminPendingOrders($chatId);
+        }
+    } else if ($commandLower === '/balance') {
+        if (isAdmin($telegramId)) {
+            sendAdminBalance($chatId);
+        }
+    } else if ($commandLower === '/support' || $commandLower === '/paysupport' || str_contains($cleanText, 'support') || str_contains($cleanText, 'help')) {
+        sendSupportMessage($chatId);
+    } else {
+        sendDefaultHelpMessage($chatId);
     }
 
     // 2. Perform background user sync in non-blocking manner
@@ -199,6 +202,106 @@ function sendWelcomeMessage(int|string $chatId, string $firstName): void {
 
 /**
  * --------------------------------------------------------------------
+ * User Profile Card (/profile or text "Profile")
+ * --------------------------------------------------------------------
+ * Displays Telegram ID, Name, Username, Wallet Balance, and Total Orders
+ * matching competitor screenshots.
+ */
+function sendUserProfileCard(int|string $chatId, int $telegramId, string $firstName, ?string $username): void {
+    $db = getDb();
+    $balance = 0.00;
+    $totalOrders = 0;
+
+    if ($db) {
+        $uStmt = $db->prepare("SELECT `wallet_balance` FROM `users` WHERE `telegram_id` = :uid");
+        $uStmt->execute([':uid' => $telegramId]);
+        $row = $uStmt->fetch();
+        if ($row) {
+            $balance = (float) $row['wallet_balance'];
+        }
+        $oStmt = $db->prepare("SELECT COUNT(*) FROM `orders` WHERE `telegram_user_id` = :uid");
+        $oStmt->execute([':uid' => $telegramId]);
+        $totalOrders = (int) $oStmt->fetchColumn();
+    }
+
+    $userLabel = !empty($username) ? "@" . $username : "None";
+
+    $text = "👤 <b>User Profile</b>\n\n";
+    $text .= "🆔 <b>Telegram ID:</b> <code>{$telegramId}</code>\n";
+    $text .= "👤 <b>Name:</b> " . htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8') . "\n";
+    $text .= "🏷️ <b>Username:</b> {$userLabel}\n";
+    $text .= "💰 <b>Wallet Balance:</b> " . number_format($balance, 2) . " ETB\n";
+    $text .= "📦 <b>Total Orders:</b> {$totalOrders}\n\n";
+    $text .= "Manage your orders and wallet below:";
+
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => '📦 My Orders', 'callback_data' => 'cmd_myorders'],
+                ['text' => '💳 Wallet', 'web_app' => ['url' => WEB_APP_URL]]
+            ],
+            [
+                ['text' => '🛍️ Open Atke Store', 'web_app' => ['url' => WEB_APP_URL]]
+            ]
+        ]
+    ];
+
+    sendTelegramApi('sendMessage', [
+        'chat_id'      => $chatId,
+        'text'         => $text,
+        'parse_mode'   => 'HTML',
+        'reply_markup' => $inlineKeyboard
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Wallet Card (/wallet or text "Wallet")
+ * --------------------------------------------------------------------
+ */
+function sendWalletCard(int|string $chatId, int $telegramId): void {
+    $db = getDb();
+    $balance = 0.00;
+    if ($db) {
+        $uStmt = $db->prepare("SELECT `wallet_balance` FROM `users` WHERE `telegram_id` = :uid");
+        $uStmt->execute([':uid' => $telegramId]);
+        $row = $uStmt->fetch();
+        if ($row) {
+            $balance = (float) $row['wallet_balance'];
+        }
+    }
+
+    $cbe   = PAYMENT_CHANNELS['CBE'];
+    $ebirr = PAYMENT_CHANNELS['EBIRR'];
+    $kaafi = PAYMENT_CHANNELS['KAAFI'];
+
+    $text = "💳 <b>Atke Digital Wallet</b>\n\n";
+    $text .= "💰 <b>Available Balance:</b> <b>" . number_format($balance, 2) . " ETB</b>\n\n";
+    $text .= "<b>Deposit Target Accounts:</b>\n";
+    $text .= "🏦 <b>CBE Birr:</b> <code>{$cbe['account_number']}</code> ({$cbe['account_holder']})\n";
+    $text .= "📱 <b>Telebirr / E-Birr:</b> <code>{$ebirr['account_number']}</code> ({$ebirr['account_holder']})\n";
+    $text .= "💳 <b>Kaafi:</b> <code>{$kaafi['account_number']}</code> ({$kaafi['account_holder']})\n\n";
+    $text .= "Tap below to add funds or spend balance in store:";
+
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => '💳 Add Money in Store', 'web_app' => ['url' => WEB_APP_URL]],
+                ['text' => '📦 My Orders', 'callback_data' => 'cmd_myorders']
+            ]
+        ]
+    ];
+
+    sendTelegramApi('sendMessage', [
+        'chat_id'      => $chatId,
+        'text'         => $text,
+        'parse_mode'   => 'HTML',
+        'reply_markup' => $inlineKeyboard
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
  * Support & Payment Guide Message (/paysupport)
  * --------------------------------------------------------------------
  */
@@ -229,7 +332,8 @@ function sendSupportMessage(int|string $chatId): void {
     $text .= "2. Select your product and chosen payment channel.\n";
     $text .= "3. Paste your bank Transaction Reference into the checkout box.\n";
     $text .= "4. Your order is instantly queued and verified!\n\n";
-    $text .= "Need manual help? Contact support: @suq_support";
+    $supportHandle = getSupportContact();
+    $text .= "Need manual help? Contact support: {$supportHandle}";
 
     $inlineKeyboard = [
         'inline_keyboard' => [
@@ -430,6 +534,57 @@ function handleCallbackQuery(array $callbackQuery): void {
     if ($data === 'cmd_myorders') {
         sendUserOrders($chatId, $userId);
         sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
+        return;
+    }
+    if ($data === 'cmd_wallet') {
+        sendWalletCard($chatId, $userId);
+        sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
+        return;
+    }
+    if ($data === 'cmd_profile') {
+        sendUserProfileCard($chatId, $userId, $from['first_name'] ?? 'Customer', $from['username'] ?? null);
+        sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
+        return;
+    }
+
+    // Admin commands via inline buttons
+    if ($data === 'cmd_admin_pending_orders') {
+        if (isAdmin($userId)) sendAdminPendingOrders($chatId);
+        sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
+        return;
+    }
+    if ($data === 'cmd_admin_pending_topups') {
+        if (isAdmin($userId)) sendAdminPendingTopups($chatId);
+        sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId]);
+        return;
+    }
+
+    // Admin wallet top-up approvals
+    if (str_starts_with($data, 'topup_appr_')) {
+        if (!isAdmin($userId)) {
+            sendTelegramApi('answerCallbackQuery', [
+                'callback_query_id' => $callbackId,
+                'text' => '⛔ Unauthorized. Admin permissions required.',
+                'show_alert' => true
+            ]);
+            return;
+        }
+        $topupId = (int) substr($data, strlen('topup_appr_'));
+        processTopupApproval($topupId, $chatId, $messageId, $from['username'] ?? 'Admin', $callbackId);
+        return;
+    }
+
+    if (str_starts_with($data, 'topup_rej_')) {
+        if (!isAdmin($userId)) {
+            sendTelegramApi('answerCallbackQuery', [
+                'callback_query_id' => $callbackId,
+                'text' => '⛔ Unauthorized.',
+                'show_alert' => true
+            ]);
+            return;
+        }
+        $topupId = (int) substr($data, strlen('topup_rej_'));
+        processTopupRejection($topupId, $chatId, $messageId, $from['username'] ?? 'Admin', $callbackId);
         return;
     }
 
@@ -691,7 +846,8 @@ function processOrderRejection(int $orderDbId, int|string $adminChatId, ?int $ad
         $custText = "⚠️ <b>Order Payment Notice</b>\n\n";
         $custText .= "We were unable to verify your payment reference (<code>{$order['transaction_reference']}</code>) for order <code>{$order['order_uuid']}</code>.\n\n";
         $custText .= "If this was an error, please reach out to our support team with your payment receipt:\n";
-        $custText .= "💬 Support: @suq_support";
+        $supportHandle = getSupportContact();
+        $custText .= "💬 Support: {$supportHandle}";
 
         sendTelegramApi('sendMessage', [
             'chat_id'    => $order['telegram_user_id'],
@@ -728,4 +884,212 @@ function sendDefaultHelpMessage(int|string $chatId): void {
  */
 function isAdmin(int $telegramId): bool {
     return in_array((string)$telegramId, ADMIN_TELEGRAM_IDS, true);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Admin Dashboard View (/admin)
+ * --------------------------------------------------------------------
+ */
+function sendAdminDashboard(int|string $chatId): void {
+    $db = getDb();
+    $pendingOrders = 0;
+    $pendingTopups = 0;
+    $totalProducts = 8;
+
+    if ($db) {
+        $pendingOrders = (int) $db->query("SELECT COUNT(*) FROM `orders` WHERE `payment_status` = 'pending'")->fetchColumn();
+        $pendingTopups = (int) $db->query("SELECT COUNT(*) FROM `wallet_transactions` WHERE `status` = 'pending' AND `type` = 'deposit'")->fetchColumn();
+        $totalProducts = (int) $db->query("SELECT COUNT(*) FROM `products_cache` WHERE `is_active` = 1")->fetchColumn();
+    }
+
+    $text = "⚙️ <b>Atke Store Admin Hub</b>\n\n";
+    $text .= "📊 <b>Pending Orders:</b> <b>{$pendingOrders}</b> awaiting review\n";
+    $text .= "💳 <b>Pending Top-ups:</b> <b>{$pendingTopups}</b> awaiting credit\n";
+    $text .= "📦 <b>Active Products:</b> <b>{$totalProducts}</b> in catalog\n";
+    $text .= "📢 <b>Channel:</b> " . TELEGRAM_CHANNEL_USERNAME . "\n\n";
+    $text .= "Select an action:";
+
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => "📋 Orders ({$pendingOrders})", 'callback_data' => 'cmd_admin_pending_orders'],
+                ['text' => "💳 Top-ups ({$pendingTopups})", 'callback_data' => 'cmd_admin_pending_topups']
+            ],
+            [
+                ['text' => '🛍️ Open Storefront', 'web_app' => ['url' => WEB_APP_URL]]
+            ]
+        ]
+    ];
+
+    sendTelegramApi('sendMessage', [
+        'chat_id'      => $chatId,
+        'text'         => $text,
+        'parse_mode'   => 'HTML',
+        'reply_markup' => $inlineKeyboard
+    ]);
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Admin: List Pending Wallet Top-ups
+ * --------------------------------------------------------------------
+ */
+function sendAdminPendingTopups(int|string $chatId): void {
+    $db = getDb();
+    if (!$db) return;
+
+    try {
+        $stmt = $db->query("
+            SELECT t.*, u.username, u.first_name 
+            FROM `wallet_transactions` t 
+            LEFT JOIN `users` u ON t.telegram_user_id = u.telegram_id 
+            WHERE t.status = 'pending' AND t.type = 'deposit' 
+            ORDER BY t.id ASC LIMIT 10
+        ");
+        $pending = $stmt->fetchAll();
+
+        if (empty($pending)) {
+            sendTelegramApi('sendMessage', [
+                'chat_id' => $chatId,
+                'text'    => "✅ No pending wallet deposits awaiting credit.",
+                'parse_mode' => 'HTML'
+            ]);
+            return;
+        }
+
+        foreach ($pending as $topup) {
+            $userTag = !empty($topup['username']) ? "@" . $topup['username'] : $topup['first_name'];
+            $text = "💳 <b>PENDING WALLET DEPOSIT</b>\n\n";
+            $text .= "• Request ID: #<code>{$topup['id']}</code>\n";
+            $text .= "• Customer: {$userTag} (ID: <code>{$topup['telegram_user_id']}</code>)\n";
+            $text .= "• Amount: <b>" . number_format((float)$topup['amount'], 2) . " ETB</b>\n";
+            $text .= "• Channel: <b>{$topup['payment_channel']}</b>\n";
+            $text .= "• Bank Tx Ref: <code>{$topup['transaction_reference']}</code>\n";
+            if (!empty($topup['receipt_image'])) {
+                $text .= "• Screenshot: Attached ✅\n";
+            }
+            $text .= "• Date: {$topup['created_at']}";
+
+            $inlineKeyboard = [
+                'inline_keyboard' => [
+                    [
+                        ['text' => '✅ Credit Wallet (' . number_format((float)$topup['amount'], 0) . ' ETB)', 'callback_data' => 'topup_appr_' . $topup['id']],
+                        ['text' => '❌ Reject', 'callback_data' => 'topup_rej_' . $topup['id']]
+                    ]
+                ]
+            ];
+
+            sendTelegramApi('sendMessage', [
+                'chat_id'      => $chatId,
+                'text'         => $text,
+                'parse_mode'   => 'HTML',
+                'reply_markup' => $inlineKeyboard
+            ]);
+        }
+    } catch (Exception $e) {
+        error_log("Failed to list pending topups: " . $e->getMessage());
+    }
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Approve Wallet Top-up & Credit User Balance
+ * --------------------------------------------------------------------
+ */
+function processTopupApproval(int $topupId, int|string $adminChatId, ?int $adminMsgId, string $adminName, string $callbackId): void {
+    $db = getDb();
+    if (!$db) return;
+
+    try {
+        $db->beginTransaction();
+        $stmt = $db->prepare("SELECT * FROM `wallet_transactions` WHERE `id` = :id FOR UPDATE");
+        $stmt->execute([':id' => $topupId]);
+        $tx = $stmt->fetch();
+
+        if (!$tx) {
+            $db->rollBack();
+            sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId, 'text' => 'Top-up record not found.', 'show_alert' => true]);
+            return;
+        }
+
+        if ($tx['status'] !== 'pending') {
+            $db->rollBack();
+            sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId, 'text' => "Already {$tx['status']}.", 'show_alert' => true]);
+            return;
+        }
+
+        $db->prepare("UPDATE `wallet_transactions` SET `status` = 'completed' WHERE `id` = :id")
+           ->execute([':id' => $topupId]);
+        $db->prepare("UPDATE `users` SET `wallet_balance` = `wallet_balance` + :amt WHERE `telegram_id` = :uid")
+           ->execute([':amt' => $tx['amount'], ':uid' => $tx['telegram_user_id']]);
+
+        $db->commit();
+
+        sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId, 'text' => "✅ Top-up #{$topupId} credited successfully!"]);
+
+        if ($adminMsgId) {
+            sendTelegramApi('editMessageText', [
+                'chat_id'    => $adminChatId,
+                'message_id' => $adminMsgId,
+                'text'       => "✅ <b>TOP-UP CREDITED & COMPLETED</b>\n\n• Amount: <b>" . number_format((float)$tx['amount'], 2) . " ETB</b>\n• User ID: <code>{$tx['telegram_user_id']}</code>\n• Ref: <code>{$tx['transaction_reference']}</code>\n• Approved by: @{$adminName}",
+                'parse_mode' => 'HTML'
+            ]);
+        }
+
+        sendTelegramApi('sendMessage', [
+            'chat_id'    => $tx['telegram_user_id'],
+            'text'       => "🎉 <b>Wallet Credited!</b>\n\nYour top-up of <b>" . number_format((float)$tx['amount'], 2) . " ETB</b> has been verified and added to your balance. Tap below to shop!",
+            'parse_mode' => 'HTML',
+            'reply_markup' => ['inline_keyboard' => [[['text' => '🛍️ Browse Store', 'web_app' => ['url' => WEB_APP_URL]]]]]
+        ]);
+    } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        error_log("Topup approval error: " . $e->getMessage());
+    }
+}
+
+/**
+ * --------------------------------------------------------------------
+ * Reject Wallet Top-up
+ * --------------------------------------------------------------------
+ */
+function processTopupRejection(int $topupId, int|string $adminChatId, ?int $adminMsgId, string $adminName, string $callbackId): void {
+    $db = getDb();
+    if (!$db) return;
+
+    try {
+        $db->beginTransaction();
+        $stmt = $db->prepare("SELECT * FROM `wallet_transactions` WHERE `id` = :id FOR UPDATE");
+        $stmt->execute([':id' => $topupId]);
+        $tx = $stmt->fetch();
+
+        if ($tx && $tx['status'] === 'pending') {
+            $db->prepare("UPDATE `wallet_transactions` SET `status` = 'rejected' WHERE `id` = :id")
+               ->execute([':id' => $topupId]);
+            $db->commit();
+
+            sendTelegramApi('answerCallbackQuery', ['callback_query_id' => $callbackId, 'text' => "❌ Top-up #{$topupId} rejected."]);
+
+            if ($adminMsgId) {
+                sendTelegramApi('editMessageText', [
+                    'chat_id'    => $adminChatId,
+                    'message_id' => $adminMsgId,
+                    'text'       => "❌ <b>TOP-UP REJECTED</b>\n\n• Amount: <b>" . number_format((float)$tx['amount'], 2) . " ETB</b>\n• User ID: <code>{$tx['telegram_user_id']}</code>\n• Rejected by: @{$adminName}",
+                    'parse_mode' => 'HTML'
+                ]);
+            }
+
+            sendTelegramApi('sendMessage', [
+                'chat_id'    => $tx['telegram_user_id'],
+                'text'       => "⚠️ <b>Deposit Notice</b>\n\nYour top-up of " . number_format((float)$tx['amount'], 2) . " ETB could not be verified on our banking statement. Contact support @AtkeShop for assistance.",
+                'parse_mode' => 'HTML'
+            ]);
+        } else {
+            $db->rollBack();
+        }
+    } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        error_log("Topup rejection error: " . $e->getMessage());
+    }
 }

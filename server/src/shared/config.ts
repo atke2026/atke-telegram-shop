@@ -35,7 +35,7 @@ const schema = z.object({
     ),
   PRODUCT_SYNC_CRON: z.string().default('*/5 * * * *'),
   /** Public channel used for product posts and the required-membership gate. */
-  ANNOUNCEMENT_CHANNEL: z.string().default('@suq_et'),
+  ANNOUNCEMENT_CHANNEL: z.string().default('@AtkeStore'),
   /** Enable only after ANNOUNCEMENT_CHANNEL exists and the bot is its admin. */
   CHANNEL_MEMBERSHIP_REQUIRED: z
     .enum(['true', 'false'])

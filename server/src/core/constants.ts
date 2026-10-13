@@ -27,7 +27,7 @@ export const POPULARITY_WINDOW_DAYS = 30;
  * The Telegram account customers reach for help. Kept in sync with the web
  * app's copy in webapp/src/shared/config/support.ts.
  */
-export const SUPPORT_USERNAME = 'Atke_Support';
+export const SUPPORT_USERNAME = 'AtkeShop';
 export const SUPPORT_URL = `https://t.me/${SUPPORT_USERNAME}`;
 
 /** Keys of operator-tunable values stored in the Config table. */

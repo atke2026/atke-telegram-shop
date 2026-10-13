@@ -20,6 +20,12 @@
 
   <div class="app-container">
     
+    <!-- Top Animated Connection Status Pill (matching Ethio-Viral & NovaPlus UX) -->
+    <div id="connectionStatusBanner" class="connection-status-pill connecting">
+      <span class="status-spinner" id="connectionStatusSpinner"></span>
+      <span id="connectionStatusText">Connecting your Telegram wallet...</span>
+    </div>
+
     <!-- Top Header -->
     <header class="app-header">
       <div class="brand-section">
@@ -30,53 +36,454 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="btnThemeToggle" class="btn-theme-toggle" title="Toggle Light / Dark Mode">
+          <span id="themeToggleIcon">☀️</span>
+        </button>
+        <button id="btnAdminHub" class="btn-header-icon admin-btn hidden" title="Admin Control Hub">
+          <span>⚙️ Admin</span>
+        </button>
         <button id="btnOpenOrders" class="btn-header-icon" title="My Orders">
-          <span>📦 My Orders</span>
+          <span>📦 Orders</span>
           <span id="ordersCountBadge" class="orders-badge-count hidden">0</span>
         </button>
+        <div class="header-avatar" id="headerUserAvatar" title="View Profile">A</div>
       </div>
     </header>
 
-    <!-- Hero Promotional Banner -->
-    <section class="hero-banner">
-      <div class="hero-content">
-        <h2>Premium Accounts & Software Keys</h2>
-        <p>Instant fulfillment on verified orders. Pay seamlessly via your preferred local Ethiopian bank or mobile wallet.</p>
-        <div class="hero-payment-tags">
-          <span class="pill-tag">🏦 CBE Birr</span>
-          <span class="pill-tag">📱 Telebirr / E-Birr</span>
-          <span class="pill-tag">💳 Kaafi</span>
-          <span class="pill-tag">⚡ 24/7 Verified</span>
+    <!-- ====================================================================
+         VIEW 1: HOME / STORE CATALOG
+         ==================================================================== -->
+    <div id="viewHome" class="tab-view active">
+      <!-- Hero Promotional Banner -->
+      <section class="hero-banner">
+        <div class="hero-content">
+          <h2>Premium Accounts & Software Keys</h2>
+          <p>Instant fulfillment on verified orders. Pay seamlessly via your preferred local Ethiopian bank or mobile wallet.</p>
+          <div class="hero-payment-tags">
+            <span class="pill-tag">🏦 CBE Birr</span>
+            <span class="pill-tag">📱 Telebirr / E-Birr</span>
+            <span class="pill-tag">💳 Kaafi</span>
+            <span class="pill-tag">⚡ 24/7 Verified</span>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Search & Category Navigation -->
-    <div class="search-container">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" class="search-input" placeholder="Search Canva, Coursera, AI tools...">
+      <!-- Search & Category Navigation -->
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search 875+ operators & brands...">
+        <button class="search-action-btn" id="btnSearchGo">→</button>
+      </div>
+
+      <div class="category-tabs" id="categoryTabs">
+        <button class="category-pill active" data-category="ALL">All Products</button>
+        <button class="category-pill" data-category="AI Tools">🤖 AI Tools</button>
+        <button class="category-pill" data-category="Education & Design">🎓 Education</button>
+        <button class="category-pill" data-category="Business & Career">💼 Business</button>
+        <button class="category-pill" data-category="Software & Productivity">💻 Software</button>
+      </div>
+
+      <!-- Products Catalog Section -->
+      <main class="products-section">
+        <div class="section-title">Available Subscriptions</div>
+        
+        <div id="productsGrid" class="products-grid">
+          <!-- Dynamically rendered via app.js -->
+          <div class="product-card" style="text-align: center; padding: 40px 20px;">
+            <div class="spinner"></div>
+            <p style="margin-top: 12px; font-size: 0.85rem; color: var(--hint-color);">Loading verified digital catalog...</p>
+          </div>
+        </div>
+      </main>
     </div>
 
-    <div class="category-tabs" id="categoryTabs">
-      <button class="category-pill active" data-category="ALL">All Products</button>
-      <button class="category-pill" data-category="AI Tools">🤖 AI Tools</button>
-      <button class="category-pill" data-category="Education & Design">🎓 Education</button>
-      <button class="category-pill" data-category="Business & Career">💼 Business</button>
-      <button class="category-pill" data-category="Software & Productivity">💻 Software</button>
-    </div>
+    <!-- ====================================================================
+         VIEW 2: WALLET & BALANCE (Matches Competitor Screenshots)
+         ==================================================================== -->
+    <div id="viewWallet" class="tab-view hidden">
+      <div class="view-header">
+        <h2>Wallet</h2>
+        <p>Manage your Atke Digital balance and top-up funds</p>
+      </div>
 
-    <!-- Products Catalog Section -->
-    <main class="products-section">
-      <div class="section-title">Available Subscriptions</div>
-      
-      <div id="productsGrid" class="products-grid">
-        <!-- Dynamically rendered via app.js -->
-        <div class="product-card" style="text-align: center; padding: 40px 20px;">
-          <div class="spinner"></div>
-          <p style="margin-top: 12px; font-size: 0.85rem; color: var(--hint-color);">Loading verified digital catalog...</p>
+      <!-- Gradient Available Balance Card -->
+      <div class="wallet-balance-card">
+        <div class="wallet-card-header">
+          <span class="wallet-badge">AVAILABLE BALANCE</span>
+          <span class="wallet-card-icon">💳</span>
+        </div>
+        <div class="wallet-card-balance">
+          <span class="currency">ETB</span>
+          <span class="amount" id="dispWalletBalance">0.00</span>
+        </div>
+        <p class="wallet-card-sub">Spend on anything in the store. Non-transferable.</p>
+        <button id="btnOpenTopUp" class="btn-wallet-action">
+          <span>+ Add money</span>
+        </button>
+      </div>
+
+      <!-- Add Money & Payment Account Selection (Screenshot 3 Parity) -->
+      <div class="add-money-section">
+        <div class="add-money-header">
+          <label class="section-label">PAYMENT ACCOUNT</label>
+          <span class="sub-hint">Tap to view details</span>
+        </div>
+        <div class="payment-account-chips" id="walletAccountSelector">
+          <button class="account-chip active" data-wallet-channel="EBIRR">
+            <span class="chip-icon">🌐</span> Telebirr
+          </button>
+          <button class="account-chip" data-wallet-channel="CBE">
+            <span class="chip-icon">🏦</span> CBE
+          </button>
+          <button class="account-chip" data-wallet-channel="KAAFI">
+            <span class="chip-icon">💳</span> Kaafi
+          </button>
+        </div>
+
+        <!-- Selected Payment Account Card (Matches Screenshot 3) -->
+        <div class="selected-account-card">
+          <div class="account-card-header">
+            <span id="walletDispChannelIcon" class="channel-icon-pill">🌐</span>
+            <div>
+              <span class="label-muted">Selected payment account</span>
+              <h4 id="walletDispChannelName">Telebirr</h4>
+            </div>
+          </div>
+          <div class="account-number-row">
+            <div>
+              <span class="label-muted">Account number</span>
+              <div class="account-num-val" id="walletDispAccountNumber">0906818924</div>
+            </div>
+            <button id="btnCopyWalletAccount" class="btn-copy-chip">
+              <span>📋 Copy</span>
+            </button>
+          </div>
+          <div class="account-name-row">
+            <span class="label-muted">Account name</span>
+            <span class="account-holder-val" id="walletDispAccountHolder">Mohammed Abdirahman Ibrahim</span>
+          </div>
         </div>
       </div>
-    </main>
+
+      <!-- Quick Top-Up Pills -->
+      <div class="quick-topup-section">
+        <label class="section-label">QUICK TOP-UP (ETB)</label>
+        <div class="quick-chips-grid">
+          <button class="quick-chip" data-amount="100">+100 <span class="chip-curr">ETB</span></button>
+          <button class="quick-chip" data-amount="250">+250 <span class="chip-curr">ETB</span></button>
+          <button class="quick-chip" data-amount="500">+500 <span class="chip-curr">ETB</span></button>
+          <button class="quick-chip" data-amount="1000">+1000 <span class="chip-curr">ETB</span></button>
+        </div>
+      </div>
+
+      <!-- Transactions Ledger Section -->
+      <div class="wallet-transactions-section">
+        <div class="transactions-header">
+          <span class="tx-title">Transactions</span>
+          <span class="tx-count" id="dispTxCount">0</span>
+        </div>
+        <div class="tx-filter-pills" id="txFilterPills">
+          <button class="tx-pill active" data-filter="all">All</button>
+          <button class="tx-pill" data-filter="deposit">Added funds</button>
+          <button class="tx-pill" data-filter="purchase">Purchases</button>
+          <button class="tx-pill" data-filter="refund">Refunds</button>
+        </div>
+
+        <div id="walletTransactionsList" class="tx-list-container">
+          <div class="empty-wallet-card">
+            <div class="empty-icon">🦁</div>
+            <h4>Sign in to view your wallet</h4>
+            <p>Your balance and transactions are private. Sign in to add funds or review activity.</p>
+            <button id="btnWalletSignIn" class="btn-wallet-signin">Sign in</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW 3: ACTIVITY / MY PURCHASES & DELIVERIES
+         ==================================================================== -->
+    <div id="viewActivity" class="tab-view hidden">
+      <div class="view-header">
+        <h2>Activity & Orders</h2>
+        <p>Real-time order statuses, redemption keys, and history</p>
+      </div>
+
+      <div id="activityOrdersList" class="activity-orders-list">
+        <p style="text-align: center; color: var(--hint-color); padding: 40px 0;">Loading purchase history...</p>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW 4: PROFILE & NOTIFICATION CONTROLS (Screenshot 013022, 013123)
+         ==================================================================== -->
+    <div id="viewProfile" class="tab-view hidden">
+      <div class="view-header">
+        <h2>Profile & Settings</h2>
+        <p>Account identity, delivery channels, and notification sound</p>
+      </div>
+
+      <!-- User Identity Card (Matches Screenshot 1 & 3) -->
+      <div class="profile-user-card">
+        <div class="profile-avatar" id="dispUserAvatar">A</div>
+        <div class="profile-info">
+          <h4 id="dispUserName">Atke</h4>
+          <p id="dispUserTelegramId">Telegram ID: <code>7608745515</code></p>
+          <p id="dispUserUsername" style="font-size: 0.78rem; color: var(--hint-color); margin-top: 2px;">Username: <span id="dispUserHandle">@AtkeShop</span></p>
+          <div class="profile-stats-row">
+            <div class="stat-pill">
+              <span class="stat-label">💰 Balance:</span>
+              <span class="stat-val" id="profileWalletBal">0.00 ETB</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">📦 Orders:</span>
+              <span class="stat-val" id="profileTotalOrders">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Standalone Web App Connection (For browsers outside Telegram) -->
+      <div id="webAppSyncCard" class="webapp-sync-card">
+        <div class="sync-header">
+          <span>🌐 Web App Account Access</span>
+          <span class="badge-pill">Browser Mode</span>
+        </div>
+        <p class="sync-desc">Browsing outside Telegram? Connect your Telegram ID or email to view your personal wallet balance and past order keys.</p>
+        <div class="sync-input-row">
+          <input type="text" id="inputWebSyncId" placeholder="Telegram @username, ID, or Email" class="sync-input">
+          <button id="btnWebSync" class="btn-sync-action">Connect</button>
+        </div>
+      </div>
+
+      <!-- Competitor Controls & Settings Panel -->
+      <div class="notification-controls-card">
+        <div class="controls-card-header">
+          <h3>Display & Theme Settings</h3>
+        </div>
+
+        <div class="controls-group">
+          <!-- Theme Switcher Row -->
+          <div class="control-row">
+            <div class="control-icon-box" id="themeSwitchIcon">☀️</div>
+            <div class="control-info">
+              <h5>Light Mode Theme</h5>
+              <p>Switch between modern light and sleek dark mode</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchThemeMode">
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="controls-card-header" style="margin-top: 20px;">
+          <h3>Notification Controls</h3>
+          <button id="btnTestSound" class="btn-test-sound">
+            <span>🔊 Test Sound</span>
+          </button>
+        </div>
+
+        <div class="controls-section-label">DELIVERY CHANNELS</div>
+        <div class="controls-group">
+          <!-- Item 1: Push Notifications -->
+          <div class="control-row">
+            <div class="control-icon-box">📱</div>
+            <div class="control-info">
+              <h5>Push Notifications</h5>
+              <p>Receive instant pop-up alerts on mobile & desktop</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchPush" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <!-- Item 2: Email Delivery Receipts -->
+          <div class="control-row">
+            <div class="control-icon-box">✉️</div>
+            <div class="control-info">
+              <h5>Email Delivery Receipts</h5>
+              <p>Receive order receipts and voucher links via email</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchEmail" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <!-- Item 3: In-App Live Banner Alerts -->
+          <div class="control-row">
+            <div class="control-icon-box">🔔</div>
+            <div class="control-info">
+              <h5>In-App Live Banner Alerts</h5>
+              <p>Show live floating banners inside Atke Digital Shop</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchBanners" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <!-- Item 4: Audio Chime Effects -->
+          <div class="control-row">
+            <div class="control-icon-box">🔊</div>
+            <div class="control-info">
+              <h5>Audio Chime Effects</h5>
+              <p>Play a subtle chime sound when new alerts arrive</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchAudio" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Chime Selector Grid (Crystal Chime, Digital Pulse, Smooth Bell, Success Pop) -->
+        <div class="controls-section-label" style="margin-top: 20px;">SELECT ALERT CHIME TONE</div>
+        <div class="chime-tones-grid" id="chimeTonesGrid">
+          <div class="chime-tone-card active" data-tone="crystal">
+            <div class="tone-title"><span>🔮 Crystal Chime</span> <span class="check-mark">✓</span></div>
+          </div>
+          <div class="chime-tone-card" data-tone="pulse">
+            <div class="tone-title"><span>⚡ Digital Pulse</span> <span class="check-mark"></span></div>
+          </div>
+          <div class="chime-tone-card" data-tone="bell">
+            <div class="tone-title"><span>🔔 Smooth Bell</span> <span class="check-mark"></span></div>
+          </div>
+          <div class="chime-tone-card" data-tone="pop">
+            <div class="tone-title"><span>🎉 Success Pop</span> <span class="check-mark"></span></div>
+          </div>
+        </div>
+
+        <!-- Categories to Receive -->
+        <div class="controls-section-label" style="margin-top: 20px;">CATEGORIES TO RECEIVE</div>
+        <div class="controls-group">
+          <div class="control-row">
+            <div class="control-icon-box">🎉</div>
+            <div class="control-info">
+              <h5>Order Deliveries & Vouchers</h5>
+              <p>Instant alerts for digital keys, subscriptions & credentials</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchCatOrders" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="control-row">
+            <div class="control-icon-box">💰</div>
+            <div class="control-info">
+              <h5>Wallet deposits & balance</h5>
+              <p>Alerts when CBE, Telebirr & manual deposits credit</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchCatWallet" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="control-row">
+            <div class="control-icon-box">🎟️</div>
+            <div class="control-info">
+              <h5>Support Replies & Messages</h5>
+              <p>Alerts when support responds to your help tickets</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchCatSupport" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="control-row">
+            <div class="control-icon-box">📢</div>
+            <div class="control-info">
+              <h5>Promotions & Price Drops</h5>
+              <p>Occasional updates on hot deals & flash discounts</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="switchCatPromos">
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Official Links -->
+      <div class="profile-links-group">
+        <button id="btnProfileAdminHub" class="profile-link-btn admin-btn hidden">
+          <span>⚙️ Open Store Admin Control Hub</span>
+          <span>→</span>
+        </button>
+        <a href="https://t.me/AtkeShop" target="_blank" class="profile-link-btn">
+          <span>💬 Customer Support (@AtkeShop)</span>
+          <span>↗</span>
+        </a>
+        <a href="https://t.me/AtkeStore" target="_blank" class="profile-link-btn">
+          <span>📢 Official Channel (@AtkeStore)</span>
+          <span>↗</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW 5: ADMIN CONTROL PANEL (PENDING ORDERS, TOP-UPS & PRICING)
+         ==================================================================== -->
+    <div id="viewAdmin" class="tab-view hidden">
+      <div class="view-header">
+        <h2>Store Admin Hub</h2>
+        <p>Review customer orders, credit wallet deposits, and manage prices</p>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="admin-metrics-grid">
+        <div class="metric-card">
+          <span class="metric-title">PENDING ORDERS</span>
+          <span class="metric-val" id="adminMetricPendingOrders">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">PENDING TOP-UPS</span>
+          <span class="metric-val" id="adminMetricPendingTopups">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">CATALOG ITEMS</span>
+          <span class="metric-val" id="adminMetricCatalogCount">8</span>
+        </div>
+      </div>
+
+      <!-- Section: Pending Orders Review -->
+      <div class="admin-review-section">
+        <div class="section-title-row">
+          <h4>📦 Orders Awaiting Payment Verification</h4>
+          <button id="btnRefreshAdminOrders" class="btn-refresh-sm">🔄 Refresh</button>
+        </div>
+        <div id="adminPendingOrdersList" class="admin-pending-list">
+          <p class="empty-hint">Loading pending orders...</p>
+        </div>
+      </div>
+
+      <!-- Section: Pending Wallet Top-Ups Review -->
+      <div class="admin-review-section" style="margin-top: 24px;">
+        <div class="section-title-row">
+          <h4>💳 Wallet Top-Ups Awaiting Credit</h4>
+          <button id="btnRefreshAdminTopups" class="btn-refresh-sm">🔄 Refresh</button>
+        </div>
+        <div id="adminPendingTopupsList" class="admin-pending-list">
+          <p class="empty-hint">Loading pending top-ups...</p>
+        </div>
+      </div>
+
+      <!-- Section: Catalog Pricing & Broadcast Quick Launch -->
+      <div class="admin-review-section" style="margin-top: 24px;">
+        <div class="section-title-row">
+          <h4>⚙️ Catalog Pricing, Badges & Channel Tools</h4>
+        </div>
+        <button id="btnOpenPricingModal" class="btn-admin-manage-full">
+          <span>🛠️ Open Full Pricing & Channel Broadcast Manager</span>
+          <span>→</span>
+        </button>
+      </div>
+    </div>
 
   </div>
 
@@ -139,9 +546,35 @@
 
       <!-- Bank Transaction Reference Form -->
       <div class="input-group">
-        <label for="txReferenceInput" class="input-label">Transaction Reference / FT Number:</label>
+        <label for="txReferenceInput" class="input-label">Transaction Reference / FT Number <span style="font-size:0.75rem; color:var(--hint-color);">(Optional if screenshot attached)</span>:</label>
         <input type="text" id="txReferenceInput" class="input-field" placeholder="e.g. FT240987123 or TxID from SMS" autocomplete="off" autocapitalize="characters">
         <p class="input-hint" id="channelInstructions">Copy the unique confirmation reference code sent to your phone upon completing your mobile transfer.</p>
+      </div>
+
+      <!-- Payment Screenshot / Receipt Upload Dropzone -->
+      <div class="input-group">
+        <label class="input-label">Transaction Screenshot / Receipt <span style="font-size:0.75rem; color:var(--hint-color);">(Optional if reference entered)</span>:</label>
+        <div class="upload-dropzone" id="checkoutUploadDropzone">
+          <input type="file" id="receiptFileInput" accept="image/*" class="file-input-hidden">
+          <div class="upload-prompt" id="uploadPrompt">
+            <span class="upload-icon">📸</span>
+            <div class="upload-text-group">
+              <span class="upload-title">Tap to attach transfer screenshot</span>
+              <span class="upload-hint">PNG, JPG, WebP from mobile banking SMS or receipt</span>
+            </div>
+          </div>
+          <div class="upload-preview hidden" id="uploadPreviewBox">
+            <img id="receiptPreviewImg" src="" alt="Payment Receipt Preview">
+            <button type="button" id="btnRemoveReceipt" class="btn-remove-preview" title="Remove screenshot">&times;</button>
+          </div>
+        </div>
+        <p class="input-hint" style="color: var(--accent-emerald); font-weight: 500;">💡 Provide EITHER your FT reference number OR attach a receipt screenshot. Both are NOT required!</p>
+      </div>
+
+      <!-- Customer Comments / Order Notes -->
+      <div class="input-group">
+        <label for="orderNotesInput" class="input-label">Comments / Delivery Notes (Optional):</label>
+        <textarea id="orderNotesInput" class="input-field textarea-field" placeholder="e.g. Your personal email for Canva/Coursera, phone number, or custom note" rows="2"></textarea>
       </div>
 
       <!-- Submit Order Button -->
@@ -226,6 +659,160 @@
       </div>
     </div>
   </div>
+
+  <!-- ====================================================================
+       MODAL 4: TOP-UP WALLET MODAL
+       ==================================================================== -->
+  <div id="topupModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3>Top-up Wallet Funds</h3>
+        <button id="btnCloseTopup" class="modal-close-btn">&times;</button>
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">Select Top-Up Amount (ETB):</label>
+        <div class="quick-chips-grid" style="margin-bottom: 12px;">
+          <button class="quick-chip modal-chip active" data-topup="100">100 ETB</button>
+          <button class="quick-chip modal-chip" data-topup="250">250 ETB</button>
+          <button class="quick-chip modal-chip" data-topup="500">500 ETB</button>
+          <button class="quick-chip modal-chip" data-topup="1000">1000 ETB</button>
+        </div>
+        <input type="number" id="customTopupAmount" class="input-field" placeholder="Or enter custom amount in ETB" value="100" min="50" step="10">
+      </div>
+
+      <label class="input-label">Select Deposit Account (Ethiopia):</label>
+      <div class="channel-selector" id="topupChannelSelector">
+        <div class="channel-card active" data-topup-channel="CBE">
+          <div class="channel-icon">🏦</div>
+          <div class="channel-title">CBE Birr</div>
+        </div>
+        <div class="channel-card" data-topup-channel="EBIRR">
+          <div class="channel-icon">📱</div>
+          <div class="channel-title">Telebirr / E-Birr</div>
+        </div>
+        <div class="channel-card" data-topup-channel="KAAFI">
+          <div class="channel-icon">💳</div>
+          <div class="channel-title">Kaafi</div>
+        </div>
+      </div>
+
+      <div class="account-details-box">
+        <div class="account-row">
+          <span class="account-label">Deposit Target:</span>
+          <span class="account-val" id="topupDispChannel">Commercial Bank of Ethiopia</span>
+        </div>
+        <div class="account-row">
+          <span class="account-label">Account Holder:</span>
+          <span class="account-val">Mohammed Abdirahman Ibrahim</span>
+        </div>
+        <div class="account-row" style="margin-top: 8px;">
+          <span class="account-label">Account Number:</span>
+          <span class="account-val" id="topupDispNumber" style="color: var(--link-color);">1000233801837</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="topupTxReference" class="input-label">Deposit Transaction Reference / FT Number <span style="font-size:0.75rem; color:var(--hint-color);">(Optional if screenshot attached)</span>:</label>
+        <input type="text" id="topupTxReference" class="input-field" placeholder="e.g. FT240987123" autocomplete="off" autocapitalize="characters">
+      </div>
+
+      <!-- Deposit Screenshot Upload Dropzone -->
+      <div class="input-group">
+        <label class="input-label">Deposit Screenshot / Receipt <span style="font-size:0.75rem; color:var(--hint-color);">(Optional if reference entered)</span>:</label>
+        <div class="upload-dropzone" id="topupUploadDropzone">
+          <input type="file" id="topupReceiptFileInput" accept="image/*" class="file-input-hidden">
+          <div class="upload-prompt" id="topupUploadPrompt">
+            <span class="upload-icon">📸</span>
+            <div class="upload-text-group">
+              <span class="upload-title">Tap to attach deposit screenshot</span>
+              <span class="upload-hint">PNG, JPG from CBE Birr / Telebirr confirmation</span>
+            </div>
+          </div>
+          <div class="upload-preview hidden" id="topupUploadPreviewBox">
+            <img id="topupReceiptPreviewImg" src="" alt="Deposit Receipt Preview">
+            <button type="button" id="btnRemoveTopupReceipt" class="btn-remove-preview" title="Remove">&times;</button>
+          </div>
+        </div>
+        <p class="input-hint" style="color: var(--accent-emerald); font-weight: 500;">💡 Provide EITHER your FT reference number OR attach a deposit screenshot. Both are NOT required!</p>
+      </div>
+
+      <!-- Top-up Notes -->
+      <div class="input-group">
+        <label for="topupNotesInput" class="input-label">Comments / Note (Optional):</label>
+        <input type="text" id="topupNotesInput" class="input-field" placeholder="e.g. Deposit for wallet from 0906...">
+      </div>
+
+      <button id="btnSubmitTopup" class="btn-submit-order">
+        <span>Submit Deposit Verification</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 5: ADMIN CONTROL HUB (PRICES, BADGES & BROADCASTS)
+       ==================================================================== -->
+  <div id="adminModal" class="modal-overlay">
+    <div class="modal-sheet modal-sheet-lg">
+      <div class="modal-header">
+        <h3>⚙️ Store Admin Hub</h3>
+        <button id="btnCloseAdmin" class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Quick Settings -->
+      <div class="admin-quick-settings">
+        <div class="admin-setting-item">
+          <label>USD ➔ ETB Exchange Rate</label>
+          <div class="rate-input-row">
+            <input type="number" id="adminUsdRate" value="140" step="1">
+            <button id="btnSaveRate" class="btn-sm">Save Rate</button>
+          </div>
+        </div>
+        <div class="admin-setting-item">
+          <label>Support Handle</label>
+          <div class="rate-input-row">
+            <input type="text" id="adminSupportContact" value="@AtkeShop">
+            <button id="btnSaveSupport" class="btn-sm">Save Handle</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-products-heading">
+        <h4>Product Pricing, Badges & Channel Broadcasts</h4>
+        <p>Set custom ETB prices or badges (HOT, BLACK FRIDAY, etc.) and post directly to @AtkeStore.</p>
+      </div>
+
+      <div id="adminProductsList" class="admin-products-list">
+        <!-- Rendered dynamically via app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       BOTTOM FLOATING NAVIGATION BAR (Home, Wallet, Activity, Profile)
+       ==================================================================== -->
+  <nav class="bottom-nav-bar">
+    <button class="nav-item active" data-tab="viewHome" id="navHome">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" data-tab="viewWallet" id="navWallet">
+      <span class="nav-icon">👛</span>
+      <span class="nav-label">Wallet</span>
+    </button>
+    <button class="nav-item" data-tab="viewActivity" id="navActivity">
+      <span class="nav-icon">⏱️</span>
+      <span class="nav-label">Activity</span>
+    </button>
+    <button class="nav-item" data-tab="viewProfile" id="navProfile">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </button>
+    <button class="nav-item hidden" data-tab="viewAdmin" id="navAdmin">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Admin</span>
+    </button>
+  </nav>
 
   <!-- Toast Notification Box -->
   <div id="appToast" class="toast-box">
