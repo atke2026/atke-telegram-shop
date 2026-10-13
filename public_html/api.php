@@ -899,12 +899,35 @@ function notifyAdminNewOrder(array $info): void {
 
     foreach (ADMIN_TELEGRAM_IDS as $adminId) {
         if (!empty($adminId)) {
-            sendTelegramApi('sendMessage', [
-                'chat_id'      => $adminId,
-                'text'         => $msg,
-                'parse_mode'   => 'HTML',
-                'reply_markup' => $keyboard
-            ]);
+            $sent = false;
+            if (!empty($info['receipt_image']) && is_string($info['receipt_image'])) {
+                $photoTarget = '';
+                if (str_starts_with($info['receipt_image'], 'uploads/')) {
+                    $photoTarget = 'https://shop.atke.com.et/' . $info['receipt_image'];
+                } elseif (str_starts_with($info['receipt_image'], 'http://') || str_starts_with($info['receipt_image'], 'https://')) {
+                    $photoTarget = $info['receipt_image'];
+                }
+                if (!empty($photoTarget)) {
+                    $res = sendTelegramApi('sendPhoto', [
+                        'chat_id'      => $adminId,
+                        'photo'        => $photoTarget,
+                        'caption'      => $msg,
+                        'parse_mode'   => 'HTML',
+                        'reply_markup' => $keyboard
+                    ]);
+                    if (!empty($res['ok'])) {
+                        $sent = true;
+                    }
+                }
+            }
+            if (!$sent) {
+                sendTelegramApi('sendMessage', [
+                    'chat_id'      => $adminId,
+                    'text'         => $msg,
+                    'parse_mode'   => 'HTML',
+                    'reply_markup' => $keyboard
+                ]);
+            }
         }
     }
 }
@@ -1259,12 +1282,35 @@ function notifyAdminNewTopup(array $info): void {
 
     foreach (ADMIN_TELEGRAM_IDS as $adminId) {
         if (!empty($adminId)) {
-            sendTelegramApi('sendMessage', [
-                'chat_id'      => $adminId,
-                'text'         => $msg,
-                'parse_mode'   => 'HTML',
-                'reply_markup' => $keyboard
-            ]);
+            $sent = false;
+            if (!empty($info['receipt_image']) && is_string($info['receipt_image'])) {
+                $photoTarget = '';
+                if (str_starts_with($info['receipt_image'], 'uploads/')) {
+                    $photoTarget = 'https://shop.atke.com.et/' . $info['receipt_image'];
+                } elseif (str_starts_with($info['receipt_image'], 'http://') || str_starts_with($info['receipt_image'], 'https://')) {
+                    $photoTarget = $info['receipt_image'];
+                }
+                if (!empty($photoTarget)) {
+                    $res = sendTelegramApi('sendPhoto', [
+                        'chat_id'      => $adminId,
+                        'photo'        => $photoTarget,
+                        'caption'      => $msg,
+                        'parse_mode'   => 'HTML',
+                        'reply_markup' => $keyboard
+                    ]);
+                    if (!empty($res['ok'])) {
+                        $sent = true;
+                    }
+                }
+            }
+            if (!$sent) {
+                sendTelegramApi('sendMessage', [
+                    'chat_id'      => $adminId,
+                    'text'         => $msg,
+                    'parse_mode'   => 'HTML',
+                    'reply_markup' => $keyboard
+                ]);
+            }
         }
     }
 }

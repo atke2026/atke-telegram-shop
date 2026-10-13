@@ -30,6 +30,9 @@ const I18N = {
     cat_edu: '🎓 Education',
     cat_biz: '💼 Business',
     cat_soft: '💻 Software',
+    channel_title: 'Join @AtkeStore on Telegram',
+    channel_desc: 'Get exclusive promo codes, daily giveaway drops & instant flash deal announcements.',
+    channel_btn: 'Join Channel ↗',
     cashback_title: '50 ETB Wallet Cashback on Review',
     cashback_sub: 'Post delivery proof in our community chat <b>@AtkeStore_Chat</b> to get 50 ETB credited to your wallet!',
     cashback_btn: 'Join Chat',
@@ -77,6 +80,9 @@ const I18N = {
     cat_edu: '🎓 ትምህርት እና ዲዛይን',
     cat_biz: '💼 ቢዝነስ',
     cat_soft: '💻 ሶፍትዌር',
+    channel_title: 'የቴሌግራም ቻናላችንን ይቀላቀሉ (@AtkeStore)',
+    channel_desc: 'ልዩ የቅናሽ ኮዶችን፣ ዕለታዊ የስጦታ ዕጣዎችን እና አዳዲስ ቅናሾችን በቀላሉ ያግኙ።',
+    channel_btn: 'ቻናሉን ይቀላቀሉ ↗',
     cashback_title: 'የ50 ብር የቦርሳ ስጦታ (Cashback)',
     cashback_sub: 'የግዢ ደረሰኝዎን በቴሌግራም ግሩፓችን <b>@AtkeStore_Chat</b> ሼር በማድረግ 50 ብር ቦርሳዎ ላይ ያግኙ!',
     cashback_btn: 'ግሩፑን ይቀላቀሉ',
@@ -556,6 +562,17 @@ function applyLanguage(lang) {
   if (catEdu) catEdu.textContent = t.cat_edu;
   if (catBiz) catBiz.textContent = t.cat_biz;
   if (catSoft) catSoft.textContent = t.cat_soft;
+
+  // Channel Marketing Banner
+  const chanTitle = document.getElementById('dispChannelBannerTitle');
+  const chanDesc = document.getElementById('dispChannelBannerDesc');
+  const chanBtn = document.getElementById('btnChannelBannerLink');
+  if (chanTitle && t.channel_title) chanTitle.textContent = t.channel_title;
+  if (chanDesc && t.channel_desc) chanDesc.textContent = t.channel_desc;
+  if (chanBtn && t.channel_btn) {
+    const s = chanBtn.querySelector('span');
+    if (s) s.textContent = t.channel_btn;
+  }
 
   // Review Cashback Card
   const cbTitle = document.getElementById('dispCashbackTitle');

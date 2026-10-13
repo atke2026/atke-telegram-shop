@@ -1,0 +1,8 @@
+# robots.txt for Atke Digital Shop (shop.atke.com.et)
+User-agent: *
+Allow: /
+Disallow: /api.php
+Disallow: /webhook.php
+Disallow: /uploads/
+
+Sitemap: https://shop.atke.com.et/sitemap.xml
