@@ -224,7 +224,7 @@ body {
 
 .search-input {
   width: 100%;
-  padding: 12px 16px 12px 42px;
+  padding: 12px 48px 12px 42px;
   background: var(--secondary-bg-color);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
@@ -248,6 +248,29 @@ body {
   font-size: 1rem;
   color: var(--hint-color);
   pointer-events: none;
+}
+
+.search-action-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--button-color);
+  color: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.search-action-btn:hover {
+  filter: brightness(1.15);
 }
 
 .category-tabs {
@@ -2308,5 +2331,265 @@ body.light-theme .admin-pending-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* ====================================================================
+   BILINGUAL TOGGLE & HEADER ENHANCEMENTS
+   ==================================================================== */
+.btn-lang-toggle {
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: var(--button-color);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-lang-toggle:hover {
+  background: rgba(124, 58, 237, 0.22);
+  border-color: var(--button-color);
+  transform: translateY(-1px);
+}
+
+body.light-theme .btn-lang-toggle {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #6d28d9;
+}
+
+/* ====================================================================
+   FLASH DEAL URGENCY COUNTDOWN BANNER (Ethio-Viral & Yene Shop Style)
+   ==================================================================== */
+.flash-deal-banner {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(139, 92, 246, 0.14) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.flash-deal-banner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.flash-deal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.flash-deal-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flash-pill {
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  animation: pulseFlash 2s infinite ease-in-out;
+}
+
+@keyframes pulseFlash {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(0.97); }
+}
+
+.flash-discount-badge {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.flash-deal-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timer-label {
+  font-size: 0.72rem;
+  color: var(--hint-color);
+  font-weight: 600;
+}
+
+.timer-boxes {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: monospace;
+  font-weight: 800;
+  color: #f87171;
+  font-size: 0.85rem;
+}
+
+.timer-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+body.light-theme .timer-box {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+}
+
+.flash-deal-content h4 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+  color: var(--text-color);
+}
+
+.flash-deal-content p {
+  font-size: 0.75rem;
+  color: var(--hint-color);
+}
+
+/* ====================================================================
+   COMMUNITY REVIEW & CASHBACK BANNER (NexxPlus & Yene Shop Benchmark)
+   ==================================================================== */
+.review-cashback-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border: 1px dashed rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.cashback-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.cashback-content {
+  flex: 1;
+}
+
+.cashback-content h4 {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #34d399;
+  margin-bottom: 2px;
+}
+
+body.light-theme .cashback-content h4 {
+  color: #059669;
+}
+
+.cashback-content p {
+  font-size: 0.73rem;
+  color: var(--hint-color);
+  line-height: 1.35;
+}
+
+.btn-cashback-action {
+  background: #10b981;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.btn-cashback-action:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* ====================================================================
+   PSYCHOLOGICAL PRICING & STOCK BADGES
+   ==================================================================== */
+.price-container-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.price-original {
+  font-size: 0.78rem;
+  color: var(--hint-color);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.discount-percent-tag {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+body.light-theme .discount-percent-tag {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.badge-instant {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.4px;
+}
+
+.stock-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #34d399;
+}
+
+.stock-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: blinkDot 1.6s infinite ease-in-out;
+}
+
+@keyframes blinkDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }
 

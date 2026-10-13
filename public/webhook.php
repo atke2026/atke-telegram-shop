@@ -756,7 +756,7 @@ function processOrderApproval(int $orderDbId, int|string $adminChatId, ?int $adm
             ]);
         }
 
-        // 4. Send Instant Delivery Notification to Customer
+        // 4. Send Instant Delivery Notification to Customer with Social Proof Cashback Prompt
         $custText = "🎉 <b>Payment Verified & Your Order is Ready!</b>\n\n";
         $custText .= "📦 <b>Product:</b> {$order['product_name']}\n";
         $custText .= "🧾 <b>Order ID:</b> <code>{$order['order_uuid']}</code>\n\n";
@@ -767,6 +767,8 @@ function processOrderApproval(int $orderDbId, int|string $adminChatId, ?int $adm
             $custText .= "💡 <b>Instructions:</b>\n" . htmlspecialchars($instructions, ENT_QUOTES, 'UTF-8') . "\n\n";
         }
 
+        $custText .= "🎁 <b>50 ETB Wallet Cashback Incentive:</b>\n";
+        $custText .= "Post a screenshot of your active subscription in our community chat @AtkeStore to receive <b>50 ETB</b> cashback directly to your wallet!\n\n";
         $custText .= "Thank you for shopping with Atke Digital! Enjoy your subscription.";
 
         sendTelegramApi('sendMessage', [
@@ -775,7 +777,8 @@ function processOrderApproval(int $orderDbId, int|string $adminChatId, ?int $adm
             'parse_mode'   => 'HTML',
             'reply_markup' => [
                 'inline_keyboard' => [
-                    [['text' => '🛍️ View in Mini App', 'web_app' => ['url' => WEB_APP_URL]]]
+                    [['text' => '🛍️ View in Mini App', 'web_app' => ['url' => WEB_APP_URL]]],
+                    [['text' => '💬 Post Review for 50 ETB Bonus', 'url' => 'https://t.me/AtkeStore']]
                 ]
             ]
         ]);

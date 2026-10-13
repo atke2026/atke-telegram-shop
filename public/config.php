@@ -91,7 +91,7 @@ define('DB_CHARSET', 'utf8mb4');
  * --------------------------------------------------------------------
  */
 define('TELEGRAM_BOT_TOKEN', (string) env('BOT_TOKEN', '8849880809:AAHwlV7suX-urb47VNorbuV-CEdbXtcJZ24'));
-define('TELEGRAM_BOT_USERNAME', (string) env('BOT_USERNAME', 'atke_shop_bot'));
+define('TELEGRAM_BOT_USERNAME', (string) env('BOT_USERNAME', 'atkedigitalbot'));
 define('WEB_APP_URL', (string) env('WEB_APP_URL', 'https://shop.atke.com.et/'));
 
 // Admin Telegram user IDs allowed to approve orders & receive alerts
@@ -227,9 +227,15 @@ function ensureDatabaseSchema(PDO $pdo): void {
             `transaction_reference` VARCHAR(128) DEFAULT NULL,
             `status` ENUM('pending', 'completed', 'rejected') NOT NULL DEFAULT 'pending',
             `description` VARCHAR(255) DEFAULT NULL,
+            `receipt_image` MEDIUMTEXT DEFAULT NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX `idx_user_tx` (`telegram_user_id`, `created_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $txCols = $pdo->query("SHOW COLUMNS FROM `wallet_transactions`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('receipt_image', $txCols, true)) {
+            $pdo->exec("ALTER TABLE `wallet_transactions` ADD COLUMN `receipt_image` MEDIUMTEXT DEFAULT NULL AFTER `description`");
+        }
     } catch (Throwable $e) {
         error_log("Automatic schema check notice: " . $e->getMessage());
     }

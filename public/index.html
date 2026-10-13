@@ -36,6 +36,9 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="btnLangToggle" class="btn-lang-toggle" title="Switch Language / ቋንቋ ቀይር">
+          <span id="langToggleText">🌐 አማ</span>
+        </button>
         <button id="btnThemeToggle" class="btn-theme-toggle" title="Toggle Light / Dark Mode">
           <span id="themeToggleIcon">☀️</span>
         </button>
@@ -57,14 +60,34 @@
       <!-- Hero Promotional Banner -->
       <section class="hero-banner">
         <div class="hero-content">
-          <h2>Premium Accounts & Software Keys</h2>
-          <p>Instant fulfillment on verified orders. Pay seamlessly via your preferred local Ethiopian bank or mobile wallet.</p>
+          <h2 id="dispHeroTitle">Premium Accounts & Software Keys</h2>
+          <p id="dispHeroSub">Instant fulfillment on verified orders. Pay seamlessly via your preferred local Ethiopian bank or mobile wallet.</p>
           <div class="hero-payment-tags">
             <span class="pill-tag">🏦 CBE Birr</span>
             <span class="pill-tag">📱 Telebirr / E-Birr</span>
             <span class="pill-tag">💳 Kaafi</span>
             <span class="pill-tag">⚡ 24/7 Verified</span>
           </div>
+        </div>
+      </section>
+
+      <!-- Live Flash Deal Urgency Bar (Ethio-Viral & Yene Shop Benchmark) -->
+      <section class="flash-deal-banner" id="flashDealBanner">
+        <div class="flash-deal-header">
+          <div class="flash-deal-badge-row">
+            <span class="flash-pill">⚡ FLASH DEAL</span>
+            <span class="flash-discount-badge" id="dispFlashDiscount">🔥 SAVE 35%</span>
+          </div>
+          <div class="flash-deal-timer">
+            <span class="timer-label">Ends in:</span>
+            <div class="timer-boxes">
+              <span class="timer-box" id="timerHours">08</span>:<span class="timer-box" id="timerMinutes">42</span>:<span class="timer-box" id="timerSeconds">15</span>
+            </div>
+          </div>
+        </div>
+        <div class="flash-deal-content">
+          <h4 id="dispFlashTitle">Google AI Pro (18 Months) & Canva Pro 3-Year</h4>
+          <p id="dispFlashDesc">Instant activation link • 5TB Cloud Storage • Verified Admin Tools</p>
         </div>
       </section>
 
@@ -76,12 +99,25 @@
       </div>
 
       <div class="category-tabs" id="categoryTabs">
-        <button class="category-pill active" data-category="ALL">All Products</button>
-        <button class="category-pill" data-category="AI Tools">🤖 AI Tools</button>
-        <button class="category-pill" data-category="Education & Design">🎓 Education</button>
-        <button class="category-pill" data-category="Business & Career">💼 Business</button>
-        <button class="category-pill" data-category="Software & Productivity">💻 Software</button>
+        <button class="category-pill active" data-category="ALL"><span id="tabCatAll">All Products</span></button>
+        <button class="category-pill" data-category="Hot Deals"><span id="tabCatDeals">🔥 Hot Deals</span></button>
+        <button class="category-pill" data-category="AI Tools"><span id="tabCatAi">🤖 AI Tools</span></button>
+        <button class="category-pill" data-category="Education & Design"><span id="tabCatEdu">🎓 Education</span></button>
+        <button class="category-pill" data-category="Business & Career"><span id="tabCatBiz">💼 Business</span></button>
+        <button class="category-pill" data-category="Software & Productivity"><span id="tabCatSoft">💻 Software</span></button>
       </div>
+
+      <!-- Social Proof & Review Cashback Banner (NexxPlus & Yene Shop Benchmark) -->
+      <section class="review-cashback-card" id="reviewCashbackCard">
+        <div class="cashback-icon">🎁</div>
+        <div class="cashback-content">
+          <h4 id="dispCashbackTitle">50 ETB Wallet Cashback on Review</h4>
+          <p id="dispCashbackSub">Post delivery proof in our community chat <b>@AtkeStore_Chat</b> to get 50 ETB credited to your wallet!</p>
+        </div>
+        <a href="https://t.me/AtkeStore" target="_blank" class="btn-cashback-action" id="btnCashbackLink">
+          <span>Join Chat</span>
+        </a>
+      </section>
 
       <!-- Products Catalog Section -->
       <main class="products-section">

@@ -7,106 +7,250 @@
  */
 
 // Determine API base URL (handles root or subdirectory deployment)
+// Determine API base URL (handles root or subdirectory deployment)
 const API_BASE_URL = window.location.pathname.includes('/public_html/') 
   ? '../api.php' 
   : 'api.php';
 
+// Bilingual Multi-Language Dictionary (Matches Ethio-Viral & NovaPlus UX)
+const I18N = {
+  en: {
+    lang_toggle: '🌐 አማ',
+    hero_title: 'Premium Accounts & Software Keys',
+    hero_sub: 'Instant fulfillment on verified orders. Pay seamlessly via your preferred local Ethiopian bank or mobile wallet.',
+    flash_badge: '⚡ FLASH DEAL',
+    flash_discount: '🔥 SAVE 35%',
+    flash_ends_in: 'Ends in:',
+    flash_title: 'Google AI Pro (18 Months) & Canva Pro 3-Year',
+    flash_desc: 'Instant activation link • 5TB Cloud Storage • Verified Admin Tools',
+    search_placeholder: 'Search 875+ operators & brands...',
+    cat_all: 'All Products',
+    cat_deals: '🔥 Hot Deals',
+    cat_ai: '🤖 AI Tools',
+    cat_edu: '🎓 Education',
+    cat_biz: '💼 Business',
+    cat_soft: '💻 Software',
+    cashback_title: '50 ETB Wallet Cashback on Review',
+    cashback_sub: 'Post delivery proof in our community chat <b>@AtkeStore_Chat</b> to get 50 ETB credited to your wallet!',
+    cashback_btn: 'Join Chat',
+    catalog_title: 'Available Subscriptions',
+    in_stock: 'In Stock',
+    out_of_stock: 'Sold Out',
+    order_now: '⚡ Order Now',
+    price_label: 'Price',
+    instant_tag: '⚡ INSTANT',
+    wallet_title: 'Wallet',
+    wallet_sub: 'Manage your Atke Digital balance and top-up funds',
+    available_balance: 'AVAILABLE BALANCE',
+    add_money: '+ Add money',
+    payment_account: 'PAYMENT ACCOUNT',
+    copy: '📋 Copy',
+    quick_topup: 'QUICK TOP-UP (ETB)',
+    transactions: 'Transactions',
+    nav_home: 'Home',
+    nav_wallet: 'Wallet',
+    nav_activity: 'Activity',
+    nav_profile: 'Profile',
+    select_payment: 'Select Payment Method (Ethiopia):',
+    confirm_payment: '⚡ Confirm & Submit Payment',
+    optional_note: 'Optional note / comments...'
+  },
+  am: {
+    lang_toggle: '🌐 EN',
+    hero_title: 'ፕሪሚየም የዲጂታል አካውንቶች እና የሶፍትዌር ቁልፎች',
+    hero_sub: 'ፈጣን አውቶማቲክ አቅርቦት። በኢትዮጵያ ንግድ ባንክ (CBE)፣ በቴሌብር (Telebirr) ወይም በካፊ (Kaafi) በቀላሉ ይክፈሉ።',
+    flash_badge: '⚡ ልዩ ቅናሽ',
+    flash_discount: '🔥 35% ቅናሽ',
+    flash_ends_in: 'የቀረው ጊዜ፡',
+    flash_title: 'ጉግል AI ፕሮ (18 ወራት) እና ካንቫ ፕሮ (3 ዓመት)',
+    flash_desc: 'ፈጣን የማግበሪያ ሊንክ • 5TB ክላውድ ስቶሬጅ • የተረጋገጡ የአድሚን መሣሪያዎች',
+    search_placeholder: '875+ ብራንዶችን እና አገልግሎቶችን ይፈልጉ...',
+    cat_all: 'ሁሉም ምርቶች',
+    cat_deals: '🔥 ልዩ ቅናሾች',
+    cat_ai: '🤖 የኤአይ መሣሪያዎች',
+    cat_edu: '🎓 ትምህርት እና ዲዛይን',
+    cat_biz: '💼 ቢዝነስ',
+    cat_soft: '💻 ሶፍትዌር',
+    cashback_title: 'የ50 ብር የቦርሳ ስጦታ (Cashback)',
+    cashback_sub: 'የግዢ ደረሰኝዎን በቴሌግራም ግሩፓችን <b>@AtkeStore_Chat</b> ሼር በማድረግ 50 ብር ቦርሳዎ ላይ ያግኙ!',
+    cashback_btn: 'ግሩፑን ይቀላቀሉ',
+    catalog_title: 'ያሉ የደንበኝነት ምዝገባዎች',
+    in_stock: 'ክምችት አለ',
+    out_of_stock: 'አልቋል',
+    order_now: '⚡ አሁን ይዘዙ',
+    price_label: 'ዋጋ',
+    instant_tag: '⚡ ፈጣን',
+    wallet_title: 'ቦርሳ',
+    wallet_sub: 'የአትኬ ዲጂታል ሂሳብዎን ይቆጣጠሩ እና ገንዘብ ያስገቡ',
+    available_balance: 'ያለ ሂሳብ',
+    add_money: '+ ገንዘብ አስገባ',
+    payment_account: 'የመክፈያ አካውንት',
+    copy: '📋 ኮፒ',
+    quick_topup: 'ፈጣን ክፍያ (ብር)',
+    transactions: 'የሂሳብ ዝውውሮች',
+    nav_home: 'መነሻ',
+    nav_wallet: 'ቦርሳ',
+    nav_activity: 'እንቅስቃሴ',
+    nav_profile: 'ፕሮፋይል',
+    select_payment: 'የመክፈያ ዘዴ ይምረጡ (ኢትዮጵያ)፦',
+    confirm_payment: '⚡ ክፍያውን አረጋግጥ እና ላክ',
+    optional_note: 'ተጨማሪ አስተያየት ወይም ማስታወሻ...'
+  }
+};
+
 // Application State with pre-cached catalog for zero-latency initial paint
 const INITIAL_PRODUCTS = [
   {
+    id: 'google-ai-pro-18m',
+    name: 'Google AI Pro (18 Months)',
+    name_am: 'ጉግል AI ፕሮ (18 ወራት)',
+    category: 'AI Tools',
+    description: 'Redeem link activated on your own Gmail. 5 TB cloud storage, Gemini 1.5 Pro advanced intelligence, zero card required.',
+    description_am: 'በራስዎ ጂሜይል አካውንት የሚነቃ የሪዲም ሊንክ። 5 TB ክላውድ ስቶሬጅ እና የጌሚኒ ፕሮ ሙሉ አገልግሎት።',
+    instructions: 'Open the delivered redeem link in any web browser and tap Activate Offer.',
+    selling_price: '350.00',
+    original_price: '500.00',
+    discount: '30%',
+    currency: 'ETB',
+    stock: 45,
+    badge: 'Flash Deal',
+    instant: true,
+    warranty: 'Activation Guarantee'
+  },
+  {
     id: 'canva-admin-3y',
     name: 'Canva Admin Panel (3 Years)',
+    name_am: 'ካንቫ አድሚን ፓነል (3 ዓመት)',
     category: 'Education & Design',
     description: 'Get full access to Canva Education with Advanced verified Admin tools. Access to Canva Pro features, 3-Year account.',
+    description_am: 'የካንቫ ፕሮ እና አድሚን ሙሉ አገልግሎት። 3 ዓመት የሚቆይ የተረጋገጠ አካውንት።',
     instructions: 'Account format: CANVA & Outlook EMAIL:PASS | 2FA EMAIL:PASS | 2FA website.',
     selling_price: '3200.00',
+    original_price: '4500.00',
+    discount: '29%',
     currency: 'ETB',
     stock: 10,
     badge: 'Popular',
+    instant: true,
     warranty: '2-Month Warranty'
   },
   {
     id: 'coursera-plus-1y',
     name: 'Coursera Premium (1 Year)',
+    name_am: 'ኮርሴራ ፕሪሚየም (1 ዓመት)',
     category: 'Education & Design',
     description: 'Org+ Premium Access. All courses and professional certificates issued in your own name. Ready-made account with mail access.',
+    description_am: 'ሙሉ የኮርሴራ ትምህርቶች እና ፕሮፌሽናል ሰርተፊኬቶች በራስዎ ስም የሚሰጡበት ዓመታዊ አካውንት።',
     instructions: 'Instructions: Log in using provided details. Change name and password after first login. Duration: 12 Months.',
     selling_price: '850.00',
+    original_price: '1400.00',
+    discount: '39%',
     currency: 'ETB',
     stock: 50,
     badge: 'Instant Delivery',
+    instant: true,
     warranty: '1-Month Warranty'
   },
   {
     id: 'elevenlabs-creator-1y',
     name: 'ElevenLabs Creator (1 Year)',
+    name_am: 'ኢሌቨንላብስ ክሪኤተር (1 ዓመት)',
     category: 'AI Tools',
     description: 'Official Coupon Code for 12 months Creator plan with monthly voice generation quota. Activated directly on your account.',
+    description_am: 'የድምፅ ማቀናበሪያ (Voice AI) ዓመታዊ የኩፖን ኮድ። በራስዎ አካውንት ላይ ወዲያውኑ የሚነቃ።',
     instructions: 'Instructions: 1. Sign up at elevenlabs.io. 2. Upgrade to Creator plan with Monthly billing. 3. Enter promo code at checkout.',
     selling_price: '7500.00',
+    original_price: '11000.00',
+    discount: '32%',
     currency: 'ETB',
     stock: 15,
     badge: 'High Demand',
+    instant: true,
     warranty: 'Activation Guarantee'
   },
   {
     id: 'gamma-pro-1y',
     name: 'Gamma Pro (1 Year)',
+    name_am: 'ጋማ ፕሮ AI (1 ዓመት)',
     category: 'AI Tools',
     description: 'Create stunning presentations, docs, and web pages with AI. Official 12-month coupon code redeemable on your own account.',
+    description_am: 'አስደናቂ ፕሬዘንቴሽኖችን እና ዶክመንቶችን በኤአይ የሚፈጥሩበት ዓመታዊ የፕሮሞ ኮድ።',
     instructions: 'Instructions: Log in at gamma.app, select Gamma Pro Yearly, enter promo code at checkout.',
     selling_price: '4600.00',
+    original_price: '6800.00',
+    discount: '32%',
     currency: 'ETB',
     stock: 25,
     badge: 'Best Seller',
+    instant: true,
     warranty: 'Activation Guarantee'
   },
   {
     id: 'factory-pro-1y',
     name: 'Factory Pro AI (1 Year)',
+    name_am: 'ፋክቶሪ ፕሮ AI (1 ዓመት)',
     category: 'AI Tools',
     description: 'Autonomous AI software development platform. Official 12-month voucher code redeemable on your account.',
+    description_am: 'የፕሮግራሚንግ እና የሶፍትዌር ልማት አውቶማቲክ AI መድረክ ዓመታዊ ቫውቸር።',
     instructions: 'Instructions: Create account at app.factory.ai. Visit app.factory.ai/voucher and enter your voucher code.',
     selling_price: '2400.00',
+    original_price: '3600.00',
+    discount: '33%',
     currency: 'ETB',
     stock: 12,
     badge: 'Developer Choice',
+    instant: true,
     warranty: 'Activation Guarantee'
   },
   {
     id: 'linkedin-business-2m',
     name: 'LinkedIn Business (2 Months)',
+    name_am: 'ሊንክድኢን ቢዝነስ (2 ወራት)',
     category: 'Business & Career',
     description: 'Premium Business upgrade. 15 InMails/month, see who viewed your profile, Unlimited People Browsing, and business insights.',
+    description_am: 'የሊንክድኢን ቢዝነስ ፕሪሚየም አገልግሎት። ያልተገደበ ፍለጋ እና የቢዝነስ ግንኙነቶች።',
     instructions: 'Works on accounts that have not had active premium in last 12 months. Open redeem link in browser and click Activate.',
     selling_price: '650.00',
+    original_price: '1200.00',
+    discount: '46%',
     currency: 'ETB',
     stock: 30,
     badge: 'Special Offer',
+    instant: true,
     warranty: 'Activation Guarantee'
   },
   {
     id: 'lovable-lite-1y',
     name: 'Lovable Lite (1 Year)',
+    name_am: 'ላቫብል ላይት AI (1 ዓመት)',
     category: 'AI Tools',
     description: 'Build full-stack apps and tools with AI. 12-month full Lite access with 150 monthly credits and custom domain support.',
+    description_am: 'ሙሉ ድረ-ገጾችን እና አፖችን በኤአይ የሚሰሩበት ዓመታዊ የላቫብል አካውንት።',
     instructions: 'Instructions: Redeem link must be applied within 72 hours of receiving order.',
     selling_price: '950.00',
+    original_price: '1600.00',
+    discount: '41%',
     currency: 'ETB',
     stock: 20,
     badge: 'Hot',
+    instant: true,
     warranty: '1-Month Warranty'
   },
   {
     id: 'm365-family-1y',
     name: 'Microsoft 365 Family (1 Year)',
+    name_am: 'ማይክሮሶፍት 365 ፋሚሊ (1 ዓመት)',
     category: 'Software & Productivity',
     description: 'Direct yearly billed plan. Word, Excel, PowerPoint, Outlook, plus 1TB OneDrive cloud storage. Readymade account with mail access.',
+    description_am: 'ወርድ፣ ኤክሴል፣ ፓወር ፖይንት ከ1TB ዋን ድራይቭ ክላውድ ጋር የተዘጋጀ ዓመታዊ አካውንት።',
     instructions: 'Login with credentials provided. Password can be changed immediately.',
     selling_price: '1450.00',
+    original_price: '2200.00',
+    discount: '34%',
     currency: 'ETB',
     stock: 18,
     badge: 'Productivity',
+    instant: true,
     warranty: 'Full Term Access'
   }
 ];
@@ -116,6 +260,7 @@ const state = {
   filteredProducts: [...INITIAL_PRODUCTS],
   activeCategory: 'ALL',
   searchQuery: '',
+  currentLang: localStorage.getItem('atke_lang') || 'en',
   selectedProduct: null,
   selectedChannel: 'CBE',
   selectedTopupChannel: 'CBE',
@@ -270,6 +415,8 @@ function playAudioChime(toneName = state.selectedChimeTone) {
  */
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initLanguage();
+  initFlashCountdown();
   initTelegram();
   bindEvents();
   initWalletTab();
@@ -284,6 +431,105 @@ document.addEventListener('DOMContentLoaded', () => {
   loadUserProfile();
   loadWalletBalance();
 });
+
+/**
+ * --------------------------------------------------------------------
+ * Bilingual Multi-Language Engine (Amharic & English)
+ * --------------------------------------------------------------------
+ */
+function initLanguage() {
+  const saved = localStorage.getItem('atke_lang') || 'en';
+  state.currentLang = saved;
+  applyLanguage(saved);
+}
+
+function toggleLanguage() {
+  const nextLang = state.currentLang === 'en' ? 'am' : 'en';
+  state.currentLang = nextLang;
+  localStorage.setItem('atke_lang', nextLang);
+  applyLanguage(nextLang);
+  triggerHaptic('selection');
+  showToast(nextLang === 'am' ? '🇪🇹 ወደ አማርኛ ተቀይሯል' : '🌐 Switched to English');
+}
+
+function applyLanguage(lang) {
+  const t = I18N[lang] || I18N.en;
+  
+  // Header Toggle Button Text
+  const langBtnText = document.getElementById('langToggleText');
+  if (langBtnText) langBtnText.textContent = t.lang_toggle;
+
+  // Hero Section
+  const heroTitle = document.getElementById('dispHeroTitle');
+  const heroSub = document.getElementById('dispHeroSub');
+  if (heroTitle) heroTitle.textContent = t.hero_title;
+  if (heroSub) heroSub.textContent = t.hero_sub;
+
+  // Flash Deal Section
+  const flashTitle = document.getElementById('dispFlashTitle');
+  const flashDesc = document.getElementById('dispFlashDesc');
+  const flashDisc = document.getElementById('dispFlashDiscount');
+  if (flashTitle) flashTitle.textContent = t.flash_title;
+  if (flashDesc) flashDesc.textContent = t.flash_desc;
+  if (flashDisc) flashDisc.textContent = t.flash_discount;
+
+  // Search Input Placeholder
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) searchInput.placeholder = t.search_placeholder;
+
+  // Category Tabs
+  const catAll = document.getElementById('tabCatAll');
+  const catDeals = document.getElementById('tabCatDeals');
+  const catAi = document.getElementById('tabCatAi');
+  const catEdu = document.getElementById('tabCatEdu');
+  const catBiz = document.getElementById('tabCatBiz');
+  const catSoft = document.getElementById('tabCatSoft');
+  if (catAll) catAll.textContent = t.cat_all;
+  if (catDeals) catDeals.textContent = t.cat_deals;
+  if (catAi) catAi.textContent = t.cat_ai;
+  if (catEdu) catEdu.textContent = t.cat_edu;
+  if (catBiz) catBiz.textContent = t.cat_biz;
+  if (catSoft) catSoft.textContent = t.cat_soft;
+
+  // Review Cashback Card
+  const cbTitle = document.getElementById('dispCashbackTitle');
+  const cbSub = document.getElementById('dispCashbackSub');
+  const cbBtn = document.getElementById('btnCashbackLink');
+  if (cbTitle) cbTitle.textContent = t.cashback_title;
+  if (cbSub) cbSub.innerHTML = t.cashback_sub;
+  if (cbBtn) {
+    const s = cbBtn.querySelector('span');
+    if (s) s.textContent = t.cashback_btn;
+  }
+
+  // Rerender product cards with translated metadata
+  renderProducts(state.filteredProducts);
+}
+
+function initFlashCountdown() {
+  function updateTimer() {
+    const now = new Date();
+    const midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
+    let diff = Math.floor((midnight - now) / 1000);
+    if (diff < 0) diff = 86400 + diff;
+
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+
+    const hEl = document.getElementById('timerHours');
+    const mEl = document.getElementById('timerMinutes');
+    const sEl = document.getElementById('timerSeconds');
+
+    if (hEl) hEl.textContent = String(hours).padStart(2, '0');
+    if (mEl) mEl.textContent = String(minutes).padStart(2, '0');
+    if (sEl) sEl.textContent = String(seconds).padStart(2, '0');
+  }
+
+  updateTimer();
+  setInterval(updateTimer, 1000);
+}
 
 /**
  * --------------------------------------------------------------------
@@ -432,7 +678,8 @@ function bindEvents() {
     });
   }
 
-  // Theme Mode Controls
+  // Language & Theme Mode Controls
+  document.getElementById('btnLangToggle')?.addEventListener('click', toggleLanguage);
   document.getElementById('btnThemeToggle')?.addEventListener('click', toggleTheme);
   document.getElementById('switchThemeMode')?.addEventListener('change', (e) => {
     applyTheme(e.target.checked ? 'light' : 'dark');
@@ -1111,13 +1358,23 @@ async function loadCatalog() {
 }
 
 function applyFilters() {
+  const isAm = state.currentLang === 'am';
   state.filteredProducts = state.products.filter(product => {
-    const matchesCategory = (state.activeCategory === 'ALL') || 
-      (product.category && product.category.toLowerCase().includes(state.activeCategory.toLowerCase()));
+    let matchesCategory = false;
+    if (state.activeCategory === 'ALL') {
+      matchesCategory = true;
+    } else if (state.activeCategory === 'Hot Deals') {
+      matchesCategory = !!(product.badge || product.original_price || product.discount);
+    } else {
+      matchesCategory = product.category && product.category.toLowerCase().includes(state.activeCategory.toLowerCase());
+    }
     
-    const matchesSearch = !state.searchQuery || 
-      product.name.toLowerCase().includes(state.searchQuery) ||
-      (product.description && product.description.toLowerCase().includes(state.searchQuery));
+    const query = (state.searchQuery || '').toLowerCase();
+    const matchesSearch = !query || 
+      (product.name && product.name.toLowerCase().includes(query)) ||
+      (product.name_am && product.name_am.includes(query)) ||
+      (product.description && product.description.toLowerCase().includes(query)) ||
+      (product.description_am && product.description_am.includes(query));
 
     return matchesCategory && matchesSearch;
   });
@@ -1129,12 +1386,15 @@ function renderProducts(items) {
   const grid = document.getElementById('productsGrid');
   if (!grid) return;
 
+  const isAm = state.currentLang === 'am';
+  const t = I18N[state.currentLang] || I18N.en;
+
   if (items.length === 0) {
     grid.innerHTML = `
       <div style="grid-column: 1/-1; text-align: center; padding: 48px 16px; color: var(--hint-color);">
         <div style="font-size: 2.2rem; margin-bottom: 8px;">🔍</div>
-        <p style="font-weight: 600;">No subscriptions found</p>
-        <p style="font-size: 0.8rem; margin-top: 4px;">Try searching with different keywords</p>
+        <p style="font-weight: 600;">${isAm ? 'ምንም አይነት ምርት አልተገኘም' : 'No subscriptions found'}</p>
+        <p style="font-size: 0.8rem; margin-top: 4px;">${isAm ? 'እባክዎ በሌላ ቃል ይፈልጉ' : 'Try searching with different keywords'}</p>
       </div>
     `;
     return;
@@ -1143,21 +1403,31 @@ function renderProducts(items) {
   grid.innerHTML = items.map(p => {
     const isOutOfStock = parseInt(p.stock, 10) <= 0;
     const priceFormatted = Number(p.selling_price).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    const originalPriceFormatted = p.original_price ? Number(p.original_price).toLocaleString('en-US', { minimumFractionDigits: 2 }) : null;
+    const discountHtml = p.discount ? `<span class="discount-percent-tag">-${p.discount}</span>` : '';
+    const instantBadge = p.instant ? `<span class="badge-instant">${t.instant_tag}</span>` : '';
     const badgeHtml = p.badge ? `<span class="product-badge">${escapeHtml(p.badge)}</span>` : '';
     const warrantyHtml = p.warranty ? `<div class="meta-item">🛡️ ${escapeHtml(p.warranty)}</div>` : '';
     const stockHtml = isOutOfStock 
-      ? `<span style="color: var(--accent-rose);">❌ Out of stock</span>` 
-      : `<span style="color: var(--accent-emerald);">🔥 In Stock (${p.stock})</span>`;
+      ? `<span style="color: var(--accent-rose);">❌ ${t.out_of_stock}</span>` 
+      : `<div class="stock-live-pill"><span class="stock-live-dot"></span> ${t.in_stock} (${p.stock})</div>`;
+
+    const displayName = isAm && p.name_am ? p.name_am : p.name;
+    const displayDesc = isAm && p.description_am ? p.description_am : (p.description || '');
+    const displayCat = isAm && p.category_am ? p.category_am : (p.category || 'Digital');
 
     return `
-      <div class="product-card">
+      <div class="product-card" id="card-${escapeHtml(p.id)}">
         <div>
           <div class="card-top">
-            <span class="product-category-tag">${escapeHtml(p.category || 'Digital')}</span>
-            ${badgeHtml}
+            <span class="product-category-tag">${escapeHtml(displayCat)}</span>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              ${instantBadge}
+              ${badgeHtml}
+            </div>
           </div>
-          <h3 class="product-title">${escapeHtml(p.name)}</h3>
-          <p class="product-desc">${escapeHtml(p.description || '')}</p>
+          <h3 class="product-title">${escapeHtml(displayName)}</h3>
+          <p class="product-desc">${escapeHtml(displayDesc)}</p>
           <div class="product-meta">
             ${warrantyHtml}
             <div class="meta-item">${stockHtml}</div>
@@ -1166,15 +1436,19 @@ function renderProducts(items) {
 
         <div class="card-bottom">
           <div class="price-box">
-            <span class="price-label">Price</span>
-            <span class="price-value">${priceFormatted} <span class="price-currency">${escapeHtml(p.currency || 'ETB')}</span></span>
+            <span class="price-label">${t.price_label}</span>
+            <div class="price-container-row">
+              <span class="price-value">${priceFormatted} <span class="price-currency">${escapeHtml(p.currency || 'ETB')}</span></span>
+              ${originalPriceFormatted ? `<span class="price-original">${originalPriceFormatted} ETB</span>` : ''}
+              ${discountHtml}
+            </div>
           </div>
           <button 
             class="btn-buy ${isOutOfStock ? 'out-of-stock' : ''}" 
             ${isOutOfStock ? 'disabled' : ''}
             onclick="openCheckoutModal('${escapeHtml(p.id)}')"
           >
-            ${isOutOfStock ? 'Sold Out' : '⚡ Order Now'}
+            ${isOutOfStock ? t.out_of_stock : t.order_now}
           </button>
         </div>
       </div>
@@ -1857,16 +2131,23 @@ async function checkDeepLinkParam() {
     let startParam = tg?.initDataUnsafe?.start_param || '';
     if (!startParam) {
       const urlParams = new URLSearchParams(window.location.search);
-      startParam = urlParams.get('startapp') || urlParams.get('start') || '';
+      startParam = urlParams.get('startapp') || urlParams.get('item') || urlParams.get('start') || '';
     }
-    if (startParam && startParam.startsWith('item_')) {
-      const targetId = startParam.replace('item_', '');
+    if (startParam) {
+      const targetId = startParam.startsWith('item_') ? startParam.replace('item_', '') : startParam;
       setTimeout(() => {
-        const item = state.products.find(p => p.id === targetId);
+        const item = state.products.find(p => p.id === targetId || p.id.includes(targetId));
         if (item) {
+          switchTab('viewHome');
+          const cardEl = document.getElementById(`card-${item.id}`);
+          if (cardEl) {
+            cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            cardEl.style.boxShadow = '0 0 25px rgba(124, 58, 237, 0.6)';
+            setTimeout(() => { cardEl.style.boxShadow = ''; }, 3000);
+          }
           openCheckoutModal(item.id);
         }
-      }, 350);
+      }, 400);
     }
   } catch (e) {}
 }
